@@ -50,12 +50,12 @@ Plans:
   3. Edge density of the generated graph matches expected p_in/p_out ratios within statistical tolerance
   4. Regenerating with the same config hash loads from cache instead of recomputing
   5. Degree correction produces heterogeneous degree distributions following the configured parameters
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 02-01: Custom DCSBM generator with degree correction
-- [ ] 02-02: Block jumper designation and graph validation gates
-- [ ] 02-03: Graph caching by config hash
+- [ ] 02-01-PLAN.md — Custom DCSBM generator with degree correction, validation gates, and retry logic
+- [ ] 02-02-PLAN.md — Block jumper designation with variable r values and non-triviality verification
+- [ ] 02-03-PLAN.md — Graph caching by config hash with gzip-compressed sparse matrix storage
 
 ### Phase 3: Walk Generation
 **Goal**: The system produces correctly structured walk corpora with complete jumper-event metadata, ready to serve as transformer training and evaluation data
