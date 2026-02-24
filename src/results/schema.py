@@ -14,6 +14,7 @@ import numpy as np
 
 from src.config.experiment import ExperimentConfig
 from src.config.hashing import full_config_hash, graph_config_hash
+from src.reproducibility.git_hash import get_git_hash
 from src.results.experiment_id import generate_experiment_id
 
 REQUIRED_TOP_FIELDS = {
@@ -137,7 +138,7 @@ def write_result(
         "metrics": metrics,
         "sequences": sequences or [],
         "metadata": {
-            "code_hash": "unknown",  # placeholder — replaced with get_git_hash() in Plan 02
+            "code_hash": get_git_hash(),
             "config_hash": full_config_hash(config),
             "graph_config_hash": graph_config_hash(config),
             **(metadata or {}),
