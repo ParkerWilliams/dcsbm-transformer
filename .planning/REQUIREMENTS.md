@@ -10,10 +10,10 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Graph Generation
 
 - [x] **GRPH-01**: System generates DCSBM directed graphs with configurable number of vertices (n), blocks (K), in-group probability (p_in), out-group probability (p_out), and degree correction parameters per Karrer & Newman 2011
-- [ ] **GRPH-02**: System designates block jumper vertices with configurable jump length r and target block, where the rule "after r steps from jumper v_i in block b, the walk must land in a specific target block different from b" is enforced
+- [x] **GRPH-02**: System designates block jumper vertices with configurable jump length r and target block, where the rule "after r steps from jumper v_i in block b, the walk must land in a specific target block different from b" is enforced
 - [x] **GRPH-03**: System validates graph connectivity (strongly connected), minimum expected degree >= 3, and edge density matching expected p_in/p_out ratios
-- [ ] **GRPH-04**: System verifies non-triviality of block jumper rules: valid paths of length r from jumper to target block exist but are not the only paths at that length
-- [ ] **GRPH-05**: System caches generated graphs by config hash to avoid redundant regeneration across sweep configs sharing the same graph parameters
+- [x] **GRPH-04**: System verifies non-triviality of block jumper rules: valid paths of length r from jumper to target block exist but are not the only paths at that length
+- [x] **GRPH-05**: System caches generated graphs by config hash to avoid redundant regeneration across sweep configs sharing the same graph parameters
 
 ### Walk Generation
 
@@ -137,10 +137,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | TRNG-02 | Phase 1 | Complete |
 | TRNG-07 | Phase 1 | Complete |
 | GRPH-01 | Phase 2 | Complete |
-| GRPH-02 | Phase 2 | Pending |
+| GRPH-02 | Phase 2 | Complete |
 | GRPH-03 | Phase 2 | Complete |
-| GRPH-04 | Phase 2 | Pending |
-| GRPH-05 | Phase 2 | Pending |
+| GRPH-04 | Phase 2 | Complete |
+| GRPH-05 | Phase 2 | Complete |
 | WALK-01 | Phase 3 | Pending |
 | WALK-02 | Phase 3 | Pending |
 | WALK-03 | Phase 3 | Pending |

@@ -12,8 +12,8 @@ This roadmap delivers a research framework that generates synthetic token sequen
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Config, Schema, and Reproducibility Foundation** - Experiment configuration, result.json schema, seed management, and code hash tracking
-- [ ] **Phase 2: DCSBM Graph Generation** - Custom degree-corrected stochastic block model with block jumper rules, validation gates, and caching
+- [x] **Phase 1: Config, Schema, and Reproducibility Foundation** - Experiment configuration, result.json schema, seed management, and code hash tracking
+- [x] **Phase 2: DCSBM Graph Generation** - Custom degree-corrected stochastic block model with block jumper rules, validation gates, and caching
 - [ ] **Phase 3: Walk Generation** - Directed random walks on DCSBM graphs with corpus validation, jumper metadata, and caching
 - [ ] **Phase 4: Transformer Model** - NanoGPT-scale single-head transformer with QK^T extraction capability
 - [ ] **Phase 5: Training Pipeline** - Cross-entropy training loop with sufficiency gate, checkpointing, and training curve logging
@@ -37,8 +37,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — ExperimentConfig dataclass system, result.json schema validation, and project scaffolding
-- [ ] 01-02-PLAN.md — Seed management, git hash tracking, and reproducibility integration tests
+- [x] 01-01-PLAN.md — ExperimentConfig dataclass system, result.json schema validation, and project scaffolding
+- [x] 01-02-PLAN.md — Seed management, git hash tracking, and reproducibility integration tests
 
 ### Phase 2: DCSBM Graph Generation
 **Goal**: The system generates valid, non-trivial DCSBM graphs with block jumper rules that are ready to serve as training data foundations
@@ -53,9 +53,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Custom DCSBM generator with degree correction, validation gates, and retry logic
-- [ ] 02-02-PLAN.md — Block jumper designation with variable r values and non-triviality verification
-- [ ] 02-03-PLAN.md — Graph caching by config hash with gzip-compressed sparse matrix storage
+- [x] 02-01-PLAN.md — Custom DCSBM generator with degree correction, validation gates, and retry logic
+- [x] 02-02-PLAN.md — Block jumper designation with variable r values and non-triviality verification
+- [x] 02-03-PLAN.md — Graph caching by config hash with gzip-compressed sparse matrix storage
 
 ### Phase 3: Walk Generation
 **Goal**: The system produces correctly structured walk corpora with complete jumper-event metadata, ready to serve as transformer training and evaluation data
@@ -189,8 +189,8 @@ Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 co
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Config, Schema, and Reproducibility Foundation | 0/2 | Not started | - |
-| 2. DCSBM Graph Generation | 0/3 | Not started | - |
+| 1. Config, Schema, and Reproducibility Foundation | 2/2 | Complete | 2026-02-24 |
+| 2. DCSBM Graph Generation | 3/3 | Complete | 2026-02-24 |
 | 3. Walk Generation | 0/2 | Not started | - |
 | 4. Transformer Model | 0/1 | Not started | - |
 | 5. Training Pipeline | 0/2 | Not started | - |
