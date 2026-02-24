@@ -35,6 +35,7 @@ Progress: [██░░░░░░░░] 20%
 - Trend: Accelerating
 
 *Updated after each plan completion*
+| Phase 03 P01 | 4 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -55,6 +56,7 @@ Recent decisions affecting current work:
 - [01-02]: Git hash dirty detection checks both staged and unstaged changes
 - [01-01]: Used dacite strict=True for config deserialization to catch schema drift early
 - [01-01]: SweepConfig structure defined but execution deferred to Phase 10
+- [Phase 03]: Convert numpy int types to Python int in JumperEvent for isinstance compatibility — numpy int32 is not recognized as Python int by isinstance checks
 
 ### Pending Todos
 
