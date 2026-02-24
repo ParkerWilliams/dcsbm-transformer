@@ -32,12 +32,12 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Training
 
 - [ ] **TRNG-01**: System trains the transformer using cross-entropy next-token prediction with AdamW optimizer and cosine learning rate schedule
-- [ ] **TRNG-02**: System controls all random seeds (torch, numpy, python random, CUDA deterministic) from a single master seed for reproducibility
+- [x] **TRNG-02**: System controls all random seeds (torch, numpy, python random, CUDA deterministic) from a single master seed for reproducibility
 - [ ] **TRNG-03**: System checkpoints model weights, optimizer state, and training step periodically and on gate pass
 - [ ] **TRNG-04**: System logs training loss and compliance curves per step, stored in result.json curves block
 - [ ] **TRNG-05**: System enforces training sufficiency gate: edge compliance >95% and rule compliance >80% on held-out walks, evaluated periodically during training
 - [ ] **TRNG-06**: Configurations that fail the sufficiency gate after allocated training budget are flagged and excluded from SVD analysis, with failure metadata recorded in result.json
-- [ ] **TRNG-07**: System tracks git code hash (short SHA) and stores it with results for reproducibility
+- [x] **TRNG-07**: System tracks git code hash (short SHA) and stores it with results for reproducibility
 
 ### Behavioral Evaluation
 
@@ -134,8 +134,8 @@ Deferred to future release. Tracked but not in current roadmap.
 |-------------|-------|--------|
 | MGMT-01 | Phase 1 | Complete |
 | MGMT-05 | Phase 1 | Complete |
-| TRNG-02 | Phase 1 | Pending |
-| TRNG-07 | Phase 1 | Pending |
+| TRNG-02 | Phase 1 | Complete |
+| TRNG-07 | Phase 1 | Complete |
 | GRPH-01 | Phase 2 | Pending |
 | GRPH-02 | Phase 2 | Pending |
 | GRPH-03 | Phase 2 | Pending |
