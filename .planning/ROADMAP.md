@@ -67,11 +67,11 @@ Plans:
   3. Train and evaluation walk sets use different seeds and contain no overlapping walks
   4. Every block jumper encounter during walk generation is recorded with the jumper vertex ID, encounter step, and expected target block at step+r
   5. Regenerating walks with the same config hash loads from cache instead of recomputing
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 03-01: Walk generator with corpus validation
-- [ ] 03-02: Jumper event metadata tracking and walk caching
+- [ ] 03-01-PLAN.md — Walk generation engine: types, path-count precomputation, guided/batch walk generation, jumper event tracking
+- [ ] 03-02-PLAN.md — Corpus assembly: train/eval split, validation, NPZ storage, and walk caching
 
 ### Phase 4: Transformer Model
 **Goal**: A minimal, fully transparent NanoGPT-scale transformer exists that can process token sequences and expose its internal QK^T attention matrix for analysis
@@ -191,7 +191,7 @@ Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 co
 |-------|----------------|--------|-----------|
 | 1. Config, Schema, and Reproducibility Foundation | 2/2 | Complete | 2026-02-24 |
 | 2. DCSBM Graph Generation | 3/3 | Complete | 2026-02-24 |
-| 3. Walk Generation | 0/2 | Not started | - |
+| 3. Walk Generation | 0/2 | Planned | - |
 | 4. Transformer Model | 0/1 | Not started | - |
 | 5. Training Pipeline | 0/2 | Not started | - |
 | 6. Behavioral Evaluation and SVD Collection | 0/3 | Not started | - |
