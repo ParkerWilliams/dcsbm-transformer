@@ -67,11 +67,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Experiment Management
 
-- [ ] **MGMT-01**: System defines experiment configuration as a frozen, serializable, hashable dataclass with all governing parameters
+- [x] **MGMT-01**: System defines experiment configuration as a frozen, serializable, hashable dataclass with all governing parameters
 - [ ] **MGMT-02**: System implements parameter sweep with declarative definition of parameter ranges matching the spec sweep ranges
 - [ ] **MGMT-03**: System implements a priority-ordered job queue: anchor config first, then core r-vs-w sweep (Tier 1), then architecture/w sweeps (Tier 2), then secondary sweeps (Tier 3)
 - [ ] **MGMT-04**: System runs 3 random seeds per configuration
-- [ ] **MGMT-05**: System writes result.json per configuration conforming to the project schema (schema_version, experiment_id, timestamp, description, tags, config, metrics, sequences, metadata)
+- [x] **MGMT-05**: System writes result.json per configuration conforming to the project schema (schema_version, experiment_id, timestamp, description, tags, config, metrics, sequences, metadata)
 - [ ] **MGMT-06**: System persists sweep state for resume after RunPod preemption
 
 ### Visualization
@@ -132,8 +132,8 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MGMT-01 | Phase 1 | Pending |
-| MGMT-05 | Phase 1 | Pending |
+| MGMT-01 | Phase 1 | Complete |
+| MGMT-05 | Phase 1 | Complete |
 | TRNG-02 | Phase 1 | Pending |
 | TRNG-07 | Phase 1 | Pending |
 | GRPH-01 | Phase 2 | Pending |
