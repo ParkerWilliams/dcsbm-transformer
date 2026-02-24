@@ -18,10 +18,10 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Walk Generation
 
 - [x] **WALK-01**: System generates directed random walks on the DCSBM graph with configurable walk length l (swept at 2w, 4w, 8w)
-- [ ] **WALK-02**: System validates corpus size is at least 2 orders of magnitude larger than n (t >= 100n)
-- [ ] **WALK-03**: System produces separate train and evaluation walk sets with different seeds
+- [x] **WALK-02**: System validates corpus size is at least 2 orders of magnitude larger than n (t >= 100n)
+- [x] **WALK-03**: System produces separate train and evaluation walk sets with different seeds
 - [x] **WALK-04**: System tracks block jumper encounter metadata during walk generation (which jumper was hit, at which step, expected target block at step+r)
-- [ ] **WALK-05**: System caches generated walks by config hash to avoid redundant regeneration
+- [x] **WALK-05**: System caches generated walks by config hash to avoid redundant regeneration
 
 ### Model
 
@@ -142,10 +142,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | GRPH-04 | Phase 2 | Complete |
 | GRPH-05 | Phase 2 | Complete |
 | WALK-01 | Phase 3 | Complete |
-| WALK-02 | Phase 3 | Pending |
-| WALK-03 | Phase 3 | Pending |
+| WALK-02 | Phase 3 | Complete |
+| WALK-03 | Phase 3 | Complete |
 | WALK-04 | Phase 3 | Complete |
-| WALK-05 | Phase 3 | Pending |
+| WALK-05 | Phase 3 | Complete |
 | MODL-01 | Phase 4 | Pending |
 | MODL-02 | Phase 4 | Pending |
 | MODL-03 | Phase 4 | Pending |

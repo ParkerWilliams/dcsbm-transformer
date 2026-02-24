@@ -36,6 +36,7 @@ Progress: [██░░░░░░░░] 20%
 
 *Updated after each plan completion*
 | Phase 03 P01 | 4 min | 2 tasks | 5 files |
+| Phase 03 P02 | 5 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -57,6 +58,8 @@ Recent decisions affecting current work:
 - [01-01]: Used dacite strict=True for config deserialization to catch schema drift early
 - [01-01]: SweepConfig structure defined but execution deferred to Phase 10
 - [Phase 03]: Convert numpy int types to Python int in JumperEvent for isinstance compatibility — numpy int32 is not recognized as Python int by isinstance checks
+- [Phase 03]: Train seed offset +2000, eval seed offset +3000 from config.seed — Avoids correlation with graph seed and jumper seed (+1000)
+- [Phase 03]: Events stored as parallel arrays in NPZ for efficient serialization — Flat arrays with walk_id grouping enables O(n) reconstruction
 
 ### Pending Todos
 
