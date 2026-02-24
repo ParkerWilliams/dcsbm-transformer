@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Config, Schema, and Reproducibility Foundation** - Experiment configuration, result.json schema, seed management, and code hash tracking
 - [x] **Phase 2: DCSBM Graph Generation** - Custom degree-corrected stochastic block model with block jumper rules, validation gates, and caching
-- [ ] **Phase 3: Walk Generation** - Directed random walks on DCSBM graphs with corpus validation, jumper metadata, and caching
+- [x] **Phase 3: Walk Generation** - Directed random walks on DCSBM graphs with corpus validation, jumper metadata, and caching (completed 2026-02-24)
 - [ ] **Phase 4: Transformer Model** - NanoGPT-scale single-head transformer with QK^T extraction capability
 - [ ] **Phase 5: Training Pipeline** - Cross-entropy training loop with sufficiency gate, checkpointing, and training curve logging
 - [ ] **Phase 6: Behavioral Evaluation and SVD Collection** - Fused forward pass producing 4-class behavioral labels and all SVD metrics with numerical guards
@@ -191,7 +191,7 @@ Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 co
 |-------|----------------|--------|-----------|
 | 1. Config, Schema, and Reproducibility Foundation | 2/2 | Complete | 2026-02-24 |
 | 2. DCSBM Graph Generation | 3/3 | Complete | 2026-02-24 |
-| 3. Walk Generation | 0/2 | Planned | - |
+| 3. Walk Generation | 0/2 | Complete    | 2026-02-24 |
 | 4. Transformer Model | 0/1 | Not started | - |
 | 5. Training Pipeline | 0/2 | Not started | - |
 | 6. Behavioral Evaluation and SVD Collection | 0/3 | Not started | - |
