@@ -132,73 +132,73 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GRPH-01 | Phase 1 | Pending |
-| GRPH-02 | Phase 1 | Pending |
-| GRPH-03 | Phase 1 | Pending |
-| GRPH-04 | Phase 1 | Pending |
-| GRPH-05 | Phase 1 | Pending |
-| WALK-01 | Phase 2 | Pending |
-| WALK-02 | Phase 2 | Pending |
-| WALK-03 | Phase 2 | Pending |
-| WALK-04 | Phase 2 | Pending |
-| WALK-05 | Phase 2 | Pending |
-| MODL-01 | Phase 2 | Pending |
-| MODL-02 | Phase 2 | Pending |
-| MODL-03 | Phase 2 | Pending |
-| TRNG-01 | Phase 2 | Pending |
-| TRNG-02 | Phase 2 | Pending |
-| TRNG-03 | Phase 2 | Pending |
-| TRNG-04 | Phase 2 | Pending |
-| TRNG-05 | Phase 2 | Pending |
-| TRNG-06 | Phase 2 | Pending |
-| TRNG-07 | Phase 2 | Pending |
-| EVAL-01 | Phase 3 | Pending |
-| EVAL-02 | Phase 3 | Pending |
-| EVAL-03 | Phase 3 | Pending |
-| EVAL-04 | Phase 3 | Pending |
-| EVAL-05 | Phase 3 | Pending |
-| SVD-01 | Phase 3 | Pending |
-| SVD-02 | Phase 3 | Pending |
-| SVD-03 | Phase 3 | Pending |
-| SVD-04 | Phase 3 | Pending |
-| SVD-05 | Phase 3 | Pending |
-| SVD-06 | Phase 3 | Pending |
-| SVD-07 | Phase 3 | Pending |
-| PRED-01 | Phase 4 | Pending |
-| PRED-02 | Phase 4 | Pending |
-| PRED-03 | Phase 4 | Pending |
-| PRED-04 | Phase 4 | Pending |
-| PRED-05 | Phase 4 | Pending |
-| STAT-01 | Phase 4 | Pending |
-| STAT-02 | Phase 4 | Pending |
-| STAT-03 | Phase 4 | Pending |
-| STAT-04 | Phase 4 | Pending |
-| STAT-05 | Phase 4 | Pending |
-| PLOT-01 | Phase 4 | Pending |
-| PLOT-02 | Phase 4 | Pending |
-| PLOT-03 | Phase 4 | Pending |
-| PLOT-04 | Phase 4 | Pending |
-| PLOT-05 | Phase 4 | Pending |
-| PLOT-06 | Phase 4 | Pending |
-| PLOT-07 | Phase 4 | Pending |
-| PLOT-08 | Phase 4 | Pending |
-| REPT-01 | Phase 4 | Pending |
-| REPT-02 | Phase 4 | Pending |
-| REPT-03 | Phase 4 | Pending |
 | MGMT-01 | Phase 1 | Pending |
-| MGMT-02 | Phase 5 | Pending |
-| MGMT-03 | Phase 5 | Pending |
-| MGMT-04 | Phase 5 | Pending |
 | MGMT-05 | Phase 1 | Pending |
-| MGMT-06 | Phase 5 | Pending |
-| MATH-01 | Phase 5 | Pending |
-| MATH-02 | Phase 5 | Pending |
+| TRNG-02 | Phase 1 | Pending |
+| TRNG-07 | Phase 1 | Pending |
+| GRPH-01 | Phase 2 | Pending |
+| GRPH-02 | Phase 2 | Pending |
+| GRPH-03 | Phase 2 | Pending |
+| GRPH-04 | Phase 2 | Pending |
+| GRPH-05 | Phase 2 | Pending |
+| WALK-01 | Phase 3 | Pending |
+| WALK-02 | Phase 3 | Pending |
+| WALK-03 | Phase 3 | Pending |
+| WALK-04 | Phase 3 | Pending |
+| WALK-05 | Phase 3 | Pending |
+| MODL-01 | Phase 4 | Pending |
+| MODL-02 | Phase 4 | Pending |
+| MODL-03 | Phase 4 | Pending |
+| TRNG-01 | Phase 5 | Pending |
+| TRNG-03 | Phase 5 | Pending |
+| TRNG-04 | Phase 5 | Pending |
+| TRNG-05 | Phase 5 | Pending |
+| TRNG-06 | Phase 5 | Pending |
+| EVAL-01 | Phase 6 | Pending |
+| EVAL-02 | Phase 6 | Pending |
+| EVAL-03 | Phase 6 | Pending |
+| EVAL-04 | Phase 6 | Pending |
+| EVAL-05 | Phase 6 | Pending |
+| SVD-01 | Phase 6 | Pending |
+| SVD-02 | Phase 6 | Pending |
+| SVD-03 | Phase 6 | Pending |
+| SVD-04 | Phase 6 | Pending |
+| SVD-05 | Phase 6 | Pending |
+| SVD-06 | Phase 6 | Pending |
+| SVD-07 | Phase 6 | Pending |
+| PRED-01 | Phase 7 | Pending |
+| PRED-02 | Phase 7 | Pending |
+| PRED-03 | Phase 7 | Pending |
+| PRED-04 | Phase 7 | Pending |
+| PRED-05 | Phase 7 | Pending |
+| STAT-01 | Phase 7 | Pending |
+| STAT-02 | Phase 7 | Pending |
+| STAT-03 | Phase 7 | Pending |
+| STAT-04 | Phase 7 | Pending |
+| STAT-05 | Phase 7 | Pending |
+| PLOT-01 | Phase 8 | Pending |
+| PLOT-02 | Phase 8 | Pending |
+| PLOT-03 | Phase 8 | Pending |
+| PLOT-04 | Phase 8 | Pending |
+| PLOT-05 | Phase 8 | Pending |
+| PLOT-06 | Phase 8 | Pending |
+| PLOT-07 | Phase 8 | Pending |
+| PLOT-08 | Phase 8 | Pending |
+| REPT-01 | Phase 9 | Pending |
+| REPT-02 | Phase 9 | Pending |
+| REPT-03 | Phase 9 | Pending |
+| MATH-01 | Phase 9 | Pending |
+| MATH-02 | Phase 9 | Pending |
+| MGMT-02 | Phase 10 | Pending |
+| MGMT-03 | Phase 10 | Pending |
+| MGMT-04 | Phase 10 | Pending |
+| MGMT-06 | Phase 10 | Pending |
 
 **Coverage:**
-- v1 requirements: 57 total
-- Mapped to phases: 57
-- Unmapped: 0 ✓
+- v1 requirements: 61 total
+- Mapped to phases: 61
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after initial definition*
+*Last updated: 2026-02-24 after roadmap creation (10-phase comprehensive structure)*
