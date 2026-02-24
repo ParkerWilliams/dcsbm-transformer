@@ -34,11 +34,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. A result.json file can be created conforming to the project schema (schema_version, experiment_id, timestamp, description, tags, config, metrics, sequences, metadata) and validated against the schema
   3. Setting the master seed produces identical random number sequences across torch, numpy, and python random on repeated runs
   4. The current git short SHA is captured and stored in a result.json metadata block
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: ExperimentConfig dataclass and result.json schema
-- [ ] 01-02: Seed management and reproducibility infrastructure
+- [ ] 01-01-PLAN.md — ExperimentConfig dataclass system, result.json schema validation, and project scaffolding
+- [ ] 01-02-PLAN.md — Seed management, git hash tracking, and reproducibility integration tests
 
 ### Phase 2: DCSBM Graph Generation
 **Goal**: The system generates valid, non-trivial DCSBM graphs with block jumper rules that are ready to serve as training data foundations
