@@ -96,11 +96,11 @@ Plans:
   3. Training loss and compliance curves (edge compliance, rule compliance) are logged per evaluation interval and stored in result.json curves block
   4. The anchor configuration passes the sufficiency gate (edge compliance >95%, rule compliance >80%) on held-out evaluation walks
   5. A configuration that fails the sufficiency gate is flagged with failure metadata in result.json and excluded from SVD analysis
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 05-01: Training loop with AdamW and cosine schedule
-- [ ] 05-02: Sufficiency gate and checkpoint management
+- [ ] 05-01-PLAN.md — Training loop with AdamW, cosine schedule, and data loading (TDD)
+- [ ] 05-02-PLAN.md — Sufficiency gate, checkpoint management, and training pipeline (TDD)
 
 ### Phase 6: Behavioral Evaluation and SVD Collection
 **Goal**: A single evaluation pass through generated sequences produces both behavioral labels (4-class outcomes) and SVD metrics across three targets (QK^T routing, WvWo OV circuit, AVWo net residual update) with numerical stability guarantees
