@@ -1,5 +1,6 @@
 """Evaluation package for behavioral classification and SVD metric collection."""
 
+from src.evaluation.behavioral import RuleOutcome, classify_steps
 from src.evaluation.svd_metrics import (
     CONDITION_CAP,
     EPS,
@@ -30,4 +31,6 @@ __all__ = [
     "read_write_alignment",
     "grassmannian_distance",
     "compute_all_metrics",
+    "RuleOutcome",
+    "classify_steps",
 ]
