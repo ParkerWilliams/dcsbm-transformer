@@ -22,7 +22,10 @@ def guard_matrix_for_svd(M: torch.Tensor) -> tuple[torch.Tensor, bool]:
         Tuple of (cleaned_matrix, guard_activated). If guard_activated is True,
         the input contained NaN or Inf values that were clamped.
     """
-    raise NotImplementedError
+    has_nonfinite = not torch.isfinite(M).all().item()
+    if has_nonfinite:
+        M = torch.nan_to_num(M, nan=0.0, posinf=1e6, neginf=-1e6)
+    return M, has_nonfinite
 
 
 def stable_rank(S: torch.Tensor) -> torch.Tensor:
@@ -34,7 +37,8 @@ def stable_rank(S: torch.Tensor) -> torch.Tensor:
     Returns:
         Stable rank scalar(s) with shape [...].
     """
-    raise NotImplementedError
+    s_sq = S**2
+    return s_sq.sum(dim=-1) / (s_sq[..., 0] + EPS)
 
 
 def spectral_entropy(S: torch.Tensor) -> torch.Tensor:
@@ -46,7 +50,9 @@ def spectral_entropy(S: torch.Tensor) -> torch.Tensor:
     Returns:
         Spectral entropy scalar(s) with shape [...].
     """
-    raise NotImplementedError
+    p = S / (S.sum(dim=-1, keepdim=True) + EPS)
+    ent = -(p * torch.log(p + EPS)).sum(dim=-1)
+    return torch.clamp(ent, min=0.0)
 
 
 def spectral_gap_1_2(S: torch.Tensor) -> torch.Tensor:
@@ -58,7 +64,7 @@ def spectral_gap_1_2(S: torch.Tensor) -> torch.Tensor:
     Returns:
         Spectral gap scalar(s) with shape [...].
     """
-    raise NotImplementedError
+    return S[..., 0] - S[..., 1]
 
 
 def spectral_gap_2_3(S: torch.Tensor) -> torch.Tensor:
@@ -70,7 +76,7 @@ def spectral_gap_2_3(S: torch.Tensor) -> torch.Tensor:
     Returns:
         Spectral gap scalar(s) with shape [...].
     """
-    raise NotImplementedError
+    return S[..., 1] - S[..., 2]
 
 
 def spectral_gap_4_5(S: torch.Tensor) -> torch.Tensor:
@@ -82,7 +88,7 @@ def spectral_gap_4_5(S: torch.Tensor) -> torch.Tensor:
     Returns:
         Spectral gap scalar(s) with shape [...].
     """
-    raise NotImplementedError
+    return S[..., 3] - S[..., 4]
 
 
 def condition_number(S: torch.Tensor) -> torch.Tensor:
@@ -94,10 +100,13 @@ def condition_number(S: torch.Tensor) -> torch.Tensor:
     Returns:
         Condition number scalar(s) with shape [...].
     """
-    raise NotImplementedError
+    raw = S[..., 0] / (S[..., -1] + EPS)
+    return torch.clamp(raw, max=CONDITION_CAP)
 
 
-def rank1_residual_norm(U: torch.Tensor, S: torch.Tensor, Vh: torch.Tensor) -> torch.Tensor:
+def rank1_residual_norm(
+    U: torch.Tensor, S: torch.Tensor, Vh: torch.Tensor
+) -> torch.Tensor:
     """Rank-1 residual norm: ||M - sigma_1 * u_1 * v_1^T||_F / ||M||_F.
 
     Args:
@@ -108,7 +117,11 @@ def rank1_residual_norm(U: torch.Tensor, S: torch.Tensor, Vh: torch.Tensor) -> t
     Returns:
         Rank-1 residual norm scalar(s) with shape [...].
     """
-    raise NotImplementedError
+    # Frobenius norm of M: sqrt(sum(s_i^2))
+    fro_M = torch.sqrt((S**2).sum(dim=-1) + EPS)
+    # Frobenius norm of residual: sqrt(sum(s_i^2 for i>=1))
+    fro_residual = torch.sqrt((S[..., 1:] ** 2).sum(dim=-1) + EPS)
+    return fro_residual / (fro_M + EPS)
 
 
 def read_write_alignment(U: torch.Tensor, Vh: torch.Tensor) -> torch.Tensor:
@@ -124,7 +137,10 @@ def read_write_alignment(U: torch.Tensor, Vh: torch.Tensor) -> torch.Tensor:
     Returns:
         Alignment scalar(s) in [0, 1] with shape [...].
     """
-    raise NotImplementedError
+    u1 = U[..., :, 0]  # top left singular vector [..., m]
+    v1 = Vh[..., 0, :]  # top right singular vector [..., n]
+    dot = torch.sum(u1 * v1, dim=-1)
+    return torch.abs(dot)
 
 
 def grassmannian_distance(
@@ -143,7 +159,13 @@ def grassmannian_distance(
     Returns:
         Grassmannian distance scalar(s) with shape [...].
     """
-    raise NotImplementedError
+    # Principal angles via SVD of U_prev^T @ U_curr (top-k columns)
+    cos_angles = torch.linalg.svdvals(
+        U_prev[..., :, :k].transpose(-2, -1) @ U_curr[..., :, :k]
+    )
+    cos_angles = torch.clamp(cos_angles, -1.0, 1.0)
+    angles = torch.arccos(cos_angles)
+    return torch.sqrt((angles**2).sum(dim=-1))
 
 
 def compute_all_metrics(
@@ -161,4 +183,25 @@ def compute_all_metrics(
     Returns:
         Dict mapping metric names to tensor values.
     """
-    raise NotImplementedError
+    metrics: dict[str, torch.Tensor] = {}
+
+    # Singular-value-only metrics (always computed)
+    metrics["stable_rank"] = stable_rank(S)
+    metrics["spectral_entropy"] = spectral_entropy(S)
+
+    k = S.shape[-1]
+    if k >= 2:
+        metrics["spectral_gap_1_2"] = spectral_gap_1_2(S)
+    if k >= 3:
+        metrics["spectral_gap_2_3"] = spectral_gap_2_3(S)
+    if k >= 5:
+        metrics["spectral_gap_4_5"] = spectral_gap_4_5(S)
+
+    metrics["condition_number"] = condition_number(S)
+
+    # Full-SVD metrics (only when U and Vh provided)
+    if U is not None and Vh is not None:
+        metrics["rank1_residual_norm"] = rank1_residual_norm(U, S, Vh)
+        metrics["read_write_alignment"] = read_write_alignment(U, Vh)
+
+    return metrics
