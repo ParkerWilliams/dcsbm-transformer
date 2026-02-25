@@ -1,6 +1,7 @@
 """Evaluation package for behavioral classification and SVD metric collection."""
 
 from src.evaluation.behavioral import RuleOutcome, classify_steps
+from src.evaluation.pipeline import EvaluationResult, fused_evaluate, save_evaluation_results
 from src.evaluation.svd_metrics import (
     CONDITION_CAP,
     EPS,
@@ -33,4 +34,7 @@ __all__ = [
     "compute_all_metrics",
     "RuleOutcome",
     "classify_steps",
+    "EvaluationResult",
+    "fused_evaluate",
+    "save_evaluation_results",
 ]
