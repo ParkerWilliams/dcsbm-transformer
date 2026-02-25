@@ -15,8 +15,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Config, Schema, and Reproducibility Foundation** - Experiment configuration, result.json schema, seed management, and code hash tracking
 - [x] **Phase 2: DCSBM Graph Generation** - Custom degree-corrected stochastic block model with block jumper rules, validation gates, and caching
 - [x] **Phase 3: Walk Generation** - Directed random walks on DCSBM graphs with corpus validation, jumper metadata, and caching (completed 2026-02-24)
-- [ ] **Phase 4: Transformer Model** - NanoGPT-scale single-head transformer with QK^T extraction capability
-- [ ] **Phase 5: Training Pipeline** - Cross-entropy training loop with sufficiency gate, checkpointing, and training curve logging
+- [x] **Phase 4: Transformer Model** - NanoGPT-scale single-head transformer with QK^T extraction capability
+- [x] **Phase 5: Training Pipeline** - Cross-entropy training loop with sufficiency gate, checkpointing, and training curve logging
 - [ ] **Phase 6: Behavioral Evaluation and SVD Collection** - Fused forward pass producing 4-class behavioral labels and all SVD metrics with numerical guards
 - [ ] **Phase 7: Predictive Horizon and Statistical Analysis** - AUROC at each lookback distance, position-matched baselines, multiple comparison correction, and effect sizes
 - [ ] **Phase 8: Visualization** - All publication-quality plot types from event-aligned metrics to predictive horizon heatmaps
@@ -70,8 +70,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — Walk generation engine: types, path-count precomputation, guided/batch walk generation, jumper event tracking
-- [ ] 03-02-PLAN.md — Corpus assembly: train/eval split, validation, NPZ storage, and walk caching
+- [x] 03-01-PLAN.md — Walk generation engine: types, path-count precomputation, guided/batch walk generation, jumper event tracking
+- [x] 03-02-PLAN.md — Corpus assembly: train/eval split, validation, NPZ storage, and walk caching
 
 ### Phase 4: Transformer Model
 **Goal**: A minimal, fully transparent NanoGPT-scale transformer exists that can process token sequences and expose its internal attention components (QK^T, Wv, Wo, A, V) for three-target SVD analysis
@@ -99,8 +99,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Training loop with AdamW, cosine schedule, and data loading (TDD)
-- [ ] 05-02-PLAN.md — Sufficiency gate, checkpoint management, and training pipeline (TDD)
+- [x] 05-01-PLAN.md — Training loop with AdamW, cosine schedule, and data loading (TDD)
+- [x] 05-02-PLAN.md — Sufficiency gate, checkpoint management, and training pipeline (TDD)
 
 ### Phase 6: Behavioral Evaluation and SVD Collection
 **Goal**: A single evaluation pass through generated sequences produces both behavioral labels (4-class outcomes) and SVD metrics across three targets (QK^T routing, WvWo OV circuit, AVWo net residual update) with numerical stability guarantees
@@ -193,7 +193,7 @@ Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 co
 | 2. DCSBM Graph Generation | 3/3 | Complete | 2026-02-24 |
 | 3. Walk Generation | 2/2 | Complete    | 2026-02-24 |
 | 4. Transformer Model | 1/1 | Complete | 2026-02-25 |
-| 5. Training Pipeline | 0/2 | Not started | - |
+| 5. Training Pipeline | 2/2 | Complete | 2026-02-25 |
 | 6. Behavioral Evaluation and SVD Collection | 0/3 | Not started | - |
 | 7. Predictive Horizon and Statistical Analysis | 0/2 | Not started | - |
 | 8. Visualization | 0/2 | Not started | - |

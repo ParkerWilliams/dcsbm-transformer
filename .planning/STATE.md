@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Phase 4 - Transformer Model (complete)
+**Current focus:** Phase 5 - Training Pipeline (complete)
 
 ## Current Position
 
-Phase: 4 of 10 (Transformer Model) -- COMPLETE
-Plan: 1 of 1 in current phase (all complete)
-Status: Phase 4 execution complete, verified
-Last activity: 2026-02-25 -- Completed 04-01: Transformer model with SVD extraction
+Phase: 5 of 10 (Training Pipeline) -- COMPLETE
+Plan: 2 of 2 in current phase (all complete)
+Status: Phase 5 execution complete, verified
+Last activity: 2026-02-25 -- Completed 05-02: Sufficiency gate and training pipeline
 
-Progress: [████░░░░░░] 40%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 3.5 min
-- Total execution time: ~0.47 hours
+- Total plans completed: 10
+- Average duration: 3.7 min
+- Total execution time: ~0.62 hours
 
 **By Phase:**
 
@@ -31,9 +31,10 @@ Progress: [████░░░░░░] 40%
 | 2 | 3/3 | 8 min | 2.7 min |
 | 3 | 2/2 | 9 min | 4.5 min |
 | 4 | 1/1 | 4 min | 4.0 min |
+| 5 | 2/2 | 7 min | 3.5 min |
 
 **Recent Trend:**
-- Last 5 plans: 02-03 (2 min), 03-01 (4 min), 03-02 (5 min), 04-01 (4 min)
+- Last 5 plans: 03-01 (4 min), 03-02 (5 min), 04-01 (4 min), 05-01 (2 min), 05-02 (5 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -64,6 +65,14 @@ Recent decisions affecting current work:
 - [04-01]: Separate W_q/W_k/W_v/W_o linear layers (not fused) for extraction clarity
 - [04-01]: Residual stream includes pre-block embedding state as index 0 (n_layers+1 total states)
 - [04-01]: WvWo computed as W_v.weight.T @ W_o.weight per layer (nn.Linear convention)
+- [05-01]: WalkDataset chunks walks into non-overlapping subsequences of size w+1 (context+target)
+- [05-01]: Cosine schedule with 10% linear warmup, min_lr_ratio=0.1
+- [05-01]: Gradient clipping max_norm=1.0, AdamW weight_decay=0.01
+- [05-02]: Edge compliance checks CSR adjacency via indptr/indices lookup
+- [05-02]: Rule compliance uses jumper_map dict for O(1) jumper vertex lookup
+- [05-02]: Gate thresholds as module constants: EDGE_COMPLIANCE_THRESHOLD=0.95, RULE_COMPLIANCE_THRESHOLD=0.80
+- [05-02]: Self-loops included in complete graph fixtures for test correctness
+- [05-02]: Pipeline generates experiment_id for checkpoint directory naming
 
 ### Pending Todos
 
@@ -78,5 +87,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed 04-01-PLAN.md
+Stopped at: Completed Phase 5 (05-01-PLAN.md and 05-02-PLAN.md)
 Resume file: None
