@@ -25,9 +25,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Model
 
-- [ ] **MODL-01**: System implements a NanoGPT-scale transformer with configurable d_model (64, 128, 256), n_layers (2, 4, 6), and exactly 1 attention head
-- [ ] **MODL-02**: Model's single attention head exposes internal components for SVD analysis via a `return_internals=True` flag: raw QK^T matrix (causal-masked, zero-filled), attention weights A, value matrix V, and access to Wv/Wo weight parameters — enabling three SVD targets (QK^T routing, WvWo OV circuit, AVWo net residual update)
-- [ ] **MODL-03**: Model vocabulary equals the number of graph vertices (tokens are vertex IDs)
+- [x] **MODL-01**: System implements a NanoGPT-scale transformer with configurable d_model (64, 128, 256), n_layers (2, 4, 6), and exactly 1 attention head
+- [x] **MODL-02**: Model's single attention head exposes internal components for SVD analysis via a `return_internals=True` flag: raw QK^T matrix (causal-masked, zero-filled), attention weights A, value matrix V, and access to Wv/Wo weight parameters — enabling three SVD targets (QK^T routing, WvWo OV circuit, AVWo net residual update)
+- [x] **MODL-03**: Model vocabulary equals the number of graph vertices (tokens are vertex IDs)
 
 ### Training
 
@@ -146,9 +146,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | WALK-03 | Phase 3 | Complete |
 | WALK-04 | Phase 3 | Complete |
 | WALK-05 | Phase 3 | Complete |
-| MODL-01 | Phase 4 | Pending |
-| MODL-02 | Phase 4 | Pending |
-| MODL-03 | Phase 4 | Pending |
+| MODL-01 | Phase 4 | Complete |
+| MODL-02 | Phase 4 | Complete |
+| MODL-03 | Phase 4 | Complete |
 | TRNG-01 | Phase 5 | Pending |
 | TRNG-03 | Phase 5 | Pending |
 | TRNG-04 | Phase 5 | Pending |

@@ -84,7 +84,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md — NanoGPT single-head transformer with ExtractionMode-controlled QK^T/A/V extraction, get_wvwo(), and comprehensive tests
+- [x] 04-01-PLAN.md — NanoGPT single-head transformer with ExtractionMode-controlled QK^T/A/V extraction, get_wvwo(), and comprehensive tests
 
 ### Phase 5: Training Pipeline
 **Goal**: The transformer can be trained to learn edge structure and block jumper rules from walk data, with a hard sufficiency gate that must pass before any downstream SVD analysis
@@ -192,7 +192,7 @@ Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 co
 | 1. Config, Schema, and Reproducibility Foundation | 2/2 | Complete | 2026-02-24 |
 | 2. DCSBM Graph Generation | 3/3 | Complete | 2026-02-24 |
 | 3. Walk Generation | 2/2 | Complete    | 2026-02-24 |
-| 4. Transformer Model | 0/1 | Not started | - |
+| 4. Transformer Model | 1/1 | Complete | 2026-02-25 |
 | 5. Training Pipeline | 0/2 | Not started | - |
 | 6. Behavioral Evaluation and SVD Collection | 0/3 | Not started | - |
 | 7. Predictive Horizon and Statistical Analysis | 0/2 | Not started | - |

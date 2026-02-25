@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Phase 3 - Walk Generation (next phase)
+**Current focus:** Phase 4 - Transformer Model (complete)
 
 ## Current Position
 
-Phase: 2 of 10 (DCSBM Graph Generation) -- COMPLETE
-Plan: 3 of 3 in current phase (all complete)
-Status: Phase 2 execution complete, verified
-Last activity: 2026-02-24 -- Completed 02-03: Graph caching by config hash
+Phase: 4 of 10 (Transformer Model) -- COMPLETE
+Plan: 1 of 1 in current phase (all complete)
+Status: Phase 4 execution complete, verified
+Last activity: 2026-02-25 -- Completed 04-01: Transformer model with SVD extraction
 
-Progress: [██░░░░░░░░] 20%
+Progress: [████░░░░░░] 40%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 3.4 min
-- Total execution time: ~0.28 hours
+- Total plans completed: 8
+- Average duration: 3.5 min
+- Total execution time: ~0.47 hours
 
 **By Phase:**
 
@@ -29,14 +29,14 @@ Progress: [██░░░░░░░░] 20%
 |-------|-------|-------|----------|
 | 1 | 2/2 | 9 min | 4.5 min |
 | 2 | 3/3 | 8 min | 2.7 min |
+| 3 | 2/2 | 9 min | 4.5 min |
+| 4 | 1/1 | 4 min | 4.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (5 min), 01-02 (4 min), 02-01 (3 min), 02-02 (3 min), 02-03 (2 min)
-- Trend: Accelerating
+- Last 5 plans: 02-03 (2 min), 03-01 (4 min), 03-02 (5 min), 04-01 (4 min)
+- Trend: Stable
 
 *Updated after each plan completion*
-| Phase 03 P01 | 4 min | 2 tasks | 5 files |
-| Phase 03 P02 | 5 min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -60,6 +60,10 @@ Recent decisions affecting current work:
 - [Phase 03]: Convert numpy int types to Python int in JumperEvent for isinstance compatibility — numpy int32 is not recognized as Python int by isinstance checks
 - [Phase 03]: Train seed offset +2000, eval seed offset +3000 from config.seed — Avoids correlation with graph seed and jumper seed (+1000)
 - [Phase 03]: Events stored as parallel arrays in NPZ for efficient serialization — Flat arrays with walk_id grouping enables O(n) reconstruction
+- [04-01]: Dual masking convention: zero-fill for SVD QK^T target, -inf for softmax attention
+- [04-01]: Separate W_q/W_k/W_v/W_o linear layers (not fused) for extraction clarity
+- [04-01]: Residual stream includes pre-block embedding state as index 0 (n_layers+1 total states)
+- [04-01]: WvWo computed as W_v.weight.T @ W_o.weight per layer (nn.Linear convention)
 
 ### Pending Todos
 
@@ -73,6 +77,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-24
-Stopped at: Phase 2 complete, ready for Phase 3
+Last session: 2026-02-25
+Stopped at: Completed 04-01-PLAN.md
 Resume file: None
