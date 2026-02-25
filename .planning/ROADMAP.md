@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Walk Generation** - Directed random walks on DCSBM graphs with corpus validation, jumper metadata, and caching (completed 2026-02-24)
 - [x] **Phase 4: Transformer Model** - NanoGPT-scale single-head transformer with QK^T extraction capability
 - [x] **Phase 5: Training Pipeline** - Cross-entropy training loop with sufficiency gate, checkpointing, and training curve logging
-- [ ] **Phase 6: Behavioral Evaluation and SVD Collection** - Fused forward pass producing 4-class behavioral labels and all SVD metrics with numerical guards
+- [x] **Phase 6: Behavioral Evaluation and SVD Collection** - Fused forward pass producing 4-class behavioral labels and all SVD metrics with numerical guards (completed 2026-02-25)
 - [ ] **Phase 7: Predictive Horizon and Statistical Analysis** - AUROC at each lookback distance, position-matched baselines, multiple comparison correction, and effect sizes
 - [ ] **Phase 8: Visualization** - All publication-quality plot types from event-aligned metrics to predictive horizon heatmaps
 - [ ] **Phase 9: Reporting and Math Verification** - Single-experiment and comparison HTML reports, reproduction blocks, and math verification PDF
@@ -115,9 +115,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — SVD metric functions (8+1) with numerical guards and unit tests against known matrices (TDD)
-- [ ] 06-02-PLAN.md — 4-class behavioral classification with failure_index annotation (TDD)
-- [ ] 06-03-PLAN.md — Fused evaluation pipeline with SVD collection, NPZ output, and tail extension
+- [x] 06-01-PLAN.md — SVD metric functions (8+1) with numerical guards and unit tests against known matrices (TDD)
+- [x] 06-02-PLAN.md — 4-class behavioral classification with failure_index annotation (TDD)
+- [x] 06-03-PLAN.md — Fused evaluation pipeline with SVD collection, NPZ output, and tail extension
 
 ### Phase 7: Predictive Horizon and Statistical Analysis
 **Goal**: For each SVD metric, the system measures how far in advance it can predict rule violations (AUROC at each lookback distance), with position-matched baselines and rigorous statistical controls
@@ -194,7 +194,7 @@ Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 co
 | 3. Walk Generation | 2/2 | Complete    | 2026-02-24 |
 | 4. Transformer Model | 1/1 | Complete | 2026-02-25 |
 | 5. Training Pipeline | 2/2 | Complete | 2026-02-25 |
-| 6. Behavioral Evaluation and SVD Collection | 0/3 | Not started | - |
+| 6. Behavioral Evaluation and SVD Collection | 3/3 | Complete | 2026-02-25 |
 | 7. Predictive Horizon and Statistical Analysis | 0/2 | Not started | - |
 | 8. Visualization | 0/2 | Not started | - |
 | 9. Reporting and Math Verification | 0/3 | Not started | - |

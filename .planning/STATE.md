@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Phase 5 - Training Pipeline (complete)
+**Current focus:** Phase 6 - Behavioral Evaluation and SVD Collection (complete)
 
 ## Current Position
 
-Phase: 5 of 10 (Training Pipeline) -- COMPLETE
-Plan: 2 of 2 in current phase (all complete)
-Status: Phase 5 execution complete, verified
-Last activity: 2026-02-25 -- Completed 05-02: Sufficiency gate and training pipeline
+Phase: 6 of 10 (Behavioral Evaluation and SVD Collection) -- COMPLETE
+Plan: 3 of 3 in current phase (all complete)
+Status: Phase 6 execution complete
+Last activity: 2026-02-25 -- Completed 06-03: Fused evaluation pipeline
 
-Progress: [█████░░░░░] 50%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
-- Average duration: 3.7 min
-- Total execution time: ~0.62 hours
+- Total plans completed: 13
+- Average duration: 3.5 min
+- Total execution time: ~0.76 hours
 
 **By Phase:**
 
@@ -32,9 +32,10 @@ Progress: [█████░░░░░] 50%
 | 3 | 2/2 | 9 min | 4.5 min |
 | 4 | 1/1 | 4 min | 4.0 min |
 | 5 | 2/2 | 7 min | 3.5 min |
+| 6 | 3/3 | 11 min | 3.7 min |
 
 **Recent Trend:**
-- Last 5 plans: 03-01 (4 min), 03-02 (5 min), 04-01 (4 min), 05-01 (2 min), 05-02 (5 min)
+- Last 5 plans: 04-01 (4 min), 05-01 (2 min), 05-02 (5 min), 06-01 (3 min), 06-02 (3 min), 06-03 (5 min)
 - Trend: Stable
 
 *Updated after each plan completion*
@@ -73,6 +74,15 @@ Recent decisions affecting current work:
 - [05-02]: Gate thresholds as module constants: EDGE_COMPLIANCE_THRESHOLD=0.95, RULE_COMPLIANCE_THRESHOLD=0.80
 - [05-02]: Self-loops included in complete graph fixtures for test correctness
 - [05-02]: Pipeline generates experiment_id for checkpoint directory naming
+- [06-01]: EPS=1e-12 for all SVD metric denominator guards, CONDITION_CAP=1e6
+- [06-01]: Grassmannian distance default k=2 subspace dimension
+- [06-01]: compute_all_metrics conditionally includes spectral gaps based on S.shape[-1]
+- [06-02]: Active jumper constraints tracked as (deadline_step, target_block) tuples
+- [06-02]: failure_index records step index t where rule_outcome[t]==VIOLATED
+- [06-03]: AVWo = (A @ V) @ W_o.weight.T matching actual residual stream contribution
+- [06-03]: read_write_alignment only for square matrices (WvWo); skipped for QK^T, AVWo
+- [06-03]: WvWo SVD computed once and broadcast (static weight matrices)
+- [06-03]: NaN for WvWo Grassmannian distance (static, no step-to-step change)
 
 ### Pending Todos
 
@@ -80,12 +90,12 @@ None yet.
 
 ### Blockers/Concerns
 
-- Phase 6 is the largest phase (12 requirements) due to fused evaluation constraint; may need careful plan decomposition
 - Phase 3 research flag: SVD memory footprint for w=256 needs profiling on anchor config before sweep planning
 - pylatex stability on RunPod needs verification before Phase 9 math PDF work
 
 ## Session Continuity
 
 Last session: 2026-02-25
-Stopped at: Completed Phase 5 (05-01-PLAN.md and 05-02-PLAN.md)
+Stopped at: Completed Phase 6 (all 3 plans: 06-01, 06-02, 06-03). Verification passed.
 Resume file: None
+Next action: Begin Phase 7 (Predictive Horizon and Statistical Analysis)
