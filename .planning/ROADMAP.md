@@ -112,12 +112,12 @@ Plans:
   3. Seven scalar metrics per target per step (stable rank, spectral entropy, spectral gap + generalized k=2,4, condition number, rank-1 residual norm, read-write alignment for WvWo) are computed and stored as token-level time series in token_metrics.npz keyed by target.metric
   4. SVD metrics are collected only for positions >= w (context window warmup), and numerical guards (NaN/Inf clamping, epsilon in entropy, condition number cap at 1e6) prevent any NaN or Inf in stored metrics
   5. Each SVD metric function has a unit test that verifies its output against an analytically known matrix decomposition for each target type
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 06-01: Fused behavioral evaluation with 4-class classification
-- [ ] 06-02: SVD metric computation functions with unit tests
-- [ ] 06-03: Batched SVD collection pipeline with numerical guards and storage
+- [ ] 06-01-PLAN.md — SVD metric functions (8+1) with numerical guards and unit tests against known matrices (TDD)
+- [ ] 06-02-PLAN.md — 4-class behavioral classification with failure_index annotation (TDD)
+- [ ] 06-03-PLAN.md — Fused evaluation pipeline with SVD collection, NPZ output, and tail extension
 
 ### Phase 7: Predictive Horizon and Statistical Analysis
 **Goal**: For each SVD metric, the system measures how far in advance it can predict rule violations (AUROC at each lookback distance), with position-matched baselines and rigorous statistical controls
