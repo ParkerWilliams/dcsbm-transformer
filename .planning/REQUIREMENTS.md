@@ -41,10 +41,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Behavioral Evaluation
 
-- [ ] **EVAL-01**: System classifies each generation step into 4-class outcome: edge valid/invalid crossed with rule followed/violated/not-applicable
-- [ ] **EVAL-02**: System checks edge validity (chosen next token corresponds to a valid directed edge in DCSBM) at each step
-- [ ] **EVAL-03**: System checks rule compliance (at step r from a block jumper vertex, the walk lands in the required target block) at each step
-- [ ] **EVAL-04**: System annotates each generated sequence with failure_index (index of first rule violation), or null for correct sequences
+- [x] **EVAL-01**: System classifies each generation step into 4-class outcome: edge valid/invalid crossed with rule followed/violated/not-applicable
+- [x] **EVAL-02**: System checks edge validity (chosen next token corresponds to a valid directed edge in DCSBM) at each step
+- [x] **EVAL-03**: System checks rule compliance (at step r from a block jumper vertex, the walk lands in the required target block) at each step
+- [x] **EVAL-04**: System annotates each generated sequence with failure_index (index of first rule violation), or null for correct sequences
 - [ ] **EVAL-05**: Behavioral evaluation and SVD collection happen in a single fused forward pass (not separate inference runs)
 
 ### SVD Metrics
@@ -154,10 +154,10 @@ Deferred to future release. Tracked but not in current roadmap.
 | TRNG-04 | Phase 5 | Complete |
 | TRNG-05 | Phase 5 | Complete |
 | TRNG-06 | Phase 5 | Complete |
-| EVAL-01 | Phase 6 | Pending |
-| EVAL-02 | Phase 6 | Pending |
-| EVAL-03 | Phase 6 | Pending |
-| EVAL-04 | Phase 6 | Pending |
+| EVAL-01 | Phase 6 | Complete |
+| EVAL-02 | Phase 6 | Complete |
+| EVAL-03 | Phase 6 | Complete |
+| EVAL-04 | Phase 6 | Complete |
 | EVAL-05 | Phase 6 | Pending |
 | SVD-01 | Phase 6 | Pending |
 | SVD-02 | Phase 6 | Complete |
