@@ -45,16 +45,16 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **EVAL-02**: System checks edge validity (chosen next token corresponds to a valid directed edge in DCSBM) at each step
 - [x] **EVAL-03**: System checks rule compliance (at step r from a block jumper vertex, the walk lands in the required target block) at each step
 - [x] **EVAL-04**: System annotates each generated sequence with failure_index (index of first rule violation), or null for correct sequences
-- [ ] **EVAL-05**: Behavioral evaluation and SVD collection happen in a single fused forward pass (not separate inference runs)
+- [x] **EVAL-05**: Behavioral evaluation and SVD collection happen in a single fused forward pass (not separate inference runs)
 
 ### SVD Metrics
 
-- [ ] **SVD-01**: System computes SVD on three targets per attention layer at every token step during evaluation: (1) QK^T — routing stability, (2) WvWo — OV circuit stability (input-agnostic), (3) AVWo — net residual stream update stability
+- [x] **SVD-01**: System computes SVD on three targets per attention layer at every token step during evaluation: (1) QK^T — routing stability, (2) WvWo — OV circuit stability (input-agnostic), (3) AVWo — net residual stream update stability
 - [x] **SVD-02**: System computes SVD using torch.linalg.svd with full_matrices=False, batched for efficiency on GPU
 - [x] **SVD-03**: System computes 7 scalar metrics per SVD target per token step: stable rank (||M||²_F/||M||²_2), spectral entropy (-Σ pᵢ log pᵢ where pᵢ=σᵢ/Σσ), spectral gap (σ₁-σ₂ and generalized σₖ-σₖ₊₁ for k=2,4), condition number (σ₁/σₙ), rank-1 residual norm (||M-σ₁u₁v₁ᵀ||_F/||M||_F), and read-write subspace alignment (WvWo only: cosine angle between top left and right singular vectors in d_model space)
-- [ ] **SVD-04**: System stores all SVD metrics as token-level time series in result.json/token_metrics.npz keyed by target and metric name (e.g., qkt.stable_rank, wvwo.spectral_entropy, avwo.condition_number)
+- [x] **SVD-04**: System stores all SVD metrics as token-level time series in result.json/token_metrics.npz keyed by target and metric name (e.g., qkt.stable_rank, wvwo.spectral_entropy, avwo.condition_number)
 - [x] **SVD-05**: System includes numerical guards: NaN/Inf clamping, epsilon in entropy computation, condition number capped at 1e6, Grassmannian distance for subspace tracking
-- [ ] **SVD-06**: System collects SVD metrics only for positions >= w (context window warmup) to avoid padding artifacts
+- [x] **SVD-06**: System collects SVD metrics only for positions >= w (context window warmup) to avoid padding artifacts
 - [x] **SVD-07**: Each SVD metric function has unit tests against analytically known matrix decompositions for each target type
 
 ### Predictive Horizon Analysis
@@ -158,13 +158,13 @@ Deferred to future release. Tracked but not in current roadmap.
 | EVAL-02 | Phase 6 | Complete |
 | EVAL-03 | Phase 6 | Complete |
 | EVAL-04 | Phase 6 | Complete |
-| EVAL-05 | Phase 6 | Pending |
-| SVD-01 | Phase 6 | Pending |
+| EVAL-05 | Phase 6 | Complete |
+| SVD-01 | Phase 6 | Complete |
 | SVD-02 | Phase 6 | Complete |
 | SVD-03 | Phase 6 | Complete |
-| SVD-04 | Phase 6 | Pending |
+| SVD-04 | Phase 6 | Complete |
 | SVD-05 | Phase 6 | Complete |
-| SVD-06 | Phase 6 | Pending |
+| SVD-06 | Phase 6 | Complete |
 | SVD-07 | Phase 6 | Complete |
 | PRED-01 | Phase 7 | Pending |
 | PRED-02 | Phase 7 | Pending |
