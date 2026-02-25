@@ -26,7 +26,7 @@ Requirements for initial release. Each maps to roadmap phases.
 ### Model
 
 - [ ] **MODL-01**: System implements a NanoGPT-scale transformer with configurable d_model (64, 128, 256), n_layers (2, 4, 6), and exactly 1 attention head
-- [ ] **MODL-02**: Model's single attention head returns QK^T matrix alongside logits via a `return_qkt=True` flag for SVD analysis
+- [ ] **MODL-02**: Model's single attention head exposes internal components for SVD analysis via a `return_internals=True` flag: raw QK^T matrix (causal-masked, zero-filled), attention weights A, value matrix V, and access to Wv/Wo weight parameters — enabling three SVD targets (QK^T routing, WvWo OV circuit, AVWo net residual update)
 - [ ] **MODL-03**: Model vocabulary equals the number of graph vertices (tokens are vertex IDs)
 
 ### Training
@@ -49,13 +49,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### SVD Metrics
 
-- [ ] **SVD-01**: System extracts the full QK^T matrix from the single attention head at every token step during evaluation
+- [ ] **SVD-01**: System computes SVD on three targets per attention layer at every token step during evaluation: (1) QK^T — routing stability, (2) WvWo — OV circuit stability (input-agnostic), (3) AVWo — net residual stream update stability
 - [ ] **SVD-02**: System computes SVD using torch.linalg.svd with full_matrices=False, batched for efficiency on GPU
-- [ ] **SVD-03**: System computes all ~20 specified SVD metrics per token step: principal vector direction change, dominant subspace membership change, principal angles (Grassmannian distance), condition number, spectral gap, generalized gap (k=2,4,8), singular value entropy, stable rank, participation ratio, low-rank approximation error (k=2,4,8), angular velocity, subspace drift, singular value velocity, condition number velocity, left SV alignment with current token embedding, right SV alignment with predicted token embedding, dominant subspace coherence with embedding matrix, effective rank within context window, singular value variance
-- [ ] **SVD-04**: System stores all SVD metrics as token-level time series in result.json/token_metrics.npz keyed by metric name
-- [ ] **SVD-05**: System includes numerical guards: NaN/Inf clamping, epsilon in entropy computation, condition number capped at 1e6, Grassmannian distance for subspace tracking instead of single vector direction
+- [ ] **SVD-03**: System computes 7 scalar metrics per SVD target per token step: stable rank (||M||²_F/||M||²_2), spectral entropy (-Σ pᵢ log pᵢ where pᵢ=σᵢ/Σσ), spectral gap (σ₁-σ₂ and generalized σₖ-σₖ₊₁ for k=2,4), condition number (σ₁/σₙ), rank-1 residual norm (||M-σ₁u₁v₁ᵀ||_F/||M||_F), and read-write subspace alignment (WvWo only: cosine angle between top left and right singular vectors in d_model space)
+- [ ] **SVD-04**: System stores all SVD metrics as token-level time series in result.json/token_metrics.npz keyed by target and metric name (e.g., qkt.stable_rank, wvwo.spectral_entropy, avwo.condition_number)
+- [ ] **SVD-05**: System includes numerical guards: NaN/Inf clamping, epsilon in entropy computation, condition number capped at 1e6, Grassmannian distance for subspace tracking
 - [ ] **SVD-06**: System collects SVD metrics only for positions >= w (context window warmup) to avoid padding artifacts
-- [ ] **SVD-07**: Each SVD metric has unit tests against analytically known matrix decompositions
+- [ ] **SVD-07**: Each SVD metric function has unit tests against analytically known matrix decompositions for each target type
 
 ### Predictive Horizon Analysis
 

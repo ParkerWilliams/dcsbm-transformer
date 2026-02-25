@@ -74,12 +74,12 @@ Plans:
 - [ ] 03-02-PLAN.md — Corpus assembly: train/eval split, validation, NPZ storage, and walk caching
 
 ### Phase 4: Transformer Model
-**Goal**: A minimal, fully transparent NanoGPT-scale transformer exists that can process token sequences and expose its internal QK^T attention matrix for analysis
+**Goal**: A minimal, fully transparent NanoGPT-scale transformer exists that can process token sequences and expose its internal attention components (QK^T, Wv, Wo, A, V) for three-target SVD analysis
 **Depends on**: Phase 1
 **Requirements**: MODL-01, MODL-02, MODL-03
 **Success Criteria** (what must be TRUE):
   1. The transformer accepts configurable d_model (64, 128, 256), n_layers (2, 4, 6), and enforces exactly 1 attention head
-  2. With return_qkt=True, the forward pass returns both logits and the QK^T matrix, and the QK^T matrix has the expected shape (seq_len, seq_len)
+  2. With return_internals=True, the forward pass returns logits and internal attention components: raw QK^T (causal-masked with zero fill, shape w×w), attention weights A, value matrix V, and access to Wv/Wo parameters — enabling construction of all three SVD targets (QK^T, WvWo, AVWo)
   3. The vocabulary size equals the number of graph vertices (token IDs are vertex IDs), and the model handles the anchor config vocabulary (n=500) correctly
 **Plans**: TBD
 
@@ -103,15 +103,15 @@ Plans:
 - [ ] 05-02: Sufficiency gate and checkpoint management
 
 ### Phase 6: Behavioral Evaluation and SVD Collection
-**Goal**: A single evaluation pass through generated sequences produces both behavioral labels (4-class outcomes) and all SVD metrics from the QK^T matrix, with numerical stability guarantees
+**Goal**: A single evaluation pass through generated sequences produces both behavioral labels (4-class outcomes) and SVD metrics across three targets (QK^T routing, WvWo OV circuit, AVWo net residual update) with numerical stability guarantees
 **Depends on**: Phase 5
 **Requirements**: EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, SVD-01, SVD-02, SVD-03, SVD-04, SVD-05, SVD-06, SVD-07
 **Success Criteria** (what must be TRUE):
   1. Each generation step is classified into the 4-class outcome (edge valid/invalid x rule followed/violated/not-applicable) and sequences are annotated with failure_index
-  2. The QK^T matrix is extracted at every token step and SVD is computed using batched torch.linalg.svd with full_matrices=False on GPU
-  3. All ~20 specified SVD metrics are computed per token step and stored as token-level time series in token_metrics.npz
-  4. SVD metrics are collected only for positions >= w (context window warmup), and numerical guards (NaN/Inf clamping, epsilon in entropy, condition number cap at 1e6, Grassmannian distance for subspace tracking) prevent any NaN or Inf in stored metrics
-  5. Each SVD metric function has a unit test that verifies its output against an analytically known matrix decomposition
+  2. SVD is computed on three targets per layer at every token step: QK^T (routing stability), WvWo (OV circuit stability), AVWo (net residual update stability), using batched torch.linalg.svd with full_matrices=False on GPU
+  3. Seven scalar metrics per target per step (stable rank, spectral entropy, spectral gap + generalized k=2,4, condition number, rank-1 residual norm, read-write alignment for WvWo) are computed and stored as token-level time series in token_metrics.npz keyed by target.metric
+  4. SVD metrics are collected only for positions >= w (context window warmup), and numerical guards (NaN/Inf clamping, epsilon in entropy, condition number cap at 1e6) prevent any NaN or Inf in stored metrics
+  5. Each SVD metric function has a unit test that verifies its output against an analytically known matrix decomposition for each target type
 **Plans**: TBD
 
 Plans:
