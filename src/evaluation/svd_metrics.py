@@ -202,6 +202,11 @@ def compute_all_metrics(
     # Full-SVD metrics (only when U and Vh provided)
     if U is not None and Vh is not None:
         metrics["rank1_residual_norm"] = rank1_residual_norm(U, S, Vh)
-        metrics["read_write_alignment"] = read_write_alignment(U, Vh)
+        # read_write_alignment only meaningful when U and Vh have compatible
+        # last dimensions (square or matching m==n in the original matrix)
+        u_dim = U.shape[-2]  # m (rows of original matrix)
+        v_dim = Vh.shape[-1]  # n (cols of original matrix)
+        if u_dim == v_dim:
+            metrics["read_write_alignment"] = read_write_alignment(U, Vh)
 
     return metrics
