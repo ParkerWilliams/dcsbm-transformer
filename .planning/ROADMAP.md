@@ -81,10 +81,10 @@ Plans:
   1. The transformer accepts configurable d_model (64, 128, 256), n_layers (2, 4, 6), and enforces exactly 1 attention head
   2. With return_internals=True, the forward pass returns logits and internal attention components: raw QK^T (causal-masked with zero fill, shape w×w), attention weights A, value matrix V, and access to Wv/Wo parameters — enabling construction of all three SVD targets (QK^T, WvWo, AVWo)
   3. The vocabulary size equals the number of graph vertices (token IDs are vertex IDs), and the model handles the anchor config vocabulary (n=500) correctly
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: NanoGPT transformer with single-head attention and QK^T extraction
+- [ ] 04-01-PLAN.md — NanoGPT single-head transformer with ExtractionMode-controlled QK^T/A/V extraction, get_wvwo(), and comprehensive tests
 
 ### Phase 5: Training Pipeline
 **Goal**: The transformer can be trained to learn edge structure and block jumper rules from walk data, with a hard sufficiency gate that must pass before any downstream SVD analysis
@@ -191,7 +191,7 @@ Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 co
 |-------|----------------|--------|-----------|
 | 1. Config, Schema, and Reproducibility Foundation | 2/2 | Complete | 2026-02-24 |
 | 2. DCSBM Graph Generation | 3/3 | Complete | 2026-02-24 |
-| 3. Walk Generation | 0/2 | Complete    | 2026-02-24 |
+| 3. Walk Generation | 2/2 | Complete    | 2026-02-24 |
 | 4. Transformer Model | 0/1 | Not started | - |
 | 5. Training Pipeline | 0/2 | Not started | - |
 | 6. Behavioral Evaluation and SVD Collection | 0/3 | Not started | - |
