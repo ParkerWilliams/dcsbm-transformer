@@ -59,13 +59,12 @@ def small_graph():
     # Create block assignments: [0,0,0,0,0, 1,1,1,1,1, 2,2,2,2,2, 3,3,3,3,3]
     block_assignments = np.repeat(np.arange(K), block_size).astype(np.int32)
 
-    # Create a complete graph (all edges valid) for simplicity in some tests
+    # Create a complete graph including self-loops (all edges valid)
     rows, cols = [], []
     for i in range(n):
         for j in range(n):
-            if i != j:
-                rows.append(i)
-                cols.append(j)
+            rows.append(i)
+            cols.append(j)
     data = np.ones(len(rows), dtype=np.float64)
     adjacency = csr_matrix((data, (rows, cols)), shape=(n, n))
 
@@ -119,8 +118,8 @@ def small_graph_sparse():
 def jumpers():
     """Block jumpers: vertex 0 (block 0) targets block 2, vertex 5 (block 1) targets block 3."""
     return [
-        JumperInfo(vertex_id=0, block=0, target_block=2, r=10),
-        JumperInfo(vertex_id=5, block=1, target_block=3, r=10),
+        JumperInfo(vertex_id=0, source_block=0, target_block=2, r=10),
+        JumperInfo(vertex_id=5, source_block=1, target_block=3, r=10),
     ]
 
 

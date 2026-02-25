@@ -56,12 +56,12 @@ def complete_graph():
     block_size = n // K
     block_assignments = np.repeat(np.arange(K), block_size).astype(np.int32)
 
+    # Include self-loops so all possible token transitions are valid edges
     rows, cols = [], []
     for i in range(n):
         for j in range(n):
-            if i != j:
-                rows.append(i)
-                cols.append(j)
+            rows.append(i)
+            cols.append(j)
     data = np.ones(len(rows), dtype=np.float64)
     adjacency = csr_matrix((data, (rows, cols)), shape=(n, n))
 
@@ -77,8 +77,8 @@ def complete_graph():
 @pytest.fixture
 def jumpers():
     return [
-        JumperInfo(vertex_id=0, block=0, target_block=2, r=10),
-        JumperInfo(vertex_id=5, block=1, target_block=3, r=10),
+        JumperInfo(vertex_id=0, source_block=0, target_block=2, r=10),
+        JumperInfo(vertex_id=5, source_block=1, target_block=3, r=10),
     ]
 
 
