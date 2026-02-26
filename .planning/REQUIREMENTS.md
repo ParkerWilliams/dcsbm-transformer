@@ -111,9 +111,9 @@ Requirements for journal feedback milestone. Each maps to roadmap phases 11-16.
 ### Null Model Baseline
 
 - [x] **NULL-01**: System generates evaluation walks with zero block jumpers (same graph, same trained model) to produce null Grassmannian drift distribution
-- [ ] **NULL-02**: System computes position-matched statistical comparison (Mann-Whitney U, Cohen's d) of Grassmannian drift between null and violation sequences at each lookback distance
+- [x] **NULL-02**: System computes position-matched statistical comparison (Mann-Whitney U, Cohen's d) of Grassmannian drift between null and violation sequences at each lookback distance
 - [x] **NULL-03**: System computes Marchenko-Pastur reference distribution for QK^T singular values at the anchor config matrix dimensions
-- [ ] **NULL-04**: System stores null model results in result.json `null_model` block and renders null overlay on event-aligned plots
+- [x] **NULL-04**: System stores null model results in result.json `null_model` block and renders null overlay on event-aligned plots
 
 ### Softmax Filtering Bound
 
@@ -201,9 +201,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | PREG-02 | Phase 11 | Pending |
 | PREG-03 | Phase 11 | Pending |
 | NULL-01 | Phase 12 | Complete |
-| NULL-02 | Phase 12 | Pending |
+| NULL-02 | Phase 12 | Complete |
 | NULL-03 | Phase 12 | Complete |
-| NULL-04 | Phase 12 | Pending |
+| NULL-04 | Phase 12 | Complete |
 | PRCL-01 | Phase 13 | Pending |
 | PRCL-02 | Phase 13 | Pending |
 | PRCL-03 | Phase 13 | Pending |

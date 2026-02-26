@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-26)
 
 ## Current Position
 
-Phase: 12 of 16 (Null Model Baseline)
-Plan: 1 of 2 in current phase
-Status: Executing
-Last activity: 2026-02-26 -- Completed 12-01-PLAN.md (null walk generator, MP reference)
+Phase: 12 of 16 (Null Model Baseline) -- COMPLETE
+Plan: 2 of 2 in current phase
+Status: Phase Complete
+Last activity: 2026-02-26 -- Completed 12-02-PLAN.md (statistical comparison, visualization, reporting)
 
-Progress: [##░░░░░░░░░░░░] 1/14 plans (7%)
+Progress: [###░░░░░░░░░░░] 2/14 plans (14%)
 
 ## Performance Metrics
 
@@ -37,13 +37,14 @@ Progress: [##░░░░░░░░░░░░] 1/14 plans (7%)
 - Total execution time: ~1.25 hours
 
 **Velocity (v1.1):**
-- Total plans completed: 1
-- Average duration: 5 min
-- Total execution time: 5 min
+- Total plans completed: 2
+- Average duration: 6.5 min
+- Total execution time: 13 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 12    | 01   | 5min     | 2     | 2     |
+| 12    | 02   | 8min     | 3     | 8     |
 
 ## Accumulated Context
 
@@ -60,6 +61,10 @@ Recent decisions affecting current work:
 - [12-01]: Column-filtered adjacency (zero jumper columns) instead of discard approach for null walk generation
 - [12-01]: Data-calibrated sigma2 for MP reference via mean formula sigma2 = mean(sv^2) / (1 + gamma)
 - [12-01]: Vectorized CDF for scipy.stats.kstest compatibility
+- [12-02]: Separate Holm-Bonferroni family for null model MW-U tests (across lookback distances only)
+- [12-02]: signal_exceeds_noise requires both rejection + Cohen's d >= 0.5 (matching pre-registration Gate 2)
+- [12-02]: Null overlay gray color scheme (0.7 band, 0.5 median) for visual noise floor
+- [12-02]: Backward-compatible schema: null_model block validated only when present
 
 ### Pending Todos
 
@@ -77,6 +82,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 12-01-PLAN.md
+Stopped at: Completed 12-02-PLAN.md (Phase 12 complete)
 Resume file: None
-Next action: Execute 12-02-PLAN.md (statistical comparison, result storage, visualization)
+Next action: Begin Phase 13 planning
