@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Experiment Comparison</title>
+  <style>
+    /* Academic style: serif fonts, paper-like feel */
+    body {
+      font-family: Georgia, "Times New Roman", Times, serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2em 1.5em;
+      background: #fff;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-size: 1.8em;
+      border-bottom: 2px solid #333;
+      padding-bottom: 0.3em;
+      margin-bottom: 0.5em;
+    }
+
+    h2 {
+      font-size: 1.4em;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.2em;
+      margin-top: 2em;
+    }
+
+    h3 {
+      font-size: 1.15em;
+      margin-top: 1.5em;
+    }
+
+    .header-meta {
+      color: #666;
+      font-size: 0.95em;
+      margin-bottom: 1.5em;
+    }
+
+    .header-meta p {
+      margin: 0.2em 0;
+    }
+
+    /* Tables */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+      font-size: 0.95em;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5em 0.8em;
+      text-align: left;
+    }
+
+    th {
+      background: #f5f5f5;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background: #fafafa;
+    }
+
+    /* Diff highlight for rows where configs differ */
+    .diff-highlight {
+      background: #fff3cd !important;
+    }
+
+    /* Verdict box */
+    .verdict-box {
+      background: #f0f7ff;
+      border: 1px solid #b0d0f0;
+      border-radius: 4px;
+      padding: 1em 1.5em;
+      margin: 1em 0;
+      font-size: 1.05em;
+    }
+
+    /* Sparkline cells */
+    .sparkline-cell {
+      text-align: center;
+      padding: 0.2em 0.4em;
+    }
+
+    .sparkline-cell img {
+      vertical-align: middle;
+    }
+
+    /* Figures */
+    .figure-container {
+      margin: 1.5em 0;
+      text-align: center;
+    }
+
+    .figure-container img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .figure-container .figure-title {
+      font-weight: bold;
+      margin-bottom: 0.5em;
+      font-size: 1.05em;
+    }
+
+    /* Not available placeholder */
+    .not-available {
+      color: #999;
+      font-style: italic;
+    }
+
+    /* Dirty warning */
+    .dirty-warning {
+      color: #cc6600;
+      font-weight: bold;
+    }
+
+    /* Reproduction block */
+    .repro-block {
+      position: relative;
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 1em;
+      margin: 1em 0;
+    }
+
+    .repro-block pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.9em;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5em;
+      right: 0.5em;
+      background: #e0e0e0;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 0.3em 0.8em;
+      cursor: pointer;
+      font-size: 0.85em;
+      font-family: sans-serif;
+    }
+
+    .copy-btn:hover {
+      background: #d0d0d0;
+    }
+
+    /* Footer */
+    .report-footer {
+      margin-top: 3em;
+      padding-top: 1em;
+      border-top: 1px solid #ccc;
+      color: #999;
+      font-size: 0.85em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <h1>Experiment Comparison</h1>
+  <div class="header-meta">
+    <p><strong>Experiments:</strong>
+    {% for eid in experiment_ids %}
+      {{ eid }}{% if not loop.last %}, {% endif %}
+    {% endfor %}
+    </p>
+    <p><strong>Labels:</strong>
+    {% for i in range(labels|length) %}
+      {{ labels[i] }} = {{ experiment_ids[i] }}{% if not loop.last %}; {% endif %}
+    {% endfor %}
+    </p>
+  </div>
+
+  <!-- Summary Verdict -->
+  <h2>Summary Verdict</h2>
+  <div class="verdict-box">
+    {{ verdict }}
+  </div>
+
+  <!-- Scalar Metrics Comparison -->
+  <h2>Scalar Metrics Comparison</h2>
+  {% if metric_rows %}
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        {% for i in range(labels|length) %}
+        <th>{{ labels[i] }} ({{ experiment_ids[i] }})</th>
+        {% endfor %}
+        <th>Sparkline</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in metric_rows %}
+      <tr>
+        <td>{{ row.name }}</td>
+        {% for v in row.values %}
+        <td>
+          {% if v is none %}
+          <span class="not-available">N/A</span>
+          {% elif v is number %}
+          {{ "%.6f"|format(v) }}
+          {% else %}
+          {{ v }}
+          {% endif %}
+        </td>
+        {% endfor %}
+        <td class="sparkline-cell">
+          {% if row.sparkline %}
+          <img src="{{ row.sparkline }}" alt="sparkline for {{ row.name }}">
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="not-available">No scalar metrics available.</p>
+  {% endif %}
+
+  <!-- Config Diff -->
+  <h2>Configuration Comparison</h2>
+  {% if config_diff %}
+  <table>
+    <thead>
+      <tr>
+        <th>Parameter</th>
+        {% for i in range(labels|length) %}
+        <th>{{ labels[i] }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in config_diff %}
+      <tr{% if row.differs %} class="diff-highlight"{% endif %}>
+        <td>{{ row.param }}</td>
+        {% for v in row.values %}
+        <td>{{ v }}</td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="not-available">No configuration data available.</p>
+  {% endif %}
+
+  <!-- Curve Overlays -->
+  <h2>Curve Overlays</h2>
+  {% if curve_overlays %}
+  {% for fig in curve_overlays %}
+  <div class="figure-container">
+    <div class="figure-title">{{ fig.title }}</div>
+    <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="not-available">No overlayable figures found across experiments.</p>
+  {% endif %}
+
+  <!-- Reproduction Blocks -->
+  <h2>Reproduction</h2>
+  {% for repro in reproductions %}
+  <h3>Experiment {{ repro.label }}: {{ repro.experiment_id }}</h3>
+
+  {% if repro.dirty_warning %}
+  <p class="dirty-warning">{{ repro.dirty_warning }}</p>
+  {% endif %}
+
+  <p><strong>1. Checkout code version</strong></p>
+  <div class="repro-block">
+    <button class="copy-btn" onclick="copyToClipboard(this, 'checkout-{{ repro.label }}')">Copy</button>
+    <pre id="checkout-{{ repro.label }}">{{ repro.checkout_cmd }}</pre>
+  </div>
+
+  <p><strong>2. Run experiment</strong></p>
+  <div class="repro-block">
+    <button class="copy-btn" onclick="copyToClipboard(this, 'run-{{ repro.label }}')">Copy</button>
+    <pre id="run-{{ repro.label }}">{{ repro.run_cmd }}</pre>
+  </div>
+
+  <p><strong>Seed:</strong> {{ repro.seed }}</p>
+  {% endfor %}
+
+  <!-- Footer -->
+  <div class="report-footer">
+    Generated by DCSBM-Transformer reporting module
+  </div>
+
+  <script>
+    function copyToClipboard(btn, elementId) {
+      var text = document.getElementById(elementId).textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+        }).catch(function() {
+          fallbackCopy(btn, text);
+        });
+      } else {
+        fallbackCopy(btn, text);
+      }
+    }
+
+    function fallbackCopy(btn, text) {
+      var textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+      } catch (e) {
+        btn.textContent = 'Failed';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+      }
+      document.body.removeChild(textarea);
+    }
+  </script>
+
+</body>
+</html>
