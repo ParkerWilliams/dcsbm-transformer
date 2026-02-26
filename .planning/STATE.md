@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 
 ## Current Position
 
-Phase: 8 of 10 (Visualization) -- COMPLETE
-Plan: 2 of 2 in current phase
-Status: Phase 8 complete -- all plans executed
-Last activity: 2026-02-26 -- Completed 08-02: Distributions, heatmap, render orchestrator
+Phase: 9 of 10 (Reporting and Math Verification)
+Plan: 1 of 3 in current phase
+Status: Executing Phase 9 -- Plan 01 complete
+Last activity: 2026-02-26 -- Completed 09-01: Single-experiment report generator
 
-Progress: [████████░░] 80%
+Progress: [████████░░] 82%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
-- Average duration: 3.8 min
-- Total execution time: ~1.08 hours
+- Total plans completed: 18
+- Average duration: 3.7 min
+- Total execution time: ~1.10 hours
 
 **By Phase:**
 
@@ -35,9 +35,10 @@ Progress: [████████░░] 80%
 | 6 | 3/3 | 11 min | 3.7 min |
 | 7 | 2/2 | 14 min | 7.0 min |
 | 8 | 2/2 | 10 min | 5.0 min |
+| 9 | 1/3 | 3 min | 3.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 06-03 (5 min), 07-01 (8 min), 07-02 (6 min), 08-01 (5 min), 08-02 (5 min)
+- Last 5 plans: 07-01 (8 min), 07-02 (6 min), 08-01 (5 min), 08-02 (5 min), 09-01 (3 min)
 - Trend: Stable at ~5 min per plan
 
 *Updated after each plan completion*
@@ -103,6 +104,9 @@ Recent decisions affecting current work:
 - [08-02]: Box plots as default distribution type
 - [08-02]: YlOrRd colormap for horizon heatmap
 - [08-02]: render_all wraps each plot in try/except for fault isolation
+- [09-01]: Figure categorization by filename prefix for automatic template slot assignment
+- [09-01]: Config tables structured as Model/Training/Data categories with N/A defaults
+- [09-01]: Statistical tests extracted from metrics.statistical_controls.headline_comparison.primary_metrics
 
 ### Pending Todos
 
@@ -116,6 +120,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 08-02 (distributions, heatmap, render). Phase 8 complete.
+Stopped at: Completed 09-01 (single-experiment report generator). Phase 9 in progress.
 Resume file: None
-Next action: Plan and execute Phase 9 (Reporting and Math Verification)
+Next action: Execute Phase 9 Plan 02 (comparison report)

@@ -87,9 +87,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Reporting
 
-- [ ] **REPT-01**: System generates self-contained single-experiment HTML report with base64-embedded figures, covering: header, configuration, scalar metrics, curves, confusion matrix, statistical tests, sequence analysis, and reproduction command
+- [x] **REPT-01**: System generates self-contained single-experiment HTML report with base64-embedded figures, covering: header, configuration, scalar metrics, curves, confusion matrix, statistical tests, sequence analysis, and reproduction command
 - [ ] **REPT-02**: System generates comparison HTML report across multiple experiments with: scalar metrics comparison table, curve overlays, config diff table, and aligned sequence plot overlays
-- [ ] **REPT-03**: Every report includes a reproduction block with git checkout command and full CLI arguments
+- [x] **REPT-03**: Every report includes a reproduction block with git checkout command and full CLI arguments
 
 ### Statistical Rigor
 
@@ -184,9 +184,9 @@ Deferred to future release. Tracked but not in current roadmap.
 | PLOT-06 | Phase 8 | Complete |
 | PLOT-07 | Phase 8 | Complete |
 | PLOT-08 | Phase 8 | Complete |
-| REPT-01 | Phase 9 | Pending |
+| REPT-01 | Phase 9 | Complete |
 | REPT-02 | Phase 9 | Pending |
-| REPT-03 | Phase 9 | Pending |
+| REPT-03 | Phase 9 | Complete |
 | MATH-01 | Phase 9 | Pending |
 | MATH-02 | Phase 9 | Pending |
 | MGMT-02 | Phase 10 | Pending |
