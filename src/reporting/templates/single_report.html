@@ -137,6 +137,34 @@
       background: #d0d0d0;
     }
 
+    /* Collapsible enrichment sections (Phase 13) */
+    details.enrichment-section {
+      margin-top: 2em;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 0;
+    }
+    details.enrichment-section summary {
+      padding: 0.8em 1em;
+      background: #f5f5f5;
+      cursor: pointer;
+      list-style: none;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+    details.enrichment-section summary::-webkit-details-marker { display: none; }
+    details.enrichment-section summary::before {
+      content: "+ ";
+      font-weight: bold;
+      margin-right: 0.3em;
+    }
+    details.enrichment-section[open] summary::before {
+      content: "- ";
+    }
+    details.enrichment-section .section-content {
+      padding: 1em;
+    }
+
     /* Footer */
     .report-footer {
       margin-top: 3em;
@@ -236,6 +264,163 @@
   {% endfor %}
   {% else %}
   <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- PR Curves (PRCL-01, PRCL-03) -->
+  {% if pr_curves or pr_curve_figures %}
+  <details class="enrichment-section">
+    <summary>Precision-Recall Curves</summary>
+    <div class="section-content">
+      {% if pr_curves and pr_curves.by_r_value %}
+      <h3>AUPRC Summary</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>r-value</th>
+            <th>Metric</th>
+            <th>AUPRC (by lookback j=1..r)</th>
+            <th>Prevalence</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r_str, r_data in pr_curves.by_r_value|dictsort %}
+          {% if r_data.by_metric %}
+          {% for metric_name, m_data in r_data.by_metric|dictsort %}
+          <tr>
+            <td>{{ r_str }}</td>
+            <td>{{ metric_name }}</td>
+            <td>
+              {% if m_data.auprc_by_lookback %}
+              {% for v in m_data.auprc_by_lookback %}{{ "%.4f"|format(v) if v is number else 'NaN' }}{% if not loop.last %}, {% endif %}{% endfor %}
+              {% else %}
+              N/A
+              {% endif %}
+            </td>
+            <td>{{ "%.4f"|format(m_data.prevalence) if m_data.prevalence is number else 'N/A' }}</td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      {% if pr_curve_figures %}
+      <h3>PR Curve Plots</h3>
+      {% for fig in pr_curve_figures %}
+      <div class="figure-container">
+        <div class="figure-title">{{ fig.title }}</div>
+        <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+
+  <!-- Calibration Diagnostics (PRCL-02, PRCL-03) -->
+  {% if calibration or calibration_figures %}
+  <details class="enrichment-section">
+    <summary>Calibration Diagnostics</summary>
+    <div class="section-content">
+      {% if calibration and calibration.by_r_value %}
+      <h3>ECE Summary</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>r-value</th>
+            <th>Metric</th>
+            <th>ECE (by lookback j=1..r)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r_str, r_data in calibration.by_r_value|dictsort %}
+          {% if r_data.by_metric %}
+          {% for metric_name, m_data in r_data.by_metric|dictsort %}
+          <tr>
+            <td>{{ r_str }}</td>
+            <td>{{ metric_name }}</td>
+            <td>
+              {% if m_data.ece_by_lookback %}
+              {% for v in m_data.ece_by_lookback %}{{ "%.4f"|format(v) if v is number else 'NaN' }}{% if not loop.last %}, {% endif %}{% endfor %}
+              {% else %}
+              N/A
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+          {% endif %}
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      {% if calibration_figures %}
+      <h3>Reliability Diagrams</h3>
+      {% for fig in calibration_figures %}
+      <div class="figure-container">
+        <div class="figure-title">{{ fig.title }}</div>
+        <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+
+  <!-- SVD Computational Cost (OVHD-01, OVHD-02, OVHD-03) -->
+  {% if svd_benchmark %}
+  <details class="enrichment-section">
+    <summary>SVD Computational Cost</summary>
+    <div class="section-content">
+      {% if svd_benchmark.by_target %}
+      <h3>Cost Summary</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Target</th>
+            <th>Matrix Size</th>
+            <th>Full SVD (ms)</th>
+            <th>Randomized SVD (ms)</th>
+            <th>Values-only SVD (ms)</th>
+            <th>Rand. Frob. Error</th>
+            <th>Rand. SV Corr.</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for target_name, t_data in svd_benchmark.by_target|dictsort %}
+          <tr>
+            <td>{{ target_name }}</td>
+            <td>{{ t_data.matrix_shape | join(' x ') if t_data.matrix_shape else 'N/A' }}</td>
+            <td>{{ "%.3f"|format(t_data.full_svd_ms) if t_data.full_svd_ms is number else 'N/A' }}</td>
+            <td>{{ "%.3f"|format(t_data.randomized_svd_ms) if t_data.randomized_svd_ms is number else 'N/A' }}</td>
+            <td>{{ "%.3f"|format(t_data.values_only_ms) if t_data.values_only_ms is number else 'N/A' }}</td>
+            <td>{{ "%.6f"|format(t_data.randomized_frob_error) if t_data.randomized_frob_error is number else 'N/A' }}</td>
+            <td>{{ "%.6f"|format(t_data.randomized_sv_correlation) if t_data.randomized_sv_correlation is number else 'N/A' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      {% if svd_benchmark.summary %}
+      <p>
+        <strong>Total SVD cost per step:</strong> {{ "%.3f"|format(svd_benchmark.summary.total_svd_ms_per_step) }} ms.
+        <strong>Fastest method:</strong> {{ svd_benchmark.summary.fastest_method }}.
+      </p>
+      {% endif %}
+
+      {% if svd_benchmark_figures %}
+      <h3>Benchmark Plots</h3>
+      {% for fig in svd_benchmark_figures %}
+      <div class="figure-container">
+        <div class="figure-title">{{ fig.title }}</div>
+        <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </details>
   {% endif %}
 
   <!-- Event-Aligned Plots -->

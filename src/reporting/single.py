@@ -93,6 +93,9 @@ def _collect_figures(figures_dir: Path) -> dict[str, Any]:
         "distribution_figures": [],
         "null_overlay_figures": [],
         "mp_histogram_figures": [],
+        "pr_curve_figures": [],
+        "calibration_figures": [],
+        "svd_benchmark_figures": [],
     }
 
     if not figures_dir.exists():
@@ -119,6 +122,12 @@ def _collect_figures(figures_dir: Path) -> dict[str, Any]:
             result["null_overlay_figures"].append({"title": title, "data_uri": data_uri})
         elif name.startswith("mp_histogram"):
             result["mp_histogram_figures"].append({"title": title, "data_uri": data_uri})
+        elif name.startswith("pr_curve"):
+            result["pr_curve_figures"].append({"title": title, "data_uri": data_uri})
+        elif name.startswith("calibration"):
+            result["calibration_figures"].append({"title": title, "data_uri": data_uri})
+        elif name.startswith("svd_benchmark"):
+            result["svd_benchmark_figures"].append({"title": title, "data_uri": data_uri})
         elif name.startswith("distribution"):
             result["distribution_figures"].append({"title": title, "data_uri": data_uri})
         else:
@@ -248,6 +257,11 @@ def generate_single_report(
     # Null model data (Phase 12)
     null_model = metrics.get("null_model")
 
+    # Phase 13: Evaluation Enrichment data
+    pr_curves = metrics.get("pr_curves")
+    calibration = metrics.get("calibration")
+    svd_benchmark = metrics.get("svd_benchmark")
+
     # Render
     html = template.render(
         experiment_id=result.get("experiment_id", "Unknown"),
@@ -267,6 +281,12 @@ def generate_single_report(
         null_model=null_model,
         null_overlay_figures=figures.get("null_overlay_figures", []),
         mp_histogram_figures=figures.get("mp_histogram_figures", []),
+        pr_curves=pr_curves,
+        pr_curve_figures=figures.get("pr_curve_figures", []),
+        calibration=calibration,
+        calibration_figures=figures.get("calibration_figures", []),
+        svd_benchmark=svd_benchmark,
+        svd_benchmark_figures=figures.get("svd_benchmark_figures", []),
     )
 
     # Write output

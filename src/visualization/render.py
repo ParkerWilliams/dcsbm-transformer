@@ -368,6 +368,25 @@ def render_all(result_dir: str | Path) -> list[Path]:
         except Exception as e:
             log.warning("Failed to generate AUROC curves: %s", e)
 
+    # ── PRCL-01/03: PR Curves ──────────────────────────────────────────
+    pr_curves_data = result.get("metrics", {}).get("pr_curves", {})
+    if pr_curves_data:
+        try:
+            from src.visualization.pr_curves import plot_pr_curves
+
+            for r_val_str, r_data in pr_curves_data.get("by_r_value", {}).items():
+                by_metric = r_data.get("by_metric", {})
+                if not by_metric:
+                    continue
+                r_value = int(r_val_str)
+                fig = plot_pr_curves(by_metric, r_value=r_value)
+                paths = save_figure(fig, figures_dir, f"pr_curve_r{r_value}")
+                generated_files.extend(paths)
+                log.info("Generated: pr_curve_r%d", r_value)
+
+        except Exception as e:
+            log.warning("Failed to generate PR curves: %s", e)
+
     # ── PLOT-06: Heatmap (skip for single experiment) ─────────────────
     # Heatmap requires multiple (r, w) configs. For single experiment,
     # log a message and skip. Use render_horizon_heatmap() for sweep data.

@@ -130,6 +130,62 @@ def validate_result(result: dict[str, Any]) -> list[str]:
                                 f"metrics.null_model.aggregate missing field: {nm_field}"
                             )
 
+    # Optional pr_curves validation (Phase 13, backward compatible)
+    if "metrics" in result and isinstance(result["metrics"], dict):
+        pr_curves = result["metrics"].get("pr_curves")
+        if pr_curves is not None:
+            if not isinstance(pr_curves, dict):
+                errors.append("metrics.pr_curves must be a dict")
+            else:
+                if "by_r_value" not in pr_curves:
+                    errors.append(
+                        "metrics.pr_curves missing required block: by_r_value"
+                    )
+
+    # Optional calibration validation (Phase 13, backward compatible)
+    if "metrics" in result and isinstance(result["metrics"], dict):
+        calibration = result["metrics"].get("calibration")
+        if calibration is not None:
+            if not isinstance(calibration, dict):
+                errors.append("metrics.calibration must be a dict")
+            else:
+                if "by_r_value" not in calibration:
+                    errors.append(
+                        "metrics.calibration missing required block: by_r_value"
+                    )
+                cal_config = calibration.get("config", {})
+                if isinstance(cal_config, dict) and "n_bins" not in cal_config:
+                    errors.append(
+                        "metrics.calibration.config missing field: n_bins"
+                    )
+
+    # Optional svd_benchmark validation (Phase 13, backward compatible)
+    if "metrics" in result and isinstance(result["metrics"], dict):
+        svd_bench = result["metrics"].get("svd_benchmark")
+        if svd_bench is not None:
+            if not isinstance(svd_bench, dict):
+                errors.append("metrics.svd_benchmark must be a dict")
+            else:
+                if "by_target" not in svd_bench:
+                    errors.append(
+                        "metrics.svd_benchmark missing required block: by_target"
+                    )
+                by_target = svd_bench.get("by_target", {})
+                if isinstance(by_target, dict):
+                    for target_name, t_data in by_target.items():
+                        if not isinstance(t_data, dict):
+                            errors.append(
+                                f"metrics.svd_benchmark.by_target.{target_name} "
+                                "must be a dict"
+                            )
+                        else:
+                            for field in ["matrix_shape", "full_svd_ms"]:
+                                if field not in t_data:
+                                    errors.append(
+                                        f"metrics.svd_benchmark.by_target."
+                                        f"{target_name} missing field: {field}"
+                                    )
+
     # Sequence array length consistency
     for seq in result.get("sequences", []):
         tokens = seq.get("tokens", [])
