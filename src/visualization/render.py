@@ -424,6 +424,28 @@ def render_all(result_dir: str | Path) -> list[Path]:
         except Exception as e:
             log.warning("Failed to generate calibration plots: %s", e)
 
+    # ── OVHD-01/02/03: SVD Benchmark ─────────────────────────────────
+    svd_benchmark = result.get("metrics", {}).get("svd_benchmark", {})
+    if svd_benchmark and svd_benchmark.get("by_target"):
+        try:
+            from src.visualization.svd_benchmark import (
+                plot_svd_accuracy_tradeoff,
+                plot_svd_benchmark_bars,
+            )
+
+            fig = plot_svd_benchmark_bars(svd_benchmark)
+            paths = save_figure(fig, figures_dir, "svd_benchmark_bars")
+            generated_files.extend(paths)
+            log.info("Generated: svd_benchmark_bars")
+
+            fig = plot_svd_accuracy_tradeoff(svd_benchmark)
+            paths = save_figure(fig, figures_dir, "svd_benchmark_tradeoff")
+            generated_files.extend(paths)
+            log.info("Generated: svd_benchmark_tradeoff")
+
+        except Exception as e:
+            log.warning("Failed to generate SVD benchmark plots: %s", e)
+
     # ── PLOT-06: Heatmap (skip for single experiment) ─────────────────
     # Heatmap requires multiple (r, w) configs. For single experiment,
     # log a message and skip. Use render_horizon_heatmap() for sweep data.
