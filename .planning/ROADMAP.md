@@ -132,8 +132,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 07-01-PLAN.md — Event extraction, AUROC computation at each lookback distance, predictive horizon, shuffle controls (TDD)
-- [ ] 07-02-PLAN.md — Statistical rigor: Holm-Bonferroni correction, BCa bootstrap CIs, Cohen's d, correlation matrices, metric ranking (TDD)
+- [x] 07-01-PLAN.md — Event extraction, AUROC computation at each lookback distance, predictive horizon, shuffle controls (TDD)
+- [x] 07-02-PLAN.md — Statistical rigor: Holm-Bonferroni correction, BCa bootstrap CIs, Cohen's d, correlation matrices, metric ranking (TDD)
 
 ### Phase 8: Visualization
 **Goal**: All analysis results can be rendered as publication-quality static figures that follow a consistent visual style
@@ -144,11 +144,11 @@ Plans:
   2. Training convergence curves, AUROC vs lookback distance curves, confusion matrices, and pre/post failure distribution plots are all generated from result.json data
   3. The predictive horizon heatmap across the (r, w) parameter grid renders correctly with at least the anchor config data point
   4. All plots use seaborn whitegrid style with a consistent palette, and every figure is saved as both PNG (300 dpi) and SVG
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 08-01: Core plot types (event-aligned, training curves, AUROC curves, confusion matrix)
-- [ ] 08-02: Distribution plots, heatmaps, and style standardization
+- [ ] 08-01-PLAN.md — Style foundation and core plot types (event-aligned, training curves, AUROC curves, confusion matrix)
+- [ ] 08-02-PLAN.md — Distribution plots, predictive horizon heatmap, and render orchestrator
 
 ### Phase 9: Reporting and Math Verification
 **Goal**: A complete experiment produces a self-contained HTML report with all figures and reproduction instructions, and the mathematical implementations are documented for peer review
