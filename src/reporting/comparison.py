@@ -346,7 +346,7 @@ def generate_comparison_report(
 
         metric_rows.append({
             "name": metric_name,
-            "values": values,
+            "experiment_values": values,
             "sparkline": sparkline,
         })
 

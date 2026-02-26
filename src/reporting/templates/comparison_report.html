@@ -208,7 +208,7 @@
       {% for row in metric_rows %}
       <tr>
         <td>{{ row.name }}</td>
-        {% for v in row.values %}
+        {% for v in row.experiment_values %}
         <td>
           {% if v is none %}
           <span class="not-available">N/A</span>
@@ -248,7 +248,7 @@
       {% for row in config_diff %}
       <tr{% if row.differs %} class="diff-highlight"{% endif %}>
         <td>{{ row.param }}</td>
-        {% for v in row.values %}
+        {% for v in row["values"] %}
         <td>{{ v }}</td>
         {% endfor %}
       </tr>

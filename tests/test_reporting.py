@@ -1,7 +1,8 @@
 """Tests for the reporting module.
 
 Tests cover: base64 figure embedding, reproduction block builder,
-single-experiment report generation with figures and missing sections.
+single-experiment report generation with figures and missing sections,
+and multi-experiment comparison report generation.
 """
 
 import base64
@@ -300,3 +301,206 @@ def test_generate_single_report_custom_output_path(tmp_path):
     assert output == custom_path
     assert output.exists()
     assert output.read_text(encoding="utf-8").startswith("<!DOCTYPE html>")
+
+
+# ── Comparison Report Tests ─────────────────────────────────────────
+
+
+def _create_comparison_result_dir(
+    base_path,
+    name,
+    *,
+    seed=42,
+    d_model=64,
+    edge_compliance=0.97,
+    rule_compliance=0.85,
+    final_train_loss=0.512,
+    include_figures=False,
+):
+    """Create a result directory with customisable config and metrics.
+
+    Returns the created directory path.
+    """
+    result_dir = base_path / name
+    result_dir.mkdir(parents=True, exist_ok=True)
+
+    result = {
+        "schema_version": "1.0",
+        "experiment_id": name,
+        "timestamp": "2026-02-26T00:00:00+00:00",
+        "description": f"Test experiment {name}",
+        "tags": ["test"],
+        "config": {
+            "seed": seed,
+            "graph": {"n": 100, "K": 4, "p_in": 0.25, "p_out": 0.03},
+            "model": {
+                "d_model": d_model,
+                "n_layers": 2,
+                "n_heads": 1,
+                "vocab_size": 104,
+            },
+            "training": {
+                "learning_rate": 3e-4,
+                "num_epochs": 100,
+                "batch_size": 64,
+                "w": 16,
+            },
+        },
+        "metrics": {
+            "scalars": {
+                "final_train_loss": final_train_loss,
+                "edge_compliance": edge_compliance,
+                "rule_compliance": rule_compliance,
+            },
+        },
+        "sequences": [],
+        "metadata": {"code_hash": f"hash_{name}"},
+    }
+
+    with open(result_dir / "result.json", "w") as f:
+        json.dump(result, f)
+
+    if include_figures:
+        figures_dir = result_dir / "figures"
+        figures_dir.mkdir()
+        png_data = (
+            b"\x89PNG\r\n\x1a\n"
+            b"\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+            b"\x08\x02\x00\x00\x00\x90wS\xde"
+            b"\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01"
+            b"\x00\x05\x18\xd8N"
+            b"\x00\x00\x00\x00IEND\xaeB`\x82"
+        )
+        (figures_dir / "training_curves.png").write_bytes(png_data)
+
+    return result_dir
+
+
+def test_flatten_config():
+    """Nested dict flattening produces dot-separated keys."""
+    from src.reporting.comparison import _flatten_config
+
+    nested = {
+        "model": {"d_model": 128, "n_layers": 4},
+        "graph": {"n": 200},
+        "seed": 42,
+    }
+    flat = _flatten_config(nested)
+
+    assert flat["model.d_model"] == 128
+    assert flat["model.n_layers"] == 4
+    assert flat["graph.n"] == 200
+    assert flat["seed"] == 42
+    assert len(flat) == 4
+
+
+def test_config_diff_identical():
+    """Two identical configs produce no differs=True rows."""
+    from src.reporting.comparison import compute_config_diff
+
+    config = {"model": {"d_model": 64}, "seed": 42}
+    diff = compute_config_diff([config, config])
+
+    for row in diff:
+        assert row["differs"] is False, f"{row['param']} should not differ"
+
+
+def test_config_diff_different():
+    """Two configs differing in one param produce exactly one differs=True row."""
+    from src.reporting.comparison import compute_config_diff
+
+    config_a = {"model": {"d_model": 64}, "seed": 42}
+    config_b = {"model": {"d_model": 128}, "seed": 42}
+    diff = compute_config_diff([config_a, config_b])
+
+    differing = [r for r in diff if r["differs"]]
+    assert len(differing) == 1
+    assert differing[0]["param"] == "model.d_model"
+    assert differing[0]["values"] == [64, 128]
+
+
+def test_sparkline_generation():
+    """generate_sparkline returns a valid PNG data URI."""
+    from src.reporting.comparison import generate_sparkline
+
+    uri = generate_sparkline([0.8, 0.9, 0.7])
+
+    assert uri.startswith("data:image/png;base64,")
+    # Verify base64 portion decodes
+    b64_part = uri.split(",", 1)[1]
+    decoded = base64.b64decode(b64_part)
+    assert decoded[:4] == b"\x89PNG"
+
+
+def test_verdict_generation():
+    """Verdict identifies the correct winner across experiments."""
+    from src.reporting.comparison import compute_verdict
+
+    data = [
+        {"scalars": {"edge_compliance": 0.90, "rule_compliance": 0.80, "final_train_loss": 0.5}},
+        {"scalars": {"edge_compliance": 0.95, "rule_compliance": 0.85, "final_train_loss": 0.4}},
+    ]
+    verdict = compute_verdict(data)
+
+    # B is better on all 3 metrics (higher compliance, lower loss)
+    assert "B" in verdict
+    assert "3/3" in verdict
+
+
+def test_verdict_single_experiment():
+    """Verdict handles single experiment gracefully."""
+    from src.reporting.comparison import compute_verdict
+
+    data = [{"scalars": {"edge_compliance": 0.95}}]
+    verdict = compute_verdict(data)
+    assert "Single experiment" in verdict
+
+
+def test_generate_comparison_report(tmp_path):
+    """Comparison report contains sparklines, diff-highlight, verdict, reproduction."""
+    from src.reporting.comparison import generate_comparison_report
+
+    dir_a = _create_comparison_result_dir(
+        tmp_path, "exp-A", d_model=64, edge_compliance=0.90, final_train_loss=0.5,
+    )
+    dir_b = _create_comparison_result_dir(
+        tmp_path, "exp-B", d_model=128, edge_compliance=0.95, final_train_loss=0.4,
+    )
+
+    output = generate_comparison_report([dir_a, dir_b])
+
+    assert output.exists()
+    html = output.read_text(encoding="utf-8")
+
+    # Check key sections
+    assert "Experiment Comparison" in html
+    assert "exp-A" in html
+    assert "exp-B" in html
+
+    # Check diff-highlight is present (d_model differs)
+    assert "diff-highlight" in html
+
+    # Check sparkline data URIs
+    assert "data:image/png;base64," in html
+
+    # Check reproduction blocks for both experiments
+    assert "git checkout hash_exp-A" in html
+    assert "git checkout hash_exp-B" in html
+
+    # Check verdict section
+    assert "Summary Verdict" in html
+
+
+def test_comparison_report_single_experiment(tmp_path):
+    """Comparison report with a single experiment still generates without error."""
+    from src.reporting.comparison import generate_comparison_report
+
+    dir_a = _create_comparison_result_dir(tmp_path, "solo-exp")
+
+    output = generate_comparison_report([dir_a])
+
+    assert output.exists()
+    html = output.read_text(encoding="utf-8")
+    assert "Experiment Comparison" in html
+    assert "solo-exp" in html
+    assert "Single experiment" in html
