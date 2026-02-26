@@ -81,6 +81,20 @@ def validate_result(result: dict[str, Any]) -> list[str]:
         elif "scalars" not in result["metrics"]:
             errors.append("metrics.scalars is required")
 
+    # Optional split_assignment validation (backward compatible)
+    if "metrics" in result and isinstance(result["metrics"], dict):
+        scalars = result["metrics"].get("scalars", {})
+        if isinstance(scalars, dict) and "split_assignment" in scalars:
+            sa = scalars["split_assignment"]
+            if not isinstance(sa, dict):
+                errors.append("metrics.scalars.split_assignment must be a dict")
+            else:
+                for field in ["split_seed", "n_exploratory", "n_confirmatory"]:
+                    if field not in sa:
+                        errors.append(
+                            f"metrics.scalars.split_assignment missing field: {field}"
+                        )
+
     # Sequence array length consistency
     for seq in result.get("sequences", []):
         tokens = seq.get("tokens", [])

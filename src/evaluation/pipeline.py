@@ -22,6 +22,7 @@ from src.evaluation.svd_metrics import (
     grassmannian_distance,
     guard_matrix_for_svd,
 )
+from src.evaluation.split import SPLIT_SEED
 from src.graph.jumpers import JumperInfo
 from src.graph.types import GraphData
 from src.model.types import ExtractionMode
@@ -380,6 +381,7 @@ def fused_evaluate(
 def save_evaluation_results(
     result: EvaluationResult,
     output_dir: str | Path,
+    split_labels: np.ndarray | None = None,
 ) -> dict[str, Any]:
     """Save evaluation results to NPZ and return summary dict for result.json.
 
@@ -389,6 +391,10 @@ def save_evaluation_results(
     Args:
         result: EvaluationResult from fused_evaluate.
         output_dir: Directory to write token_metrics.npz into.
+        split_labels: Optional array of split assignments ('exploratory' or
+            'confirmatory') per walk. When provided, split data is stored in
+            NPZ and split metadata is included in the summary dict.
+            See docs/pre-registration.md Section 5.
 
     Returns:
         Summary dict suitable for inclusion in result.json metrics section.
@@ -408,6 +414,12 @@ def save_evaluation_results(
     npz_data["failure_index"] = result.failure_index
     npz_data["sequence_lengths"] = result.sequence_lengths
     npz_data["generated"] = result.generated
+
+    # Held-out split labels (Phase 11: Pre-Registration Framework)
+    if split_labels is not None:
+        # Store as integer array: 0=exploratory, 1=confirmatory
+        split_int = np.where(split_labels == "confirmatory", 1, 0).astype(np.int8)
+        npz_data["split"] = split_int
 
     # Write NPZ
     npz_path = output_path / "token_metrics.npz"
@@ -433,5 +445,22 @@ def save_evaluation_results(
     summary["scalars"]["failure_index_list"] = result.failure_index.tolist()
     summary["scalars"]["n_sequences"] = int(result.sequence_lengths.shape[0])
     summary["scalars"]["n_violations"] = int((result.failure_index >= 0).sum())
+
+    # Split assignment metadata
+    if split_labels is not None:
+        n_exploratory = int((split_labels == "exploratory").sum())
+        n_confirmatory = int((split_labels == "confirmatory").sum())
+        violation_mask = result.failure_index >= 0
+        summary["scalars"]["split_assignment"] = {
+            "split_seed": SPLIT_SEED,
+            "n_exploratory": n_exploratory,
+            "n_confirmatory": n_confirmatory,
+            "n_exploratory_violations": int(
+                (violation_mask & (split_labels == "exploratory")).sum()
+            ),
+            "n_confirmatory_violations": int(
+                (violation_mask & (split_labels == "confirmatory")).sum()
+            ),
+        }
 
     return summary
