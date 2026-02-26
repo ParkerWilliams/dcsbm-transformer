@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Phase 7 - Predictive Horizon and Statistical Analysis
+**Current focus:** Phase 9 - Reporting and Math Verification
 
 ## Current Position
 
-Phase: 7 of 10 (Predictive Horizon and Statistical Analysis)
+Phase: 8 of 10 (Visualization) -- COMPLETE
 Plan: 2 of 2 in current phase
-Status: Phase 7 complete -- all plans executed
-Last activity: 2026-02-26 -- Completed 07-02: Statistical controls
+Status: Phase 8 complete -- all plans executed
+Last activity: 2026-02-26 -- Completed 08-02: Distributions, heatmap, render orchestrator
 
-Progress: [████████░░] 75%
+Progress: [████████░░] 80%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 3.9 min
-- Total execution time: ~0.98 hours
+- Total plans completed: 17
+- Average duration: 3.8 min
+- Total execution time: ~1.08 hours
 
 **By Phase:**
 
@@ -34,10 +34,11 @@ Progress: [████████░░] 75%
 | 5 | 2/2 | 7 min | 3.5 min |
 | 6 | 3/3 | 11 min | 3.7 min |
 | 7 | 2/2 | 14 min | 7.0 min |
+| 8 | 2/2 | 10 min | 5.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-02 (5 min), 06-01 (3 min), 06-02 (3 min), 06-03 (5 min), 07-01 (8 min), 07-02 (6 min)
-- Trend: Slight increase (TDD + statistical pipeline complexity)
+- Last 5 plans: 06-03 (5 min), 07-01 (8 min), 07-02 (6 min), 08-01 (5 min), 08-02 (5 min)
+- Trend: Stable at ~5 min per plan
 
 *Updated after each plan completion*
 
@@ -96,6 +97,12 @@ Recent decisions affecting current work:
 - [07-02]: Measurement correlation uses resolution_step - 1 as representative event position
 - [07-02]: Predictive correlation replaces NaN AUROC with 0.5 for correlation computation
 - [07-02]: Headline comparison identifies QK^T/AVWo by key prefix, filters to primary metrics
+- [08-01]: Colorblind-safe palette from seaborn 'colorblind' preset (8 colors)
+- [08-01]: Matplotlib Agg backend for headless rendering
+- [08-01]: SVG fonttype='none' for portable text embedding
+- [08-02]: Box plots as default distribution type
+- [08-02]: YlOrRd colormap for horizon heatmap
+- [08-02]: render_all wraps each plot in try/except for fault isolation
 
 ### Pending Todos
 
@@ -109,6 +116,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 07-02 (statistical controls). Phase 7 complete.
+Stopped at: Completed 08-02 (distributions, heatmap, render). Phase 8 complete.
 Resume file: None
-Next action: Execute Phase 8 planning and execution (results assembly)
+Next action: Plan and execute Phase 9 (Reporting and Math Verification)

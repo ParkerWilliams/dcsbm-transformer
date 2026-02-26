@@ -76,14 +76,14 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Visualization
 
-- [ ] **PLOT-01**: System generates event-aligned SVD metric plots (position 0 = failure event, negative = before, positive = after) with confidence bands and correct-sequence baseline overlay
-- [ ] **PLOT-02**: System generates training convergence curves (loss and compliance over steps)
-- [ ] **PLOT-03**: System generates AUROC vs lookback distance j curves per SVD metric
-- [ ] **PLOT-04**: System generates confusion matrix for 4-class behavioral outcomes
-- [ ] **PLOT-05**: System generates pre/post failure distribution comparison plots
-- [ ] **PLOT-06**: System generates predictive horizon heatmap across (r, w) parameter grid
-- [ ] **PLOT-07**: All plots follow the project style baseline (seaborn whitegrid, consistent palette, no default matplotlib style)
-- [ ] **PLOT-08**: All figures saved as both PNG (300 dpi) and SVG to results/{experiment_id}/figures/
+- [x] **PLOT-01**: System generates event-aligned SVD metric plots (position 0 = failure event, negative = before, positive = after) with confidence bands and correct-sequence baseline overlay
+- [x] **PLOT-02**: System generates training convergence curves (loss and compliance over steps)
+- [x] **PLOT-03**: System generates AUROC vs lookback distance j curves per SVD metric
+- [x] **PLOT-04**: System generates confusion matrix for 4-class behavioral outcomes
+- [x] **PLOT-05**: System generates pre/post failure distribution comparison plots
+- [x] **PLOT-06**: System generates predictive horizon heatmap across (r, w) parameter grid
+- [x] **PLOT-07**: All plots follow the project style baseline (seaborn whitegrid, consistent palette, no default matplotlib style)
+- [x] **PLOT-08**: All figures saved as both PNG (300 dpi) and SVG to results/{experiment_id}/figures/
 
 ### Reporting
 
@@ -176,14 +176,14 @@ Deferred to future release. Tracked but not in current roadmap.
 | STAT-03 | Phase 7 | Complete |
 | STAT-04 | Phase 7 | Complete |
 | STAT-05 | Phase 7 | Complete |
-| PLOT-01 | Phase 8 | Pending |
-| PLOT-02 | Phase 8 | Pending |
-| PLOT-03 | Phase 8 | Pending |
-| PLOT-04 | Phase 8 | Pending |
-| PLOT-05 | Phase 8 | Pending |
-| PLOT-06 | Phase 8 | Pending |
-| PLOT-07 | Phase 8 | Pending |
-| PLOT-08 | Phase 8 | Pending |
+| PLOT-01 | Phase 8 | Complete |
+| PLOT-02 | Phase 8 | Complete |
+| PLOT-03 | Phase 8 | Complete |
+| PLOT-04 | Phase 8 | Complete |
+| PLOT-05 | Phase 8 | Complete |
+| PLOT-06 | Phase 8 | Complete |
+| PLOT-07 | Phase 8 | Complete |
+| PLOT-08 | Phase 8 | Complete |
 | REPT-01 | Phase 9 | Pending |
 | REPT-02 | Phase 9 | Pending |
 | REPT-03 | Phase 9 | Pending |
