@@ -1,11 +1,11 @@
 # Requirements: DCSBM Transformer SVD Hallucination Prediction
 
-**Defined:** 2026-02-24
+**Defined:** 2026-02-24 (v1.0), updated 2026-02-26 (v1.1)
 **Core Value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
 
-## v1 Requirements
+## v1.0 Requirements (Validated)
 
-Requirements for initial release. Each maps to roadmap phases.
+Shipped and verified in v1.0 milestone (phases 1-9). Listed for reference.
 
 ### Graph Generation
 
@@ -51,7 +51,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **SVD-01**: System computes SVD on three targets per attention layer at every token step during evaluation: (1) QK^T — routing stability, (2) WvWo — OV circuit stability (input-agnostic), (3) AVWo — net residual stream update stability
 - [x] **SVD-02**: System computes SVD using torch.linalg.svd with full_matrices=False, batched for efficiency on GPU
-- [x] **SVD-03**: System computes 7 scalar metrics per SVD target per token step: stable rank (||M||²_F/||M||²_2), spectral entropy (-Σ pᵢ log pᵢ where pᵢ=σᵢ/Σσ), spectral gap (σ₁-σ₂ and generalized σₖ-σₖ₊₁ for k=2,4), condition number (σ₁/σₙ), rank-1 residual norm (||M-σ₁u₁v₁ᵀ||_F/||M||_F), and read-write subspace alignment (WvWo only: cosine angle between top left and right singular vectors in d_model space)
+- [x] **SVD-03**: System computes 7 scalar metrics per SVD target per token step: stable rank (||M||^2_F/||M||^2_2), spectral entropy (-Sum p_i log p_i where p_i=sigma_i/Sum sigma), spectral gap (sigma_1-sigma_2 and generalized sigma_k-sigma_{k+1} for k=2,4), condition number (sigma_1/sigma_n), rank-1 residual norm (||M-sigma_1 u_1 v_1^T||_F/||M||_F), and read-write subspace alignment (WvWo only: cosine angle between top left and right singular vectors in d_model space)
 - [x] **SVD-04**: System stores all SVD metrics as token-level time series in result.json/token_metrics.npz keyed by target and metric name (e.g., qkt.stable_rank, wvwo.spectral_entropy, avwo.condition_number)
 - [x] **SVD-05**: System includes numerical guards: NaN/Inf clamping, epsilon in entropy computation, condition number capped at 1e6, Grassmannian distance for subspace tracking
 - [x] **SVD-06**: System collects SVD metrics only for positions >= w (context window warmup) to avoid padding artifacts
@@ -104,6 +104,59 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **MATH-01**: System generates a peer-review PDF containing: title page, table of contents, one section per math-heavy source file with plain-language summary, full code block, LaTeX representation of implemented mathematics, and appendix listing all other source files
 - [x] **MATH-02**: PDF title page notes clearly that LaTeX was AI-generated and requires researcher sign-off
 
+## v1.1 Requirements
+
+Requirements for journal feedback milestone. Each maps to roadmap phases.
+
+### Null Model Baseline
+
+- [ ] **NULL-01**: System generates evaluation walks with zero block jumpers (same graph, same trained model) to produce null Grassmannian drift distribution
+- [ ] **NULL-02**: System computes position-matched statistical comparison (Mann-Whitney U, Cohen's d) of Grassmannian drift between null and violation sequences at each lookback distance
+- [ ] **NULL-03**: System computes Marchenko-Pastur reference distribution for QK^T singular values at the anchor config matrix dimensions
+- [ ] **NULL-04**: System stores null model results in result.json `null_model` block and renders null overlay on event-aligned plots
+
+### Softmax Filtering Bound
+
+- [ ] **SFTX-01**: System includes a LaTeX derivation of the epsilon-bound from QK^T perturbation through softmax to AVWo spectral change, using the correct Lipschitz constant (1/2) and 1/sqrt(d_k) scaling
+- [ ] **SFTX-02**: System empirically verifies the bound by injecting controlled perturbations into QK^T at specific steps and measuring actual AVWo spectral change vs theoretical bound
+- [ ] **SFTX-03**: System generates bound tightness visualization (theoretical envelope vs empirical measurements) and reports tightness ratio
+
+### Multi-Head Ablation
+
+- [ ] **MHAD-01**: Transformer supports configurable n_heads (1, 2, 4) with per-head QK^T extraction; d_k is held constant (d_model scales as n_heads * d_k) to ensure equal per-head dimensionality across ablation configs
+- [ ] **MHAD-02**: SVD metrics are computed per-head with NPZ keys in format `target.layer_N.head_H.metric_name`, with backward-compatible dual key emission for single-head runs
+- [ ] **MHAD-03**: System computes per-head AUROC and signal concentration analysis (entropy/Gini of AUROC distribution across heads) to identify which heads carry predictive signal
+- [ ] **MHAD-04**: System runs ablation comparison on matched configs (same graph, walks — 1h d_model=128, 2h d_model=256, 4h d_model=512, all d_k=128) and reports per-head vs aggregate signal strength
+
+### Precision-Recall and Calibration
+
+- [ ] **PRCL-01**: System computes precision-recall curves and AUPRC per metric per lookback distance, using the same event extraction as existing AUROC
+- [ ] **PRCL-02**: System generates reliability diagrams (calibration curves) with Expected Calibration Error (ECE) for violation prediction
+- [ ] **PRCL-03**: PR curves and reliability diagrams are integrated into HTML reports alongside existing AUROC plots
+
+### Pre-Registration Framework
+
+- [ ] **PREG-01**: Pre-registration document specifying primary hypothesis (Grassmannian distance of QK^T), primary metric, alpha level, correction method, and decision criterion is committed to git before any v1.1 confirmatory analysis runs
+- [ ] **PREG-02**: System implements held-out evaluation split (exploratory / confirmatory walks) and tags results with split membership
+- [ ] **PREG-03**: System maintains a deviation log tracking any changes to the pre-registered analysis plan with rationale
+
+### Sharp Compliance Curve
+
+- [ ] **COMP-01**: System sweeps r/w ratio with fine granularity (at least 8 values spanning r << w through r >> w) and 3 seeds per value to establish the compliance phase transition
+- [ ] **COMP-02**: System generates composite publication figure showing compliance rate and predictive horizon as a function of r/w ratio with dual y-axes
+
+### Full Spectrum Trajectory
+
+- [ ] **SPEC-01**: System stores full singular value vectors sigma_1...sigma_k per step in NPZ alongside existing scalar metrics, configurable per target (QK^T by default)
+- [ ] **SPEC-02**: System computes discrete Frenet-Serret curvature and torsion on the spectral trajectory curve in R^k with appropriate numerical smoothing
+- [ ] **SPEC-03**: Curvature and torsion time series are fed into the AUROC pipeline as additional (secondary) predictive metrics
+
+### SVD Computational Overhead
+
+- [ ] **OVHD-01**: System benchmarks wall-clock SVD cost per step, broken down by target (QK^T, WvWo, AVWo) and matrix dimension, using proper GPU timing (CUDA events with warmup)
+- [ ] **OVHD-02**: System compares full SVD vs randomized SVD (torch.svd_lowrank) vs values-only SVD (torch.linalg.svdvals) and reports accuracy-cost tradeoff
+- [ ] **OVHD-03**: Cost summary table (matrix size, time per step, % of total evaluation time) is included in HTML reports
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -114,91 +167,67 @@ Deferred to future release. Tracked but not in current roadmap.
 - **ADV-02**: Automated parameter sensitivity analysis (variance decomposition of config parameters with predictive horizon)
 - **ADV-03**: Automated budget tracking dashboard with real-time cost display
 
+### Generalization Studies
+
+- **GENR-01**: Multiple rule types beyond block jumpers (parity constraints, subsequence bans, cycle return)
+- **GENR-02**: Multi-head beyond 4 heads (requires larger d_model for meaningful d_k)
+- **GENR-03**: Cross-task signal robustness analysis across rule type variations
+
+### Sweep Infrastructure (deferred from v1.0)
+
+- **MGMT-02**: System implements parameter sweep with declarative definition of parameter ranges
+- **MGMT-03**: System implements a priority-ordered job queue
+- **MGMT-04**: System runs 3 random seeds per configuration
+- **MGMT-06**: System persists sweep state for resume after RunPod preemption
+
 ## Out of Scope
 
 | Feature | Reason |
 |---------|--------|
-| Multi-head attention support | Single head is intentional and essential for unambiguous QK^T analysis |
-| Real-world / clinical data ingestion | Synthetic controlled-environment study only |
-| HuggingFace Transformers integration | Excessive overhead for NanoGPT-scale; obscures QK^T extraction |
-| Distributed / multi-GPU training | Single GPU sufficient at this scale; adds non-determinism |
-| Web UI / dashboard | Research framework; static HTML reports are sufficient |
-| Weights & Biases / MLflow | External dependency; result.json schema is comprehensive |
-| Automatic hyperparameter optimization | Sweep grid is the experiment, not a means to optimize |
-| GPU cluster orchestration (SLURM, K8s) | Single-machine workload within $100 budget |
-| Streaming / real-time inference | Offline research framework |
+| Multi-head beyond 4 heads | d_k too small at d_model=128; 1h/2h/4h demonstrates the principle |
+| Full Bayesian calibration (Platt scaling) | Undermines pre-registration claims; use raw reliability diagrams |
+| Real-time SVD monitoring | v1.1 is offline research, not deployment |
+| Symbolic math verification (SymPy) | Manual LaTeX is faster for one derivation |
+| Gradient-based attribution for SVD metrics | Different research question (why vs whether) |
+| General-purpose spectral trajectory library | Premature generalization |
+| Multiple rule types | Deferred to v2; focus on proving single-rule signal first |
+| Full production sweep infrastructure | Deferred; v1.1 runs targeted ablation configs, not full grid |
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MGMT-01 | Phase 1 | Complete |
-| MGMT-05 | Phase 1 | Complete |
-| TRNG-02 | Phase 1 | Complete |
-| TRNG-07 | Phase 1 | Complete |
-| GRPH-01 | Phase 2 | Complete |
-| GRPH-02 | Phase 2 | Complete |
-| GRPH-03 | Phase 2 | Complete |
-| GRPH-04 | Phase 2 | Complete |
-| GRPH-05 | Phase 2 | Complete |
-| WALK-01 | Phase 3 | Complete |
-| WALK-02 | Phase 3 | Complete |
-| WALK-03 | Phase 3 | Complete |
-| WALK-04 | Phase 3 | Complete |
-| WALK-05 | Phase 3 | Complete |
-| MODL-01 | Phase 4 | Complete |
-| MODL-02 | Phase 4 | Complete |
-| MODL-03 | Phase 4 | Complete |
-| TRNG-01 | Phase 5 | Complete |
-| TRNG-03 | Phase 5 | Complete |
-| TRNG-04 | Phase 5 | Complete |
-| TRNG-05 | Phase 5 | Complete |
-| TRNG-06 | Phase 5 | Complete |
-| EVAL-01 | Phase 6 | Complete |
-| EVAL-02 | Phase 6 | Complete |
-| EVAL-03 | Phase 6 | Complete |
-| EVAL-04 | Phase 6 | Complete |
-| EVAL-05 | Phase 6 | Complete |
-| SVD-01 | Phase 6 | Complete |
-| SVD-02 | Phase 6 | Complete |
-| SVD-03 | Phase 6 | Complete |
-| SVD-04 | Phase 6 | Complete |
-| SVD-05 | Phase 6 | Complete |
-| SVD-06 | Phase 6 | Complete |
-| SVD-07 | Phase 6 | Complete |
-| PRED-01 | Phase 7 | Complete |
-| PRED-02 | Phase 7 | Complete |
-| PRED-03 | Phase 7 | Complete |
-| PRED-04 | Phase 7 | Complete |
-| PRED-05 | Phase 7 | Complete |
-| STAT-01 | Phase 7 | Complete |
-| STAT-02 | Phase 7 | Complete |
-| STAT-03 | Phase 7 | Complete |
-| STAT-04 | Phase 7 | Complete |
-| STAT-05 | Phase 7 | Complete |
-| PLOT-01 | Phase 8 | Complete |
-| PLOT-02 | Phase 8 | Complete |
-| PLOT-03 | Phase 8 | Complete |
-| PLOT-04 | Phase 8 | Complete |
-| PLOT-05 | Phase 8 | Complete |
-| PLOT-06 | Phase 8 | Complete |
-| PLOT-07 | Phase 8 | Complete |
-| PLOT-08 | Phase 8 | Complete |
-| REPT-01 | Phase 9 | Complete |
-| REPT-02 | Phase 9 | Complete |
-| REPT-03 | Phase 9 | Complete |
-| MATH-01 | Phase 9 | Complete |
-| MATH-02 | Phase 9 | Complete |
-| MGMT-02 | Phase 10 | Pending |
-| MGMT-03 | Phase 10 | Pending |
-| MGMT-04 | Phase 10 | Pending |
-| MGMT-06 | Phase 10 | Pending |
+| NULL-01 | TBD | Pending |
+| NULL-02 | TBD | Pending |
+| NULL-03 | TBD | Pending |
+| NULL-04 | TBD | Pending |
+| SFTX-01 | TBD | Pending |
+| SFTX-02 | TBD | Pending |
+| SFTX-03 | TBD | Pending |
+| MHAD-01 | TBD | Pending |
+| MHAD-02 | TBD | Pending |
+| MHAD-03 | TBD | Pending |
+| MHAD-04 | TBD | Pending |
+| PRCL-01 | TBD | Pending |
+| PRCL-02 | TBD | Pending |
+| PRCL-03 | TBD | Pending |
+| PREG-01 | TBD | Pending |
+| PREG-02 | TBD | Pending |
+| PREG-03 | TBD | Pending |
+| COMP-01 | TBD | Pending |
+| COMP-02 | TBD | Pending |
+| SPEC-01 | TBD | Pending |
+| SPEC-02 | TBD | Pending |
+| SPEC-03 | TBD | Pending |
+| OVHD-01 | TBD | Pending |
+| OVHD-02 | TBD | Pending |
+| OVHD-03 | TBD | Pending |
 
 **Coverage:**
-- v1 requirements: 61 total
-- Mapped to phases: 61
-- Unmapped: 0
+- v1.1 requirements: 25 total
+- Mapped to phases: 0 (awaiting roadmap)
+- Unmapped: 25
 
 ---
-*Requirements defined: 2026-02-24*
-*Last updated: 2026-02-24 after roadmap creation (10-phase comprehensive structure)*
+*Requirements defined: 2026-02-24 (v1.0)*
+*Last updated: 2026-02-26 after v1.1 Journal Feedback milestone definition*
