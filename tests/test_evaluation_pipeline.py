@@ -223,7 +223,7 @@ class TestNPZOutput:
         save_evaluation_results(fused_result, tmp_path)
         loaded = np.load(str(tmp_path / "token_metrics.npz"))
         for key in loaded.files:
-            if key in ("edge_valid", "rule_outcome", "failure_index", "sequence_lengths"):
+            if key in ("edge_valid", "rule_outcome", "failure_index", "sequence_lengths", "generated"):
                 continue
             parts = key.split(".")
             assert len(parts) == 3, f"Key '{key}' doesn't follow target.layer.metric pattern"

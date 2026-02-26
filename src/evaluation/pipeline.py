@@ -407,6 +407,7 @@ def save_evaluation_results(
     npz_data["rule_outcome"] = result.rule_outcome
     npz_data["failure_index"] = result.failure_index
     npz_data["sequence_lengths"] = result.sequence_lengths
+    npz_data["generated"] = result.generated
 
     # Write NPZ
     npz_path = output_path / "token_metrics.npz"
