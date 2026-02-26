@@ -387,6 +387,43 @@ def render_all(result_dir: str | Path) -> list[Path]:
         except Exception as e:
             log.warning("Failed to generate PR curves: %s", e)
 
+    # ── PRCL-02/03: Calibration diagnostics ────────────────────────────
+    calibration_data = result.get("metrics", {}).get("calibration", {})
+    if calibration_data:
+        try:
+            from src.visualization.calibration import plot_reliability_diagram
+
+            for r_val_str, r_data in calibration_data.get("by_r_value", {}).items():
+                by_metric = r_data.get("by_metric", {})
+                if not by_metric:
+                    continue
+                r_value = int(r_val_str)
+
+                for metric_key, m_data in by_metric.items():
+                    ece_list = m_data.get("ece_by_lookback", [])
+                    lookback_data = [{"ece": ece_val} for ece_val in ece_list]
+
+                    try:
+                        fig = plot_reliability_diagram(
+                            metric_name=metric_key,
+                            lookback_data=lookback_data,
+                            r_value=r_value,
+                        )
+                        safe_name = metric_key.replace(".", "_")
+                        paths = save_figure(
+                            fig, figures_dir, f"calibration_{safe_name}_r{r_value}"
+                        )
+                        generated_files.extend(paths)
+                        log.info("Generated: calibration_%s_r%d", safe_name, r_value)
+                    except Exception as e:
+                        log.warning(
+                            "Failed to generate calibration_%s_r%d: %s",
+                            safe_name, r_value, e,
+                        )
+
+        except Exception as e:
+            log.warning("Failed to generate calibration plots: %s", e)
+
     # ── PLOT-06: Heatmap (skip for single experiment) ─────────────────
     # Heatmap requires multiple (r, w) configs. For single experiment,
     # log a message and skip. Use render_horizon_heatmap() for sweep data.
