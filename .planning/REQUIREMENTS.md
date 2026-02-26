@@ -130,9 +130,9 @@ Requirements for journal feedback milestone. Each maps to roadmap phases 11-16.
 
 ### Precision-Recall and Calibration
 
-- [ ] **PRCL-01**: System computes precision-recall curves and AUPRC per metric per lookback distance, using the same event extraction as existing AUROC
-- [ ] **PRCL-02**: System generates reliability diagrams (calibration curves) with Expected Calibration Error (ECE) for violation prediction
-- [ ] **PRCL-03**: PR curves and reliability diagrams are integrated into HTML reports alongside existing AUROC plots
+- [x] **PRCL-01**: System computes precision-recall curves and AUPRC per metric per lookback distance, using the same event extraction as existing AUROC
+- [x] **PRCL-02**: System generates reliability diagrams (calibration curves) with Expected Calibration Error (ECE) for violation prediction
+- [x] **PRCL-03**: PR curves and reliability diagrams are integrated into HTML reports alongside existing AUROC plots
 
 ### Pre-Registration Framework
 
@@ -153,9 +153,9 @@ Requirements for journal feedback milestone. Each maps to roadmap phases 11-16.
 
 ### SVD Computational Overhead
 
-- [ ] **OVHD-01**: System benchmarks wall-clock SVD cost per step, broken down by target (QK^T, WvWo, AVWo) and matrix dimension, using proper GPU timing (CUDA events with warmup)
-- [ ] **OVHD-02**: System compares full SVD vs randomized SVD (torch.svd_lowrank) vs values-only SVD (torch.linalg.svdvals) and reports accuracy-cost tradeoff
-- [ ] **OVHD-03**: Cost summary table (matrix size, time per step, % of total evaluation time) is included in HTML reports
+- [x] **OVHD-01**: System benchmarks wall-clock SVD cost per step, broken down by target (QK^T, WvWo, AVWo) and matrix dimension, using proper GPU timing (CUDA events with warmup)
+- [x] **OVHD-02**: System compares full SVD vs randomized SVD (torch.svd_lowrank) vs values-only SVD (torch.linalg.svdvals) and reports accuracy-cost tradeoff
+- [x] **OVHD-03**: Cost summary table (matrix size, time per step, % of total evaluation time) is included in HTML reports
 
 ## v2 Requirements
 
@@ -204,12 +204,12 @@ Deferred to future release. Tracked but not in current roadmap.
 | NULL-02 | Phase 12 | Complete |
 | NULL-03 | Phase 12 | Complete |
 | NULL-04 | Phase 12 | Complete |
-| PRCL-01 | Phase 13 | Pending |
-| PRCL-02 | Phase 13 | Pending |
-| PRCL-03 | Phase 13 | Pending |
-| OVHD-01 | Phase 13 | Pending |
-| OVHD-02 | Phase 13 | Pending |
-| OVHD-03 | Phase 13 | Pending |
+| PRCL-01 | Phase 13 | Complete |
+| PRCL-02 | Phase 13 | Complete |
+| PRCL-03 | Phase 13 | Complete |
+| OVHD-01 | Phase 13 | Complete |
+| OVHD-02 | Phase 13 | Complete |
+| OVHD-03 | Phase 13 | Complete |
 | SFTX-01 | Phase 14 | Pending |
 | SFTX-02 | Phase 14 | Pending |
 | SFTX-03 | Phase 14 | Pending |
