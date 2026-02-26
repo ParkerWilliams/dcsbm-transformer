@@ -1,638 +1,742 @@
-# Architecture Patterns
+# Architecture Patterns: v1.1 Integration
 
-**Domain:** Research framework -- DCSBM transformer SVD hallucination prediction
-**Researched:** 2026-02-24
+**Domain:** DCSBM transformer SVD hallucination prediction -- journal feedback features
+**Researched:** 2026-02-26
+**Scope:** Integration of 8 v1.1 features into existing v1.0 architecture
 
 ## Recommended Architecture
 
-The system is a linear research pipeline with a parameter sweep orchestrator wrapping around it. There are seven distinct modules, each with a single responsibility, communicating through well-defined data contracts (files on disk or typed Python objects). The critical design constraint is that SVD collection is the computational bottleneck and must be tightly integrated with model inference, not bolted on after the fact.
+The v1.1 features fall into three integration categories: (A) features that modify existing core modules (multi-head, full spectrum), (B) features that extend existing analysis pipelines (PR curves, calibration, compliance curves, softmax bounds), and (C) features that are largely standalone (null model, overhead benchmarking, pre-registration). The key architectural risk is multi-head support, which requires coordinated changes across 6+ modules. All other features are additive and can be built incrementally without breaking backward compatibility.
 
-### High-Level Data Flow
+### Integration Map: All 8 Features
 
 ```
-[1. Config]
-    |
-    v
-[2. Graph Gen] --> adjacency matrix + metadata (pickle/npz)
-    |
-    v
-[3. Walk Gen] --> walk corpus (tokenized sequences, .pt files)
-    |
-    v
-[4. Transformer Training] --> model checkpoint (.pt)
-    |                          + training curves (JSON)
-    |
-    v
-[5. Sufficiency Gate] -- FAIL --> flag config, skip SVD
-    |
-    | PASS
-    v
-[6. Evaluation + SVD Collection] --> per-step behavioral labels
-    |                                 + per-step SVD metrics
-    |                                 (combined into sequences[])
-    v
-[7. Analysis + Reporting] --> result.json
-                              + figures/
-                              + report.html
+FEATURE                     MODULES TOUCHED          CATEGORY
+1. Null model baseline      config, graph, eval      New config flag, reuse pipeline
+2. Softmax filtering bound  analysis (NEW module)    New standalone module
+3. Multi-head ablation      config, model, eval,     Core module modification
+                            analysis, viz, reporting
+4. PR curves + calibration  analysis, viz            Extension of existing AUROC
+5. Pre-registration         analysis, results        Extension of existing schema
+6. Compliance curve         training, analysis (NEW) New sweep + analysis module
+7. Full spectrum storage    eval, analysis, results  Extension of existing NPZ
+8. SVD overhead benchmark   benchmarks (NEW package) Standalone tool
 ```
-
-The sweep orchestrator wraps steps 2-7 and manages the job queue, priority ordering, and budget tracking.
 
 ### Component Boundaries
 
-| Component | Responsibility | Communicates With | Key Interface |
-|-----------|---------------|-------------------|---------------|
-| `config` | Define, validate, serialize experiment configurations | All modules read config | `ExperimentConfig` dataclass |
-| `graph` | DCSBM generation, block jumper designation, adjacency storage | Walk Gen reads adjacency + block info | `DCBSMGraph` object with adj matrix, block assignments, jumper rules |
-| `walks` | Random walk sampling, corpus construction, train/eval split | Training reads walk corpus | `.pt` files of tokenized walk tensors |
-| `model` | NanoGPT-scale transformer definition, single-head attention | Training uses model, Eval hooks into model | `nn.Module` with explicit QKV access |
-| `training` | Training loop, loss tracking, checkpoint saving, sufficiency gate | Reads walks + model, writes checkpoints + training curves | Checkpoint `.pt` + `training_log.json` |
-| `evaluation` | Behavioral eval + SVD metric extraction in a single forward pass | Reads checkpoint + eval walks + graph rules, writes sequences | `sequences[]` conforming to result schema |
-| `analysis` | Predictive horizon computation, statistical tests, plotting, reporting | Reads result.json, writes figures + reports | `result.json` conforming to schema |
-| `sweep` | Job queue management, priority ordering, budget tracking | Wraps all other modules, reads/writes sweep state | `sweep_state.json` + job queue |
+| Component | Responsibility | Communicates With |
+|-----------|---------------|-------------------|
+| `src/config/experiment.py` | Add `n_heads` flexibility, `null_model` flag | All modules |
+| `src/model/attention.py` | Multi-head CausalSelfAttention | block.py, transformer.py |
+| `src/model/transformer.py` | Pass n_heads through, update get_wvwo() | evaluation pipeline |
+| `src/evaluation/pipeline.py` | Per-head SVD extraction, full spectrum storage | analysis modules |
+| `src/analysis/auroc_horizon.py` | PR curves, calibration, pre-registration | results schema |
+| `src/analysis/softmax_bound.py` | NEW: theoretical bound verification | reporting |
+| `src/analysis/compliance_curve.py` | NEW: r/w sweep analysis | reporting, visualization |
+| `src/analysis/spectrum.py` | NEW: curvature/torsion on full spectrum | results schema |
+| `src/benchmarks/` | NEW package: SVD timing | standalone |
 
-### Data Flow Detail
+### Data Flow Changes from v1.0
 
-**Phase 1: Configuration**
-- Input: sweep parameters (YAML or Python dict)
-- Output: list of `ExperimentConfig` objects, each fully specifying one run
-- Config includes: n, w, t, d_model, n_layers, r, p_in, p_out, n_blocks, n_jumpers, walk_length, seed
-- Config is frozen and serialized before any computation begins
+```
+v1.0 flow (unchanged for single-head):
+  Config -> Graph -> Walks -> Train -> Eval+SVD -> Analysis -> Report
 
-**Phase 2: Graph Generation**
-- Input: `ExperimentConfig` (graph params only)
-- Output: `DCBSMGraph` containing:
-  - Adjacency matrix (sparse, directed) -- `scipy.sparse.csr_matrix`
-  - Block assignments: `np.ndarray[int]` of length n
-  - Degree corrections: `np.ndarray[float]` of length n
-  - Block jumper rules: `dict[int, JumperRule]` mapping vertex -> (jump_length, target_block)
-  - Saved as `.npz` + `.json` metadata for reproducibility
-- Graph is generated ONCE per unique (n, n_blocks, p_in, p_out, n_jumpers, seed) tuple
-- Multiple configs sharing the same graph params should reuse the cached graph
+v1.1 additions:
 
-**Phase 3: Walk Generation**
-- Input: `DCBSMGraph` + walk params (t, walk_length)
-- Output: tokenized walk tensors split into train/eval
-  - `train_walks.pt`: tensor of shape `(num_train_walks, walk_length)`
-  - `eval_walks.pt`: tensor of shape `(num_eval_walks, walk_length)`
-  - `walk_metadata.json`: which walks contain jumper vertices, positions of jumper activations
-- Walk generation is a random process: from each starting vertex, follow outgoing edges weighted by degree correction
-- Walks are integer-encoded (vertex IDs are token IDs; vocabulary size = n)
-- Walk corpus is generated ONCE per unique (graph_id, t, walk_length, seed) tuple
+  [Null model path]
+  Config(null_model=True) -> Graph(n_jumpers_per_block=0) -> Walks -> Train ->
+    Eval+SVD -> Baseline distributions (stored in result.json)
 
-**Phase 4: Training**
-- Input: `train_walks.pt` + model config (d_model, n_layers, w)
-- Output:
-  - Model checkpoint: `model.pt` (state_dict + optimizer_state + epoch)
-  - Training log: `training_log.json` with loss curves per step
-- Standard next-token prediction with cross-entropy loss
-- Vocabulary size = n (each vertex is a token)
-- Model architecture: embedding(n, d_model) -> n_layers x TransformerBlock -> linear(d_model, n)
-- Each TransformerBlock: single-head causal self-attention + FFN + LayerNorm
+  [Multi-head path]
+  Config(n_heads=2|4) -> Model(MultiHeadAttention) -> Train ->
+    Eval(per-head QKT extraction) -> SVD(per-head) -> Analysis(signal concentration)
 
-**Phase 5: Sufficiency Gate**
-- Input: trained model + `eval_walks.pt` + `DCBSMGraph`
-- Output: PASS/FAIL + compliance metrics
-- Edge compliance: fraction of generated next-tokens that correspond to valid edges
-- Rule compliance: fraction of jumper-activated positions where the model lands in the correct target block
-- Thresholds: edge > 95%, rule > 80%
-- FAIL: config is logged with compliance metrics but excluded from SVD analysis
+  [Full spectrum path]
+  Eval -> token_metrics.npz now includes sigma_vectors per step ->
+    Analysis(curvature, torsion) -> result.json
 
-**Phase 6: Evaluation + SVD Collection (the expensive step)**
-- Input: trained model + `eval_walks.pt` + `DCBSMGraph` + `ExperimentConfig`
-- Output: `sequences[]` array conforming to result schema
-- This is where the computational cost lives. At every token step during eval:
-  1. Run forward pass, extract Q and K matrices from the single attention head
-  2. Compute QK^T (shape: `(seq_pos, seq_pos)` or more precisely `(current_ctx_len, current_ctx_len)`)
-  3. Run `torch.linalg.svd(QKT, full_matrices=False)`
-  4. Compute all ~20 SVD metrics from the singular values and vectors
-  5. Classify behavioral outcome (edge valid/invalid x rule followed/violated/NA)
-  6. Store per-step metrics + labels
-- The QK^T matrix at step t has shape `(min(t, w), min(t, w))` -- it grows with context up to w
+  [Compliance curve path]
+  r_sweep configs -> multiple training runs -> compliance_curve analysis ->
+    sharp transition plot
 
-**Phase 7: Analysis + Reporting**
-- Input: `result.json` (complete)
-- Output: figures/, report.html, comparison reports
-- Predictive horizon computation: for each metric, compute AUROC at each lookback j
-- Statistical tests: Mann-Whitney U, Wilson intervals
-- Plotting: all plot types from the plotting guide
-- Report generation: HTML with embedded base64 figures
+  [Benchmark path]
+  Model + synthetic inputs -> timed SVD -> overhead_report.json (standalone)
+```
+
+## Feature 1: Null Model Baseline
+
+### Where it fits
+
+The null model is NOT a new model type. It is a standard experiment run with `n_jumpers_per_block=0`, which eliminates all block jumper rules. The model trains on clean sequences where no rule violations are possible. The resulting Grassmannian drift distribution serves as the null hypothesis: "this is how much subspace rotation happens when there is nothing to predict."
+
+### Architecture decision: Config flag vs. new walk type
+
+**Use a config flag, not a new walk type.** The existing pipeline already handles the case where `n_jumpers_per_block=0` -- the jumper designation returns an empty list, walks are pure random walks, and behavioral classification labels everything as NOT_APPLICABLE. The only change needed is:
+
+1. **`src/config/experiment.py`**: Remove or relax the `n_jumpers_per_block` minimum if one exists. Add a `tags` value convention: configs with `tags=("null_model",)` are recognized as baseline runs.
+
+2. **`src/graph/jumpers.py`**: Already handles `n_jumpers_per_block=0` gracefully (the loop runs zero times, returns empty list). No change needed.
+
+3. **`src/evaluation/pipeline.py`**: Already handles empty jumper maps. SVD metrics are still collected. Behavioral classification produces all NOT_APPLICABLE outcomes. No change needed.
+
+4. **`src/analysis/null_baseline.py`** (NEW): Loads token_metrics.npz from null model runs, extracts Grassmannian distance distributions, computes summary statistics (mean, std, percentiles), and provides comparison functions for real experiment results.
+
+### Modifications required
+
+| File | Change | Breaking? |
+|------|--------|-----------|
+| `src/config/experiment.py` | None (already supports n_jumpers_per_block=0 if > 0 check doesn't exist) | No |
+| `src/analysis/null_baseline.py` | NEW file: extract null distributions | No |
+| `src/results/schema.py` | Add `null_baseline` section to result.json | No (additive) |
+
+### Data contract
+
+```python
+# null_baseline section in result.json
+"null_baseline": {
+    "source_experiment_id": "null_n500_w64_seed42",
+    "grassmannian_distance": {
+        "qkt": {"mean": 0.12, "std": 0.04, "p95": 0.19, "p99": 0.23},
+        "avwo": {"mean": 0.08, "std": 0.03, "p95": 0.13, "p99": 0.16}
+    },
+    "per_layer": {
+        "layer_0": {...},
+        "layer_1": {...},
+        ...
+    }
+}
+```
+
+## Feature 2: Softmax Filtering Bound
+
+### Where it fits
+
+This is a mathematical analysis feature that verifies a theoretical bound: given perturbation epsilon in QKT, how much does the output AVWo change after softmax filtering? It has TWO parts: (a) LaTeX derivation in the math PDF, and (b) empirical verification using collected SVD data.
+
+### Architecture decision: New analysis module
+
+**Create `src/analysis/softmax_bound.py`.** This is cleanly separate from existing modules because it asks a different question (perturbation propagation) than existing analysis (predictive discrimination).
+
+### Modifications required
+
+| File | Change | Breaking? |
+|------|--------|-----------|
+| `src/analysis/softmax_bound.py` | NEW: epsilon-bound computation and empirical verification | No |
+| `src/reporting/math_pdf.py` | Add MATH_SECTIONS entry for the softmax bound derivation | No (additive) |
+| `src/evaluation/pipeline.py` | May need to store paired (QKT_perturbed, AVWo) at same step | Possibly -- see below |
+
+### Key concern: Data collection
+
+The empirical verification needs paired measurements: "at step t, the QKT perturbation was X and the AVWo perturbation was Y." The existing pipeline already stores both QKT and AVWo Grassmannian distances at each step, keyed by `qkt.layer_N.grassmannian_distance` and `avwo.layer_N.grassmannian_distance`. These are already aligned by step index in token_metrics.npz.
+
+Therefore: **No new data collection is needed.** The softmax bound verification can work entirely from existing NPZ data by correlating the QKT and AVWo perturbation magnitudes at each step and checking whether the empirical ratio stays within the theoretical bound.
+
+```python
+# In src/analysis/softmax_bound.py
+def verify_softmax_bound(
+    qkt_grassmannian: np.ndarray,  # [n_sequences, n_steps]
+    avwo_grassmannian: np.ndarray, # [n_sequences, n_steps]
+    d_model: int,
+    theoretical_bound_fn: Callable,
+) -> dict:
+    """Check empirical AVWo perturbation <= bound(QKT perturbation)."""
+```
+
+## Feature 3: Multi-Head Ablation (1h/2h/4h)
+
+### Where it fits
+
+This is the most invasive feature. The current architecture **enforces** `n_heads=1` via a hard check in `ExperimentConfig.__post_init__`. The single-head assumption is baked into:
+
+1. `CausalSelfAttention` -- no head dimension, Q/K/V are each [B, T, D]
+2. `ForwardOutput` -- QKT is [B, n_layers, T, T] (no head dimension)
+3. `fused_evaluate` -- indexes QKT as [B, layer, T, T]
+4. SVD metrics -- compute on [T, T] matrices
+5. Grassmannian distance tracking -- keyed by (target, layer)
+6. NPZ keys -- `qkt.layer_0.grassmannian_distance`
+7. AUROC analysis -- reads NPZ keys directly
+8. All visualization -- expects single QKT per layer
+
+### Architecture decision: Head-aware attention with backward-compatible ForwardOutput
+
+**Approach:** Modify `CausalSelfAttention` to support multiple heads. Add a head dimension to ForwardOutput. Make the evaluation pipeline iterate over heads. Keep the NPZ key convention backward-compatible by including head index.
+
+**Critical constraint:** The d_model must be divisible by n_heads. For anchor config d_model=128: 2 heads = d_head=64, 4 heads = d_head=32. Both are valid.
+
+### Detailed changes
+
+#### `src/config/experiment.py`
+```python
+# REMOVE the n_heads != 1 check in __post_init__
+# REPLACE with:
+if self.model.n_heads not in (1, 2, 4):
+    raise ValueError("n_heads must be 1, 2, or 4")
+if self.model.d_model % self.model.n_heads != 0:
+    raise ValueError(f"d_model ({self.model.d_model}) must be divisible by n_heads ({self.model.n_heads})")
+```
+
+#### `src/model/attention.py`
+The entire class needs rewriting to support multi-head. Key change: Q, K, V go from [B, T, D] to [B, n_heads, T, d_head]. The output shape stays [B, T, D] (heads are concatenated and projected).
+
+```python
+class CausalSelfAttention(nn.Module):
+    def __init__(self, d_model: int, n_heads: int, max_seq_len: int, dropout: float = 0.0):
+        super().__init__()
+        assert d_model % n_heads == 0
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
+        self.d_model = d_model
+        # W_q, W_k, W_v, W_o dimensions unchanged (d_model -> d_model)
+        # But internally we reshape to [B, n_heads, T, d_head]
+
+    def forward(self, x, extract=False):
+        # Q, K, V: [B, T, D] -> [B, n_heads, T, d_head]
+        # QKT per head: [B, n_heads, T, T]
+        # Attention per head: [B, n_heads, T, T]
+        # Values per head: [B, n_heads, T, d_head]
+        # Output: concat heads -> [B, T, D] -> W_o -> [B, T, D]
+        if extract:
+            return y, AttentionInternals(
+                qkt=qkt_target,        # NOW [B, n_heads, T, T]
+                attention_weights=attn, # NOW [B, n_heads, T, T]
+                values=v,               # NOW [B, n_heads, T, d_head]
+            )
+```
+
+#### `src/model/types.py`
+```python
+@dataclass
+class AttentionInternals:
+    qkt: torch.Tensor           # [B, n_heads, T, T] (was [B, T, T])
+    attention_weights: torch.Tensor  # [B, n_heads, T, T] (was [B, T, T])
+    values: torch.Tensor        # [B, n_heads, T, d_head] (was [B, T, D])
+
+@dataclass
+class ForwardOutput:
+    logits: torch.Tensor
+    qkt: torch.Tensor | None = None  # [B, n_layers, n_heads, T, T] (was [B, n_layers, T, T])
+    attention_weights: torch.Tensor | None = None  # [B, n_layers, n_heads, T, T]
+    values: torch.Tensor | None = None  # [B, n_layers, n_heads, T, d_head]
+    ...
+```
+
+#### `src/model/transformer.py`
+```python
+# In TransformerLM.__init__:
+# Pass n_heads to TransformerBlock -> CausalSelfAttention
+self.blocks = nn.ModuleList([
+    TransformerBlock(d_model, n_heads, max_seq_len, dropout)
+    for _ in range(n_layers)
+])
+
+# In forward():
+# Stack now includes head dimension:
+qkt = torch.stack(all_qkt, dim=1)  # [B, n_layers, n_heads, T, T]
+
+# get_wvwo() returns [n_layers, n_heads, d_head, d_head] for multi-head
+# or [n_layers, d_model, d_model] for single-head
+```
+
+#### `src/evaluation/pipeline.py`
+This is the most complex change. The inner loop must iterate over heads:
+
+```python
+for layer_idx in range(n_layers):
+    for head_idx in range(n_heads):
+        qkt_matrix = output.qkt[:, layer_idx, head_idx]  # [B, T, T]
+        # SVD on per-head QKT...
+        key = f"qkt.layer_{layer_idx}.head_{head_idx}.{metric_name}"
+```
+
+For single-head (n_heads=1), this produces keys like `qkt.layer_0.head_0.grassmannian_distance`, which is backward-incompatible with v1.0 keys like `qkt.layer_0.grassmannian_distance`.
+
+**Backward compatibility strategy:** When n_heads=1, emit BOTH key formats:
+- `qkt.layer_0.grassmannian_distance` (v1.0 compatible)
+- `qkt.layer_0.head_0.grassmannian_distance` (v1.1 format)
+
+This ensures v1.0 analysis code continues to work on single-head results while multi-head results use the new key format.
+
+#### `src/analysis/signal_concentration.py` (NEW)
+Per-head signal concentration analysis: which heads carry the predictive signal?
+
+```python
+def compute_signal_concentration(
+    per_head_aurocs: dict[int, dict[str, np.ndarray]],  # head_idx -> metric -> auroc_curve
+) -> dict:
+    """Determine which heads concentrate the predictive SVD signal."""
+    # Compare max AUROC across heads for each metric
+    # Report: "Head 0 carries 80% of Grassmannian signal, Head 1 carries 20%"
+```
+
+#### Impact on downstream modules
+
+| Module | Change needed |
+|--------|--------------|
+| `src/analysis/auroc_horizon.py` | Parse head index from NPZ keys; aggregate or per-head AUROC |
+| `src/analysis/statistical_controls.py` | Handle per-head metrics in correlation matrices |
+| `src/analysis/event_extraction.py` | No change (works on behavioral labels, not SVD) |
+| `src/visualization/auroc.py` | Per-head AUROC plot overlays |
+| `src/visualization/event_aligned.py` | Per-head metric trajectories |
+| `src/reporting/single.py` | Multi-head section in report |
+| `src/reporting/math_pdf.py` | Update attention.py section for multi-head math |
+
+### Multi-head WvWo changes
+
+For multi-head, `get_wvwo()` must return per-head OV circuits. With multi-head attention:
+- W_v projects [D] -> [D], then reshape to [n_heads, d_head]
+- W_o projects from concatenated heads [D] -> [D]
+
+The per-head OV circuit is: `W_v_head_h @ W_o_slice_h`, where W_o_slice_h is the slice of W_o that maps head h's output back to the residual stream. This gives [d_head, d_model] per head, not a square matrix.
+
+**Decision:** For multi-head WvWo, compute the full OV product per head as `W_v[:, h*d_head:(h+1)*d_head].T @ W_o[h*d_head:(h+1)*d_head, :]`, yielding [d_head, d_model]. SVD metrics that require square matrices (like read_write_alignment) must handle rectangular input or be skipped for WvWo in multi-head mode.
+
+## Feature 4: PR Curves + Calibration
+
+### Where it fits
+
+These plug directly into the existing AUROC pipeline. PR curves and calibration use the SAME violation/control event extraction and the SAME metric values at each lookback distance. They just compute different statistics.
+
+### Architecture decision: Extend auroc_horizon.py
+
+**Add functions to `src/analysis/auroc_horizon.py`**, not a new module. PR curves and calibration are conceptually part of the same predictive evaluation as AUROC.
+
+### Modifications required
+
+| File | Change | Breaking? |
+|------|--------|-----------|
+| `src/analysis/auroc_horizon.py` | Add `compute_pr_curve()`, `compute_calibration()` | No |
+| `src/analysis/statistical_controls.py` | Add PR-AUC and calibration to enriched results | No |
+| `src/visualization/` | New plot types: pr_curve.py, calibration.py | No (additive) |
+| `src/results/schema.py` | Add pr_auc and calibration sections | No (additive) |
+
+### Data contract
+
+```python
+# Added to by_metric in result.json predictive_horizon
+"pr_curve": {
+    "precision_by_lookback": [[...], ...],   # [r_value][n_thresholds]
+    "recall_by_lookback": [[...], ...],
+    "pr_auc_by_lookback": [0.72, 0.68, ...], # one PR-AUC per lookback j
+    "max_pr_auc": 0.72,
+    "max_pr_auc_lookback": 1
+},
+"calibration": {
+    "bin_edges": [0.0, 0.1, 0.2, ...],
+    "bin_fractions": [0.05, 0.12, ...],     # actual positive rate per bin
+    "bin_mean_predicted": [0.05, 0.15, ...],
+    "expected_calibration_error": 0.034
+}
+```
+
+### Implementation notes
+
+PR curves need a continuous score, not just binary groups. The existing pipeline provides metric values (Grassmannian distance, etc.) at each lookback -- these ARE the continuous scores. Higher Grassmannian distance = higher predicted probability of violation. The PR curve computation:
+
+```python
+def compute_pr_curve(
+    violation_events: list[AnalysisEvent],
+    control_events: list[AnalysisEvent],
+    metric_array: np.ndarray,
+    r_value: int,
+) -> dict:
+    """Compute precision-recall curve at each lookback j."""
+    # For each lookback j:
+    #   scores = metric values at resolution_step - j
+    #   labels = 1 for violation, 0 for control
+    #   PR curve from sklearn.metrics.precision_recall_curve
+```
+
+Calibration requires binning predicted probabilities. Since raw SVD metrics are not probabilities, use isotonic regression or Platt scaling to convert metric values to calibrated probabilities, then compute reliability diagrams.
+
+## Feature 5: Pre-Registration Framework
+
+### Where it fits
+
+Pre-registration is a methodological framework, not a software feature. It manifests as:
+1. A frozen hypothesis specification (already exists: PRIMARY_METRICS in auroc_horizon.py)
+2. A held-out evaluation protocol
+3. Documentation of what was decided before seeing results
+
+### Architecture decision: Extend config + results schema
+
+**Minimal code changes.** The pre-registration framework is mostly about discipline, not architecture. The code changes are:
+
+| File | Change | Breaking? |
+|------|--------|-----------|
+| `src/config/experiment.py` | Add `held_out_fraction: float = 0.2` to TrainingConfig | No |
+| `src/evaluation/pipeline.py` | Split eval walks into exploratory/confirmatory sets | No |
+| `src/analysis/auroc_horizon.py` | Add `dataset_split` parameter ("exploratory" or "confirmatory") | No |
+| `src/results/schema.py` | Add `pre_registration` section with hypothesis, split info | No |
+
+### Data contract
+
+```python
+"pre_registration": {
+    "primary_hypothesis": "Grassmannian distance of QKT predicts rule violations",
+    "primary_metric": "qkt.grassmannian_distance",
+    "secondary_metrics": ["qkt.spectral_gap_1_2", "qkt.spectral_entropy", ...],
+    "held_out_fraction": 0.2,
+    "exploratory_n": 800,
+    "confirmatory_n": 200,
+    "exploratory_results": {...},  # full analysis on 80% of eval data
+    "confirmatory_results": {...}  # blinded analysis on 20% held-out
+}
+```
+
+## Feature 6: Sharp Compliance Curve
+
+### Where it fits
+
+The compliance curve shows how rule compliance degrades as r/w increases. This requires running multiple training experiments with different r values and plotting the resulting compliance rates. It is NOT an extension of the sufficiency gate -- it is a sweep analysis.
+
+### Architecture decision: New analysis module + config sweep utility
+
+The compliance curve needs data from multiple experiments, each with a different r value. The existing `compute_r_values()` in jumpers.py already defines the discrete r set. The compliance curve analysis reads completed result.json files and extracts compliance rates.
+
+| File | Change | Breaking? |
+|------|--------|-----------|
+| `src/analysis/compliance_curve.py` | NEW: load multiple result.json, extract compliance, plot transition | No |
+| `src/visualization/compliance.py` | NEW: sharp transition plot | No |
+
+### Key insight: Reuse existing architecture
+
+The compliance curve does NOT require any new training infrastructure. Each r value is already a separate experiment config. The sweep runs them independently. The compliance curve analysis is a post-hoc aggregation:
+
+```python
+def compute_compliance_curve(
+    result_dirs: list[Path],
+) -> dict:
+    """Extract r/w ratio vs compliance from multiple experiments."""
+    points = []
+    for result_dir in result_dirs:
+        result = load_result(result_dir / "result.json")
+        r = result["config"]["training"]["r"]
+        w = result["config"]["training"]["w"]
+        edge = result["metrics"]["scalars"]["final_edge_compliance"]
+        rule = result["metrics"]["scalars"]["final_rule_compliance"]
+        points.append({"r_over_w": r / w, "edge": edge, "rule": rule})
+    return {"compliance_curve": sorted(points, key=lambda p: p["r_over_w"])}
+```
+
+The r values from jumpers.py ({0.5w, 0.7w, 0.9w, 1.0w, 1.1w, 1.3w, 1.5w, 2.0w}) already provide the x-axis points. Each is a separate training run with its own result.json.
+
+## Feature 7: Full Spectrum Trajectory
+
+### Where it fits
+
+Currently, the evaluation pipeline computes SVD and immediately reduces singular values to scalar metrics (stable_rank, spectral_entropy, etc.). The full spectrum feature stores the raw singular value vector sigma_1...sigma_k at each step, enabling post-hoc analysis of spectral curve shape changes.
+
+### Architecture decision: Extend NPZ storage, new analysis module
+
+**Store full spectrum in token_metrics.npz alongside scalar metrics.** This is additive -- existing scalar metric keys are unchanged.
+
+| File | Change | Breaking? |
+|------|--------|-----------|
+| `src/evaluation/pipeline.py` | Store `qkt.layer_N.spectrum` arrays in NPZ | No (additive) |
+| `src/analysis/spectrum.py` | NEW: curvature, torsion, spectral curve analysis | No |
+| `src/results/schema.py` | Add spectrum trajectory section | No (additive) |
+
+### Storage format
+
+```python
+# In token_metrics.npz, add per-layer per-target spectrum arrays:
+# Key: "qkt.layer_0.spectrum"
+# Shape: [n_sequences, n_steps, k] where k = min(T, D) singular values
+# Key: "avwo.layer_0.spectrum"
+# Shape: [n_sequences, n_steps, k]
+```
+
+### Storage overhead estimate
+
+For anchor config: n_sequences=1000, n_steps=256, k=min(64,128)=64:
+- Per target per layer: 1000 * 256 * 64 * 4 bytes = ~62 MB
+- 3 targets * 4 layers = 12 arrays = ~750 MB total
+
+This is large. **Mitigation:** Only store spectrum for QKT (the primary target), only for layers that show signal (configurable, default all layers), and use float16 for storage:
+- QKT only, all 4 layers: ~250 MB (float16: ~125 MB)
+- Acceptable for research runs on RTX 3090/4090 with 24GB VRAM
+
+### Curvature and torsion computation
+
+```python
+# In src/analysis/spectrum.py
+def spectral_curvature(spectra: np.ndarray) -> np.ndarray:
+    """Curvature of the spectral curve sigma(t).
+
+    spectra: [n_steps, k] -- singular values at each step
+    Returns: [n_steps] -- curvature at each step (finite difference)
+    """
+    # First derivative: d_sigma/dt (velocity of spectral change)
+    d1 = np.diff(spectra, axis=0)  # [n_steps-1, k]
+    # Second derivative: d^2_sigma/dt^2 (acceleration)
+    d2 = np.diff(d1, axis=0)  # [n_steps-2, k]
+    # Curvature = ||d2|| / ||d1||^3 (per-step scalar)
+    d1_norm = np.linalg.norm(d1[:-1], axis=-1)
+    d2_norm = np.linalg.norm(d2, axis=-1)
+    return d2_norm / (d1_norm**3 + 1e-12)
+```
+
+## Feature 8: SVD Computational Overhead
+
+### Where it fits
+
+This is a standalone benchmarking tool that measures how much time SVD adds to the evaluation pipeline. It does NOT need to be integrated into the production evaluation code.
+
+### Architecture decision: Standalone benchmarks package
+
+**Create `src/benchmarks/svd_overhead.py`.** This is a measurement tool, not a pipeline component. It runs synthetic inputs through the SVD computation path and reports timing.
+
+| File | Change | Breaking? |
+|------|--------|-----------|
+| `src/benchmarks/__init__.py` | NEW package | No |
+| `src/benchmarks/svd_overhead.py` | NEW: timing benchmarks | No |
+
+### What it measures
+
+1. **Per-step SVD time** for different matrix sizes (32x32, 64x64, 128x128, 256x256)
+2. **Per-step metric computation time** (all 8 scalar metrics from a pre-computed SVD)
+3. **Total evaluation overhead** as fraction of forward pass time
+4. **Cheaper approximation candidates**: `torch.svd_lowrank(q=8)` vs `torch.linalg.svd(full_matrices=False)`
+
+### Output format
+
+```python
+# overhead_report.json
+{
+    "device": "cuda:0 (RTX 3090)",
+    "matrix_sizes": {
+        "64x64": {
+            "svd_ms": 0.12,
+            "metrics_ms": 0.03,
+            "total_ms": 0.15,
+            "forward_pass_ms": 1.2,
+            "overhead_fraction": 0.125
+        },
+        "128x128": {...}
+    },
+    "approximations": {
+        "svd_lowrank_q8": {
+            "time_ms": 0.05,
+            "speedup": 2.4,
+            "metric_error": {
+                "stable_rank": 0.001,
+                "grassmannian_distance": 0.003,
+                ...
+            }
+        }
+    }
+}
+```
+
+## Backward Compatibility with v1.0 result.json
+
+### Schema version
+
+Bump `schema_version` from `"1.0"` to `"1.1"`. The v1.1 schema is a strict superset of v1.0:
+- All v1.0 fields remain unchanged
+- New sections are additive (null_baseline, pr_curve, calibration, pre_registration, spectrum_trajectory, overhead)
+- v1.0 readers that check for required fields will not break (no required fields removed)
+
+### NPZ key compatibility
+
+| v1.0 Key Format | v1.1 Key Format (single-head) | v1.1 Key Format (multi-head) |
+|-----------------|------------------------------|------------------------------|
+| `qkt.layer_0.grassmannian_distance` | Same (preserved) | `qkt.layer_0.head_0.grassmannian_distance` |
+| `avwo.layer_0.stable_rank` | Same (preserved) | `avwo.layer_0.head_0.stable_rank` |
+| N/A | `qkt.layer_0.spectrum` | `qkt.layer_0.head_0.spectrum` |
+
+For single-head runs, both v1.0 and v1.1 key formats are emitted. For multi-head runs, only v1.1 format is used (there is no sensible v1.0 equivalent for per-head data).
+
+### result.json compatibility
+
+```python
+# validate_result() in schema.py
+def validate_result(result: dict) -> list[str]:
+    version = result.get("schema_version", "1.0")
+    if version == "1.0":
+        # v1.0 validation (unchanged)
+        ...
+    elif version == "1.1":
+        # v1.0 validation + v1.1 additions
+        ...
+```
+
+## Build Order Considering Feature Dependencies
+
+### Dependency graph
+
+```
+Level 0 (no v1.1 dependencies):
+  [8] SVD overhead benchmarks   -- standalone, can build anytime
+  [2] Softmax filtering bound   -- only needs existing NPZ data
+  [5] Pre-registration framework -- config + schema only
+
+Level 1 (depends on Level 0 for data):
+  [1] Null model baseline       -- needs config relaxation, new analysis module
+  [4] PR curves + calibration   -- extends existing AUROC pipeline
+  [7] Full spectrum storage     -- extends evaluation pipeline
+
+Level 2 (depends on Level 1):
+  [6] Compliance curve          -- needs multiple experiment results (from null + real runs)
+
+Level 3 (depends on all others for validation):
+  [3] Multi-head ablation       -- most invasive, touches everything, should be last
+```
+
+### Recommended build sequence
+
+1. **SVD overhead benchmarks** -- standalone, no risk, provides data for the paper immediately
+2. **Pre-registration framework** -- minimal code, mostly config + schema, sets up methodology
+3. **Softmax filtering bound** -- new analysis module, uses existing data, adds math PDF section
+4. **Null model baseline** -- small config change + new analysis module, validates signal
+5. **PR curves + calibration** -- extends AUROC pipeline, uses same event extraction
+6. **Full spectrum storage** -- extends eval pipeline, new analysis module
+7. **Compliance curve** -- post-hoc analysis of multiple runs, needs data from steps 1-6
+8. **Multi-head ablation** -- LAST because it modifies core types; all other features should be stable before this invasive change
+
+### Rationale for this order
+
+- **Multi-head last:** Every other feature can be built and tested against the single-head architecture. Once working, multi-head changes propagate through the entire stack. If multi-head is built first, every subsequent feature must be developed against both single-head and multi-head codepaths simultaneously, doubling testing complexity.
+
+- **Null model early:** Provides the baseline distribution that other analyses reference. Without it, the softmax bound verification and PR curves lack context.
+
+- **Overhead benchmarks first:** Zero risk, immediate value, and the results inform whether full spectrum storage is feasible within the compute budget.
+
+## New vs. Modified Components Summary
+
+### New files (7)
+
+| File | Purpose | Depends on |
+|------|---------|------------|
+| `src/analysis/null_baseline.py` | Extract/compare null distributions | token_metrics.npz |
+| `src/analysis/softmax_bound.py` | Theoretical bound verification | token_metrics.npz |
+| `src/analysis/spectrum.py` | Full spectrum curvature/torsion | token_metrics.npz (spectrum keys) |
+| `src/analysis/compliance_curve.py` | r/w sweep compliance analysis | Multiple result.json files |
+| `src/analysis/signal_concentration.py` | Per-head signal analysis | Multi-head AUROC results |
+| `src/benchmarks/__init__.py` | Package marker | None |
+| `src/benchmarks/svd_overhead.py` | SVD timing benchmarks | Model, torch.linalg.svd |
+
+### Modified files (10)
+
+| File | Change scope | Risk |
+|------|-------------|------|
+| `src/config/experiment.py` | Remove n_heads=1 constraint, add n_heads validation | MEDIUM |
+| `src/model/attention.py` | Multi-head reshape, per-head extraction | HIGH |
+| `src/model/block.py` | Pass n_heads through | LOW |
+| `src/model/transformer.py` | Pass n_heads, update get_wvwo(), update stacking | MEDIUM |
+| `src/model/types.py` | Add head dimension to AttentionInternals/ForwardOutput | MEDIUM |
+| `src/evaluation/pipeline.py` | Per-head SVD, full spectrum storage, dual key format | HIGH |
+| `src/analysis/auroc_horizon.py` | PR curves, calibration, head-aware key parsing | MEDIUM |
+| `src/analysis/statistical_controls.py` | Handle per-head metrics | MEDIUM |
+| `src/results/schema.py` | Schema v1.1 additions, validate_result v1.1 branch | LOW |
+| `src/reporting/math_pdf.py` | Softmax bound derivation section | LOW |
+
+### Unchanged files (many)
+
+The following modules need NO changes for v1.1:
+- `src/graph/` (entire package -- graph generation is orthogonal)
+- `src/walk/` (entire package -- walk generation is orthogonal)
+- `src/training/trainer.py` (training loop unchanged)
+- `src/training/data.py` (data loading unchanged)
+- `src/training/checkpoint.py` (checkpoint format unchanged)
+- `src/analysis/event_extraction.py` (behavioral events, not SVD)
+- `src/reproducibility/` (entire package)
+- `src/config/hashing.py`, `src/config/serialization.py`, `src/config/defaults.py`
 
 ## Patterns to Follow
 
-### Pattern 1: Config-Driven Everything
+### Pattern 1: Feature Flags via Config Tags
 
-**What:** Every module takes an `ExperimentConfig` (or a subset of it) as its primary input. No hardcoded parameters anywhere.
+**What:** Use `ExperimentConfig.tags` to mark experiments as null models, ablation runs, etc. rather than adding boolean flags to config classes.
 
-**When:** Always. Every function that could conceivably vary between runs takes its parameters from config.
-
-**Example:**
-```python
-@dataclass(frozen=True)
-class GraphConfig:
-    n: int
-    n_blocks: int
-    p_in: float
-    p_out: float
-    n_jumpers_per_block: int
-    seed: int
-
-@dataclass(frozen=True)
-class ModelConfig:
-    d_model: int
-    n_layers: int
-    context_window: int  # w
-    vocab_size: int      # = n
-
-@dataclass(frozen=True)
-class ExperimentConfig:
-    graph: GraphConfig
-    model: ModelConfig
-    walk_length: int         # l
-    corpus_size: int         # t
-    jump_length: int         # r
-    seeds: list[int]         # random seeds for replication
-    experiment_slug: str
-```
-
-### Pattern 2: Forward Hook for QK^T Extraction
-
-**What:** Use PyTorch forward hooks to extract Q, K matrices from the attention layer without modifying the model architecture. This keeps the model code clean and the extraction concern separate.
-
-**When:** During evaluation (Phase 6). Do NOT use hooks during training -- they add overhead and are unnecessary.
+**When:** For metadata that does not change the computation (it only changes how results are interpreted).
 
 **Example:**
 ```python
-class QKTExtractor:
-    """Attaches to a single-head attention layer and captures QK^T."""
-
-    def __init__(self, attention_layer: nn.Module):
-        self.qkt = None
-        self._hook = attention_layer.register_forward_hook(self._hook_fn)
-
-    def _hook_fn(self, module, input, output):
-        # Assumes the attention layer exposes Q, K internally
-        # For NanoGPT-style: override forward to store Q, K as attributes
-        Q = module._last_Q  # set during forward
-        K = module._last_K
-        self.qkt = Q @ K.transpose(-2, -1)
-
-    def remove(self):
-        self._hook.remove()
+null_config = ExperimentConfig(
+    graph=GraphConfig(n_jumpers_per_block=0),
+    tags=("null_model", "v1.1"),
+)
 ```
 
-**Alternative (preferred for this project):** Since we control the model code and have a single attention head, it is cleaner to have the attention layer return QK^T as part of its output during eval mode rather than using hooks. This avoids the fragility of hooks.
+**Why:** Tags are already in the schema and result.json. Adding boolean flags to frozen dataclasses requires schema migration. Tags are flexible and backward-compatible.
 
-```python
-class SingleHeadAttention(nn.Module):
-    def forward(self, x, return_qkt=False):
-        Q = self.W_Q(x)  # (B, T, d)
-        K = self.W_K(x)
-        V = self.W_V(x)
-        qkt = Q @ K.transpose(-2, -1) / math.sqrt(self.d_model)
-        attn = F.softmax(qkt.masked_fill(self.causal_mask[:T, :T] == 0, float('-inf')), dim=-1)
-        out = attn @ V
-        if return_qkt:
-            return out, qkt  # return raw (pre-softmax) QK^T
-        return out
-```
+### Pattern 2: Dual Key Emission for Backward Compatibility
 
-### Pattern 3: Lazy SVD Batching
+**What:** When a key format changes (e.g., adding head index), emit both old and new key formats for the default case (single head).
 
-**What:** Instead of computing SVD independently at every token position, batch SVD computations where possible. Since `torch.linalg.svd` can operate on batched input, accumulate QK^T matrices across positions and SVD them together.
-
-**When:** During evaluation, when processing a single walk sequence of length L.
+**When:** Any time an NPZ or result.json key format changes in a way that would break downstream readers.
 
 **Example:**
 ```python
-def collect_svd_metrics_batched(model, walk_tensor, config):
-    """Process one walk, collecting SVD metrics at every step."""
-    model.eval()
-    w = config.model.context_window
-    L = walk_tensor.shape[0]
-
-    # Collect QK^T at each step
-    qkt_list = []
-    with torch.no_grad():
-        for t in range(1, L):
-            ctx = walk_tensor[max(0, t - w):t].unsqueeze(0)  # (1, ctx_len)
-            _, qkt = model(ctx, return_qkt=True)  # (1, ctx_len, ctx_len)
-            qkt_list.append(qkt.squeeze(0))  # (ctx_len, ctx_len)
-
-    # Batch SVD for same-size QK^T matrices
-    # Group by context length (all steps where ctx_len == w can be batched)
-    from itertools import groupby
-    size_groups = {}
-    for idx, qkt in enumerate(qkt_list):
-        sz = qkt.shape[0]
-        size_groups.setdefault(sz, []).append((idx, qkt))
-
-    svd_results = [None] * len(qkt_list)
-    for sz, group in size_groups.items():
-        indices, matrices = zip(*group)
-        batch = torch.stack(matrices)  # (batch_size, sz, sz)
-        U, S, Vh = torch.linalg.svd(batch, full_matrices=False)
-        for i, idx in enumerate(indices):
-            svd_results[idx] = (U[i], S[i], Vh[i])
-
-    return svd_results
+# In evaluation/pipeline.py
+if n_heads == 1:
+    # Emit v1.0 compatible key
+    svd_metric_arrays[f"qkt.layer_{layer_idx}.{metric_name}"] = ...
+# Always emit v1.1 key
+svd_metric_arrays[f"qkt.layer_{layer_idx}.head_{head_idx}.{metric_name}"] = ...
 ```
 
-**Why this matters:** For a walk of length L with context window w, steps 1 through w-1 each have a different-sized QK^T matrix (1x1, 2x2, ..., (w-1)x(w-1)). Steps w through L all have the same size (wxw). The wxw batch is where most of the computation lives, and batching it is a significant win.
+### Pattern 3: Post-Hoc Aggregation Over In-Pipeline Computation
 
-### Pattern 4: Result Schema as the Single Source of Truth
+**What:** For features that need data from multiple experiments (compliance curve, null model comparison), do NOT try to combine results during the pipeline. Write individual result.json files, then aggregate in a separate analysis step.
 
-**What:** All downstream code (plotting, reporting, comparison) reads exclusively from `result.json`. No module passes in-memory objects to the reporting layer. Write result first, then read it back for analysis.
+**When:** Any analysis that crosses experiment boundaries.
 
-**When:** Always. This is a hard rule from the spec.
-
-**Why:** Reproducibility. Any figure or report can be regenerated from the stored JSON without re-running the experiment. This also means the evaluation module must write a complete `result.json` before any analysis begins.
-
-### Pattern 5: Graph and Walk Caching
-
-**What:** Graph generation and walk generation are deterministic given the same parameters and seed. Cache results on disk keyed by a hash of the relevant config subset.
-
-**When:** During parameter sweeps. Many configs share the same graph (varying only r, d_model, n_layers) or the same walks (varying only model architecture).
-
-**Example:**
-```python
-import hashlib, json
-
-def config_hash(config_subset: dict) -> str:
-    """Deterministic hash of config parameters."""
-    canonical = json.dumps(config_subset, sort_keys=True)
-    return hashlib.sha256(canonical.encode()).hexdigest()[:12]
-
-def get_or_generate_graph(graph_config: GraphConfig, cache_dir: str = "cache/graphs"):
-    h = config_hash(asdict(graph_config))
-    path = os.path.join(cache_dir, h)
-    if os.path.exists(path):
-        return DCBSMGraph.load(path)
-    graph = generate_dcsbm(graph_config)
-    graph.save(path)
-    return graph
-```
-
-### Pattern 6: Evaluation as a Single Fused Pass
-
-**What:** Behavioral evaluation and SVD metric collection happen in the SAME forward pass. Do not run the model twice (once for eval, once for SVD). The evaluation module produces the complete `sequences[]` array in one pass per walk.
-
-**When:** Always during Phase 6.
-
-**Why:** The forward pass is the expensive part (GPU compute). Running it twice would double the wall time for no reason. The model forward returns both the prediction logits (for behavioral classification) and the QK^T matrix (for SVD analysis) simultaneously.
+**Why:** Keeps each pipeline run independent and reproducible. Aggregation scripts are simpler to debug and re-run.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: In-Memory Pipeline
+### Anti-Pattern 1: Monolithic Multi-Head Refactor
 
-**What:** Passing large tensors between pipeline stages through Python objects in a single script.
+**What:** Changing all modules to support multi-head simultaneously in one large PR.
 
-**Why bad:** Memory pressure (graph + walks + model + SVD results all in RAM simultaneously), no ability to resume from a failed run, no caching, no parallelism.
+**Why bad:** If attention.py, types.py, transformer.py, pipeline.py, and analysis all change together, a bug anywhere breaks everything. Testing is impossible because there are no stable intermediate states.
 
-**Instead:** Each stage writes its output to disk. The next stage reads from disk. This enables: (a) caching and reuse across configs, (b) resume from any failed stage, (c) independent profiling of each stage, (d) running stages on different hardware if needed.
+**Instead:** Build multi-head in stages: (1) attention.py + types.py + tests, (2) transformer.py + block.py + tests, (3) pipeline.py + tests, (4) analysis + tests. Each stage has a passing test suite before the next begins.
 
-### Anti-Pattern 2: SVD After-the-Fact
+### Anti-Pattern 2: Storing Full Spectrum Unconditionally
 
-**What:** Training the model, then doing a separate "SVD analysis pass" that re-runs inference just to collect QK^T.
+**What:** Always storing sigma_1...sigma_k at every step for every target and layer.
 
-**Why bad:** Doubles the inference compute. The QK^T matrix is available during the same forward pass that produces predictions.
+**Why bad:** 750 MB per experiment in float32. With 8+ experiment configs, this exceeds storage budget and slows NPZ I/O.
 
-**Instead:** Use Pattern 6 (fused evaluation pass). The model's forward method returns both logits and QK^T when `return_qkt=True`.
+**Instead:** Make spectrum storage configurable via a flag in ExperimentConfig or ExtractionMode. Default: store only for QKT target. Use float16 for storage.
 
-### Anti-Pattern 3: Giant result.json
+### Anti-Pattern 3: Computing Calibration During Evaluation
 
-**What:** Storing all SVD metrics for all token positions for all eval walks in a single result.json, producing multi-GB files.
+**What:** Running isotonic regression or Platt scaling inside the fused evaluation loop.
 
-**Why bad:** JSON parsing becomes the bottleneck. Loading a 2GB JSON into memory to plot one figure is wasteful.
+**Why bad:** Calibration requires the full dataset of scores and labels. It cannot be computed incrementally during generation.
 
-**Instead:** Use a hybrid storage strategy:
-- `result.json` stores: config, scalar metrics, curves, confusion matrix, statistical tests, predictive horizon data, and SUMMARY statistics of SVD metrics (means, stds, distributions at key positions).
-- `token_metrics.npz` (companion file): stores the full per-step SVD metric tensors as numpy arrays, referenced by sequence_id. This file is only loaded when needed for detailed per-token analysis.
-- Plotting functions check for `token_metrics.npz` and fall back to summary data in `result.json`.
-
-### Anti-Pattern 4: Monolithic Sweep Script
-
-**What:** A single `run_sweep.py` that loops over all configs sequentially, with no ability to pause, resume, reprioritize, or monitor progress.
-
-**Why bad:** With a $100 budget, you need to be able to stop at any point and have complete results for the most important configs. A monolithic loop means partial results are useless.
-
-**Instead:** Use a job queue pattern. Each config is a job. Jobs are prioritized (anchor config first, then r-sweep, then secondary sweeps). The sweep runner picks the next highest-priority incomplete job, runs it, writes results, and updates the queue state. You can stop and restart at any time.
-
-### Anti-Pattern 5: Recomputing SVD Metrics in Analysis
-
-**What:** Analysis code that re-derives SVD metrics from raw singular values stored in result.json.
-
-**Why bad:** Different definitions of the "same" metric lead to subtle bugs. The metric computation should happen exactly once, during evaluation.
-
-**Instead:** Compute all ~20 metrics during the evaluation pass and store them by name. Analysis code reads metric values directly; it never touches singular values or vectors.
-
-## Module Dependency Graph (Build Order)
-
-The build order is determined by what each module needs to function and be testable independently.
-
-```
-Level 0 (no dependencies):
-  config        -- dataclasses, validation, serialization
-  graph         -- DCSBM generation (only needs numpy/scipy)
-
-Level 1 (depends on Level 0):
-  walks         -- needs graph
-  model         -- needs config (for architecture params)
-
-Level 2 (depends on Level 1):
-  training      -- needs model + walks
-
-Level 3 (depends on Level 2):
-  evaluation    -- needs trained model + walks + graph + SVD metric computation
-
-Level 4 (depends on Level 3):
-  analysis      -- needs result.json from evaluation
-  sweep         -- wraps levels 0-4
-```
-
-### Suggested Build Sequence
-
-1. **config** -- Define all dataclasses first. Everything else imports these. Testable with pure unit tests (validation, serialization, hashing).
-
-2. **graph** -- DCSBM generation is standalone math. Test: generate a graph, verify block structure, edge density matches p_in/p_out, jumper rules are satisfiable (valid paths of length r exist to target block). No PyTorch dependency.
-
-3. **model** -- Define the NanoGPT-scale transformer. Test: forward pass with random input, verify output shape, verify QK^T extraction works with `return_qkt=True`, verify single-head constraint.
-
-4. **walks** -- Walk generation on the graph. Test: generate walks, verify all transitions are valid edges, verify walk length, verify jumper vertices appear at expected frequency.
-
-5. **training** -- Training loop. Test: train on a tiny graph (n=20, w=8) for a few epochs, verify loss decreases, verify checkpoint save/load round-trips.
-
-6. **evaluation** -- The most complex module. Build in sub-stages:
-   a. Behavioral classification (edge validity + rule compliance) -- test independently
-   b. QK^T extraction and SVD computation -- test with random matrices
-   c. SVD metric computation (~20 metrics) -- test each metric against hand-computed values
-   d. Fused evaluation pass -- integration test combining a-c
-   e. Result JSON writer -- test schema compliance
-
-7. **analysis** -- Predictive horizon, plotting, reporting. Test: create synthetic result.json with known patterns, verify AUROC computation, verify plots generate without errors.
-
-8. **sweep** -- Job queue, priority ordering, budget tracking. Test: create a small sweep (3 configs), verify execution order matches priority, verify resume after interruption.
-
-## Detailed Module Specifications
-
-### `config/` Module
-
-```
-config/
-  __init__.py
-  schema.py          # ExperimentConfig, GraphConfig, ModelConfig, etc.
-  validation.py      # Validate parameter ranges, cross-parameter constraints
-  sweep.py           # Generate config grid from sweep ranges
-  hashing.py         # Deterministic config hashing for caching
-```
-
-Key cross-parameter constraints to validate:
-- `walk_length >= 2 * context_window`
-- `corpus_size >= 100 * n`
-- `jump_length >= 1`
-- Valid paths of length r must exist (checked after graph generation, not here)
-
-### `graph/` Module
-
-```
-graph/
-  __init__.py
-  dcsbm.py           # DCSBM adjacency matrix generation
-  jumpers.py         # Block jumper designation and rule validation
-  pathcheck.py       # Verify valid paths of length r exist to target block
-  io.py              # Save/load graph to/from disk
-```
-
-The DCSBM generation:
-1. Assign n vertices to n_blocks blocks (balanced or configurable)
-2. Generate degree corrections from a Pareto or log-normal distribution
-3. For each vertex pair (i, j), edge exists with probability: `theta_i * theta_j * B[block(i), block(j)]` where B is the block interaction matrix with p_in on diagonal, p_out off-diagonal
-4. Edges are directed (the adjacency matrix is not symmetric)
-
-### `model/` Module
-
-```
-model/
-  __init__.py
-  transformer.py     # NanoGPT-scale transformer with single-head attention
-  attention.py       # SingleHeadAttention with return_qkt option
-```
-
-Architecture for anchor config (d_model=128, n_layers=4, w=64, n=500):
-- Token embedding: (500, 128)
-- Position embedding: (64, 128)
-- 4 transformer blocks, each:
-  - SingleHeadAttention(d_model=128)
-  - FFN(d_model=128, d_ff=512) -- 4x expansion
-  - LayerNorm
-- Output linear: (128, 500)
-- Total parameters: approximately 500*128 + 64*128 + 4*(128*128*3 + 128*128 + 128*512*2 + 128*4) + 128*500 = ~860K parameters
-
-### `training/` Module
-
-```
-training/
-  __init__.py
-  trainer.py         # Training loop with logging
-  sufficiency.py     # Gate evaluation (edge compliance, rule compliance)
-  checkpoint.py      # Save/load model checkpoints
-```
-
-### `evaluation/` Module
-
-```
-evaluation/
-  __init__.py
-  behavioral.py      # Edge validity + rule compliance classification
-  svd_metrics.py     # All ~20 SVD metric computations
-  collector.py       # Fused evaluation pass combining behavioral + SVD
-  writer.py          # Write result.json + token_metrics.npz
-```
-
-The SVD metrics module is the most mathematically dense. Each metric is a pure function: `(U, S, Vh, prev_U, prev_S, prev_Vh, embeddings) -> float`. Test each independently.
-
-### `analysis/` Module
-
-```
-analysis/
-  __init__.py
-  horizon.py         # Predictive horizon AUROC computation
-  statistics.py      # Statistical tests (Mann-Whitney, Wilson, etc.)
-  plotting.py        # All plot types from plotting guide
-  reporting.py       # HTML report generation
-  comparison.py      # Multi-experiment comparison
-```
-
-### `sweep/` Module
-
-```
-sweep/
-  __init__.py
-  queue.py           # Job queue with priority ordering
-  runner.py          # Execute jobs, track budget
-  state.py           # Persist sweep state for resume
-```
-
-## Scalability Considerations
-
-| Concern | Anchor Config (n=500, w=64) | Large Config (n=2000, w=256) | Full Sweep (~200 configs) |
-|---------|----------------------------|------------------------------|---------------------------|
-| Graph memory | ~1MB sparse | ~16MB sparse | Cached, not simultaneous |
-| Walk corpus (t=200k) | ~50MB | ~200MB | Cached per unique graph+params |
-| QK^T matrix per step | 64x64 = 4KB | 256x256 = 64KB | Only one config runs at a time |
-| SVD per step | ~0.1ms (64x64) | ~5ms (256x256) | Dominates wall time for large w |
-| SVD total (200k eval steps) | ~20 seconds | ~17 minutes | Budget-critical |
-| Token metrics storage | ~100MB per config | ~400MB per config | Use .npz, not JSON |
-| result.json (summary) | ~5MB | ~20MB | Manageable |
-| Model parameters | ~860K | ~14M | Fits on any GPU |
-| Training time (200k walks) | ~10 minutes (est.) | ~2 hours (est.) | Budget-critical |
-| Total per config | ~30 minutes | ~3 hours | Must prioritize |
-
-### SVD Optimization Strategy
-
-The SVD at every token step is the defining computational challenge. For the anchor config (w=64), a 64x64 SVD is fast (~0.1ms on GPU). For w=256, a 256x256 SVD takes ~5ms. Over 200k evaluation steps, this is 17 minutes just for SVD.
-
-Optimizations in priority order:
-
-1. **Use `full_matrices=False`** -- reduces SVD output size and computation. Since we only need top-k singular values/vectors for most metrics, this is sufficient.
-
-2. **Batch same-size matrices** -- all steps after the context window fills (step w onwards) have the same QK^T size. Batch them for `torch.linalg.svd`. This is the biggest single win because GPU utilization improves dramatically with batching.
-
-3. **Keep everything on GPU** -- never transfer QK^T to CPU for SVD. `torch.linalg.svd` works on CUDA tensors. All metric computation should also stay on GPU.
-
-4. **Precompute reusable quantities** -- many metrics share intermediate values (e.g., normalized singular values p_i = sigma_i / sum(sigma) are used by entropy, participation ratio, and stable rank). Compute once.
-
-5. **Consider truncated SVD for large w** -- for w=256, if we only need top-k singular values/vectors (e.g., k=8), `torch.svd_lowrank` is much faster than full SVD. However, some metrics (condition number, full entropy, rank) need all singular values. Strategy: compute full SVD for the "full" metrics, but if budget is tight, use truncated SVD and flag which metrics are exact vs. approximate.
-
-6. **Eval walk sampling** -- instead of evaluating ALL walks, evaluate a statistically sufficient subset. For AUROC computation with target significance, ~2000-5000 failure events are sufficient. This can dramatically reduce the number of eval steps.
-
-## File System Layout
-
-```
-dcsbm-transformer/
-  config/
-    __init__.py
-    schema.py
-    validation.py
-    sweep.py
-    hashing.py
-  graph/
-    __init__.py
-    dcsbm.py
-    jumpers.py
-    pathcheck.py
-    io.py
-  model/
-    __init__.py
-    transformer.py
-    attention.py
-  training/
-    __init__.py
-    trainer.py
-    sufficiency.py
-    checkpoint.py
-  evaluation/
-    __init__.py
-    behavioral.py
-    svd_metrics.py
-    collector.py
-    writer.py
-  analysis/
-    __init__.py
-    horizon.py
-    statistics.py
-    plotting.py
-    reporting.py
-    comparison.py
-  sweep/
-    __init__.py
-    queue.py
-    runner.py
-    state.py
-  tests/
-    test_config.py
-    test_graph.py
-    test_model.py
-    test_walks.py
-    test_training.py
-    test_svd_metrics.py
-    test_evaluation.py
-    test_analysis.py
-    test_sweep.py
-  cache/
-    graphs/           # cached graph files
-    walks/            # cached walk corpora
-  results/
-    {experiment_id}/
-      result.json
-      token_metrics.npz
-      figures/
-      report.html
-  run_experiment.py    # single-config entry point
-  run_sweep.py         # sweep entry point
-  Makefile
-  requirements.txt
-```
-
-## Critical Interface Contracts
-
-### Between graph and walks
-```python
-# graph provides:
-class DCBSMGraph:
-    adj: scipy.sparse.csr_matrix      # (n, n) directed adjacency
-    blocks: np.ndarray                  # (n,) block assignment
-    degree_corrections: np.ndarray      # (n,) degree correction factors
-    jumper_rules: dict[int, JumperRule] # vertex -> (jump_length, target_block)
-    n: int
-    n_blocks: int
-
-    def neighbors(self, v: int) -> np.ndarray:
-        """Return out-neighbors of vertex v."""
-
-    def is_valid_edge(self, u: int, v: int) -> bool:
-        """Check if edge u->v exists."""
-```
-
-### Between model and evaluation
-```python
-# model provides:
-class Transformer(nn.Module):
-    def forward(self, x: torch.Tensor, return_qkt: bool = False):
-        """
-        x: (batch, seq_len) token indices
-        Returns:
-            logits: (batch, seq_len, vocab_size)
-            qkt: (batch, seq_len, seq_len) if return_qkt=True, else None
-        """
-```
-
-### Between evaluation and analysis
-```python
-# evaluation writes result.json conforming to schema v1.0 with extensions:
-# sequences[i].token_metrics: dict[str, list[float]]
-#   where keys are metric names and values are per-step metric values
-# sequences[i].behavioral_labels: list[str]
-#   where each entry is one of: "edge_valid_rule_followed",
-#   "edge_valid_rule_violated", "edge_valid_rule_na",
-#   "edge_invalid_rule_na"
-```
+**Instead:** Calibration is a post-hoc analysis step. Collect raw metric values during evaluation, then fit calibration models in the analysis phase.
 
 ## Sources
 
-- Project specification: `combined-spec.md` in repository root (HIGH confidence -- primary source)
-- PROJECT.md: `.planning/PROJECT.md` (HIGH confidence -- defines constraints and scope)
-- PyTorch SVD documentation: `torch.linalg.svd` supports batched input and CUDA tensors (HIGH confidence -- well-established PyTorch API)
-- NanoGPT architecture patterns: single-file transformer implementations with explicit Q, K, V access are standard practice (HIGH confidence -- widely adopted pattern)
-- SVD computational complexity: O(min(m,n)^2 * max(m,n)) for an m x n matrix; for square wxw matrix this is O(w^3) (HIGH confidence -- standard numerical linear algebra)
+- Existing codebase analysis (HIGH confidence -- direct code reading)
+- `src/config/experiment.py` lines 85-86: `n_heads != 1` validation
+- `src/model/attention.py`: single-head architecture with explicit Q/K/V
+- `src/model/types.py`: ForwardOutput shape documentation
+- `src/evaluation/pipeline.py`: SVD collection loop structure, NPZ key format
+- `src/analysis/auroc_horizon.py`: AUROC computation and PRIMARY_METRICS
+- `src/results/schema.py`: result.json structure and validation
+- `.planning/v1.0-MILESTONE-AUDIT.md`: known integration gaps (NPZ key format conflict)
+- PyTorch `torch.linalg.svd`: supports batched input with head dimension (HIGH confidence)
+- sklearn.metrics.precision_recall_curve: standard PR curve computation (HIGH confidence)
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Module boundaries | HIGH | Follows directly from spec; each stage has clear inputs/outputs |
-| Data flow | HIGH | Linear pipeline is the natural structure for this problem |
-| SVD optimization | MEDIUM | Batching strategy is sound but actual speedups need profiling; truncated SVD tradeoffs need validation on real data |
-| Storage strategy (hybrid JSON + npz) | MEDIUM | Deviates from spec's pure-JSON approach; may need refinement based on actual file sizes |
-| Build order | HIGH | Dependency chain is unambiguous |
-| Model parameter estimates | MEDIUM | Back-of-envelope; actual count depends on implementation details (bias terms, LayerNorm params, etc.) |
+| Null model integration | HIGH | Minimal changes, existing pipeline handles n_jumpers=0 |
+| Softmax bound integration | HIGH | Pure analysis module, no pipeline changes |
+| Multi-head integration | MEDIUM | Invasive changes, many modules affected, shape mismatches possible |
+| PR curves + calibration | HIGH | Well-understood extensions of existing AUROC pipeline |
+| Pre-registration | HIGH | Minimal code, mostly methodology |
+| Compliance curve | HIGH | Post-hoc aggregation, no pipeline changes |
+| Full spectrum storage | MEDIUM | Storage overhead needs empirical validation; float16 precision may affect metrics |
+| SVD overhead benchmarks | HIGH | Standalone tool, no integration risk |
+| Build order | HIGH | Dependency chain is clear; multi-head last is critical |
+| Backward compatibility | MEDIUM | Dual key emission strategy is sound but adds code complexity |

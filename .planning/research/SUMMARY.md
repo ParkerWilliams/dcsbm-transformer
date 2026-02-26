@@ -1,242 +1,213 @@
 # Project Research Summary
 
-**Project:** DCSBM Transformer -- SVD Predictive Signals for LLM Hallucination
-**Domain:** Synthetic-data research framework for spectral analysis of transformer attention
-**Researched:** 2026-02-24
+**Project:** DCSBM Transformer v1.1 -- Journal Feedback Capabilities
+**Domain:** Research software -- extending an SVD-based hallucination prediction framework with reviewer-requested features for journal resubmission
+**Researched:** 2026-02-26
 **Confidence:** HIGH
 
 ## Executive Summary
 
-This project is a scientific research framework, not a product. Experts build this type of system as a tightly-controlled pipeline: a synthetic data source (DCSBM graphs) feeds a minimal model (NanoGPT-scale transformer), whose internal state (QK^T attention matrices) is measured throughout autoregressive generation, and the measurements are subjected to statistical analysis to detect predictive signals. The canonical approach is to write minimal, purpose-built code with no framework overhead -- custom DCSBM generator, custom transformer (~200 lines), custom training loop, custom job queue -- because every abstraction layer between the researcher and the QK^T matrix is a liability. The entire pipeline after walk generation lives on GPU in PyTorch tensors; moving data to CPU for any intermediate step (SVD, metrics) is the primary performance antipattern.
+The v1.1 milestone adds 8 features to address journal reviewer feedback on the DCSBM transformer paper. These features fall into three categories: (A) validating the core signal claim (null model baseline, multi-head ablation, pre-registration), (B) enriching the analysis toolkit (PR curves, calibration, softmax filtering bound, spectrum trajectory with curvature/torsion), and (C) addressing practical concerns (SVD computational overhead benchmarking, cheaper approximations). The existing v1.0 stack -- PyTorch 2.10, NumPy 2.3, SciPy 1.17, Matplotlib 3.10 -- is fully sufficient. Zero new pip dependencies are needed. Every v1.1 capability maps to APIs already installed in the environment (`torch.svd_lowrank`, `torch.linalg.svdvals`, `torch.utils.benchmark`, `np.gradient`, `scipy.optimize.minimize`).
 
-The recommended technical approach is Python 3.11 with PyTorch 2.5+ as the single computational framework, NetworkX as the graph primitive layer with a custom DCSBM implementation on top (NetworkX's built-in SBM generator lacks degree correction -- this is a critical gap requiring ~50-80 lines of custom sampling code), and a seven-module architecture (config, graph, walks, model, training, evaluation, analysis) communicating through file-based contracts (`.pt`, `.npz`, `.json`). Experiment orchestration uses a priority-ordered job queue implemented in ~200 lines of custom dataclass code -- no Hydra, no wandb, no Optuna. The job queue is critical because the $100 GPU budget forces priority-ordered execution: anchor config first, then the core r-sweep, then secondary parameter sweeps. Budget can be cut at any point without losing the most important results.
+The recommended approach is to build features in strict dependency order, with multi-head ablation built last despite being the most reviewer-critical feature. Multi-head is the most invasive change (touching 10+ files across model, evaluation, analysis, and visualization layers), and building it first would force every subsequent feature to handle both single-head and multi-head codepaths simultaneously. Instead, build all additive features first (null model, PR curves, softmax bound, benchmarks, pre-registration, spectrum trajectory, compliance curve), validate them on the single-head architecture, and then introduce multi-head support as the final integration. Pre-registration must be committed before any v1.1 analysis runs -- this is not optional, it is a methodological requirement that cannot be backdated.
 
-The dominant risks are: (1) degenerate DCSBM graphs (disconnected blocks, trivially-learnable block jumper rules) that must be caught before training begins; (2) SVD memory and compute scaling (O(w^3) per step) that becomes unaffordable for w=256 without batching and streaming; (3) statistical confounds in the predictive horizon analysis (position effects, class imbalance, multiple comparisons inflation) that could make spurious signals appear significant. All three risks have known mitigations -- graph validation gates, batched GPU SVD, and position-matched baselines -- but they must be built into the pipeline from the start, not retrofitted after the sweep is running.
-
----
+The key risks are: (1) confounding the null model baseline (using a different graph or unmatched temporal structure), which would invalidate the "real signal" claim all reviewers demand; (2) silent semantic breakage during multi-head integration, where tensor shape changes propagate through the pipeline without errors but produce meaningless metrics; and (3) mathematical errors in the softmax filtering bound derivation, particularly using the wrong Lipschitz constant (must be 1/2 per arXiv:2510.23012, not 1) or forgetting the 1/sqrt(d_k) scaling factor. All three risks have concrete prevention strategies with detection tests documented in the research.
 
 ## Key Findings
 
 ### Recommended Stack
 
-The full pipeline stays in PyTorch on GPU. After graph generation (NetworkX on CPU), every computation from tokenized walks through training, attention extraction, SVD, and metric derivation runs on GPU using `torch.linalg.svd` (batched, on CUDA tensors). The only CPU-side operations are graph generation, disk I/O, and final JSON serialization. This eliminates GPU-to-CPU transfer latency, which would otherwise dominate the SVD collection loop.
+The v1.0 stack requires no changes. Every v1.1 feature maps to existing PyTorch, NumPy, or SciPy APIs. The project's established pattern of implementing from first principles (e.g., AUROC via Mann-Whitney U rather than sklearn) extends naturally to PR curves (~25 lines of NumPy), calibration curves (~20 lines), and discrete curvature/torsion (~30 lines). Adding scikit-learn for three function calls would introduce a 50MB dependency contrary to the project's philosophy and adds opacity that reviewers cannot easily inspect.
 
-The model is a NanoGPT-scale transformer written from scratch in raw PyTorch (~200 lines), not HuggingFace Transformers. This is non-negotiable: HuggingFace adds massive dependency weight, obscures attention internals, and makes QK^T extraction require fighting abstraction layers. At vocabulary size n (up to 2000 vertices) and d_model up to 256 with a single attention head, the model fits in under 1MB and trains in minutes on an RTX 3090. Results are stored as JSON (per the project's defined schema) plus companion `.npz` files for per-step SVD metric tensors. Visualization is matplotlib + seaborn (static figures only). HTML reports use Jinja2 templates.
+**Core technologies (unchanged):**
+- **PyTorch 2.10:** Model, training, SVD (`torch.linalg.svd`, `torch.svd_lowrank`, `torch.linalg.svdvals`), benchmarking (`torch.utils.benchmark`)
+- **NumPy 2.3:** PR curves, calibration, discrete Frenet frame (curvature/torsion), null distribution statistics
+- **SciPy 1.17:** Bootstrap CIs, Mann-Whitney U, logistic calibration via `scipy.optimize.minimize`
+- **Matplotlib 3.10 + Seaborn 0.13:** All new visualizations (PR curves, reliability diagrams, spectral trajectory plots, benchmark charts)
 
-**Core technologies:**
-- **Python 3.11 + venv**: runtime (3.11 is the stable sweet spot; 3.12+ has intermittent C extension issues with scientific stack)
-- **PyTorch >=2.5**: everything -- model, training loop, `torch.linalg.svd`, metric computation on GPU
-- **NetworkX >=3.2 + custom DCSBM**: graph generation (NetworkX SBM generator lacks degree correction; ~50-80 lines of custom sampling code required per Karrer & Newman 2011)
-- **NumPy >=1.26 + SciPy >=1.12**: CPU-side graph adjacency storage (sparse), statistical tests (Mann-Whitney U, Wilson intervals)
-- **matplotlib >=3.8 + seaborn >=0.13**: static publication-quality figures
-- **Jinja2 >=3.1**: HTML report templating
-- **pylatex >=1.4 + system pdflatex**: math verification PDF generation (pylatex can be fragile; have a raw Jinja2+LaTeX template fallback ready)
-- **pytest >=8.0 + ruff >=0.4**: testing and linting (SVD metric correctness depends entirely on unit tests against known analytical solutions)
+**Key v1.1 APIs already available (no install):**
+- `torch.svd_lowrank(A, q, niter)` -- randomized SVD approximation (Halko 2009), 2-10x speedup verified
+- `torch.linalg.svdvals(A)` -- values-only SVD for the 6 metrics that do not need singular vectors
+- `torch.utils.benchmark.Timer` -- proper CPU/GPU benchmarking with warmup and statistical reporting
+- `np.gradient()` -- finite differences for curvature/torsion computation
 
-See `.planning/research/STACK.md` for full `pyproject.toml`, installation commands, and complete alternatives analysis.
+**Two-tier SVD strategy recommended:**
+- Tier 1 (cheap): `torch.linalg.svdvals()` for metrics needing only singular values (stable_rank, spectral_entropy, spectral_gap, condition_number, effective_rank, spectral_norm) -- 6 of 9 metrics
+- Tier 2 (moderate): `torch.svd_lowrank(q=k+5)` for metrics needing singular vectors (grassmannian_distance, rank1_residual_norm, read_write_alignment) -- 3 of 9 metrics
+- Expected overhead reduction: 40-60% depending on matrix size
+
+See `.planning/research/STACK.md` for full API verification, benchmark results, and alternatives analysis.
 
 ### Expected Features
 
-The project spec (combined-spec.md) fully defines the feature set. The complexity concentration is in two areas: the ~20 SVD metrics (individually simple but collectively requiring ~30% of implementation effort, and easy to get subtly wrong) and comparison reporting (combinatorial config filtering that can balloon without discipline).
+**Must have (table stakes -- reviewer-required for resubmission):**
+- **[1] Null model baseline** -- all 3 reviewers: "How do you know the signal is not just normal attention dynamics?" Generate clean (no-jumper) sequences, compute Grassmannian drift null distribution, position-matched statistical comparison
+- **[3] Multi-head ablation (1h/2h/4h)** -- reviewer concern: "Is the signal real or an artifact of single-head multiplexing?" Per-head SVD extraction, signal concentration analysis
+- **[4] Precision-recall curves + calibration** -- standard for rare-event classifiers; AUROC alone is misleading for imbalanced classes
+- **[5] Pre-registration framework** -- held-out evaluation protocol, locks analysis plan before seeing confirmatory results
+- **[2] Softmax filtering bound** -- mathematician reviewer: "Derive the theoretical lag prediction"
 
-**Must have (table stakes):**
-- Custom DCSBM generator with degree correction, configurable p_in/p_out, and block jumper designation
-- Graph validation: connectivity, non-triviality check (block jumper rules must not be topologically trivial -- require 0.1-0.5 fraction of length-r paths reach target block), minimum expected degree, edge density checks
-- Walk generator producing directed random walks with jumper-event metadata tracked; corpus size validated at >= 100x n
-- NanoGPT transformer (single attention head, configurable d_model/n_layers) with explicit QK^T extraction via `return_qkt=True` flag
-- Training loop with cross-entropy, AdamW, cosine schedule, seed control, and checkpointing
-- Training sufficiency gate (edge compliance >95%, rule compliance >80%) -- hard gate before any SVD analysis
-- 4-class behavioral outcome classification (edge valid/invalid x rule followed/violated/NA) with `failure_index` annotation
-- All ~20 SVD metrics computed per token step during fused evaluation pass
-- Predictive horizon AUROC at each lookback distance j for each metric
-- Priority-ordered job queue with 3 seeds per config and result.json output per run
-- Single-experiment and comparison HTML reports with embedded figures and reproduction commands
+**Should have (differentiators that strengthen the paper):**
+- **[6] Sharp compliance curve** -- r/w sweep showing phase transition from near-perfect to failed compliance; the "money figure"
+- **[7] Full spectrum trajectory with curvature/torsion** -- novel geometric analysis of spectral curve shape
+- **[8] SVD computational overhead** -- benchmarks quantifying practical cost, cheaper approximation candidates
 
-**Should have (differentiators):**
-- Non-triviality verification using path fraction analysis (builds reviewer confidence in experimental validity)
-- Bootstrap confidence intervals on AUROC and predictive horizon estimates
-- Effect size reporting (Cohen's d, not just p-values -- required by modern reviewers)
-- SVD metric correlation matrix (identifies which of the ~20 metrics are redundant)
-- Metric importance ranking by max AUROC (natural "main result" table for the paper)
-- Wall-time profiling per pipeline stage (proves $100 budget is reproducible on similar hardware)
-- Heatmap of predictive horizon across (r, w) grid (the "money figure" for the paper)
+**Defer (anti-features -- explicitly do NOT build):**
+- Multi-head beyond 4 heads (d_k too small at d_model=128)
+- Full Bayesian calibration / Platt scaling (undermines pre-registration claims)
+- Real-time SVD monitoring (v1.1 is offline research, not deployment)
+- Symbolic math verification via SymPy (manual LaTeX is faster)
+- Gradient-based attribution for SVD metrics (different research question)
+- General-purpose spectral trajectory analysis library (premature generalization)
 
-**Defer to v2+:**
-- Grassmannian trajectory visualization (conceptually interesting; defer until core results are confirmed)
-- Automated budget tracking dashboard (manual tracking in a spreadsheet is sufficient for a single researcher)
-- Automated parameter sensitivity analysis (can be done after core data is in hand)
-
-See `.planning/research/FEATURES.md` for the full feature dependency graph and per-feature complexity estimates.
+See `.planning/research/FEATURES.md` for the full feature dependency graph, complexity matrix, and MVP recommendation.
 
 ### Architecture Approach
 
-The system is a seven-module linear pipeline wrapped by a sweep orchestrator. Each module has a single responsibility and communicates via well-defined file contracts -- every stage writes to disk before the next stage reads from disk. This is non-negotiable: an in-memory pipeline prevents caching, crash recovery, and stage-level profiling. The most critical architectural decision is that behavioral evaluation and SVD collection happen in a single fused forward pass (`return_qkt=True`), not as separate inference runs. The model returns logits AND QK^T simultaneously; running inference twice would double wall time for no benefit.
+The v1.1 features integrate into the existing v1.0 pipeline through three patterns: (A) core module modifications for multi-head and full spectrum storage, (B) additive analysis modules that extend existing pipelines without modifying them, and (C) standalone tools for benchmarking. The critical architectural constraint is backward compatibility: single-head results must emit both v1.0-format NPZ keys (`qkt.layer_0.grassmannian_distance`) and v1.1-format keys (`qkt.layer_0.head_0.grassmannian_distance`). Schema version bumps from "1.0" to "1.1" with v1.1 as a strict superset.
 
 **Major components:**
-1. **config** -- `ExperimentConfig` dataclass (frozen, serializable, hashable); cross-parameter validation; deterministic hashing for cache keying
-2. **graph** -- DCSBM generation, block jumper designation, path validation, adjacency persistence (scipy sparse + JSON metadata); cached by config hash
-3. **walks** -- directed random walk sampling, train/eval split, jumper-event metadata; cached by config hash (many sweep configs share the same graph)
-4. **model** -- NanoGPT transformer with `SingleHeadAttention(return_qkt=True)`; ~200 lines total; single head is hard-coded, not parameterizable
-5. **training** -- cross-entropy training loop, sufficiency gate, checkpointing, training curve logging
-6. **evaluation** -- fused behavioral + SVD collection pass; writes `result.json` (summary scalars + curves) + `token_metrics.npz` (full per-step metric arrays referenced by sequence_id)
-7. **analysis** -- predictive horizon AUROC, position-matched baselines, statistical tests, all visualization, HTML report generation
-8. **sweep** -- priority-ordered job queue (3 tiers), budget tracking, resume-from-checkpoint state persistence
+1. **`src/analysis/null_baseline.py`** (NEW) -- Extract and compare null Grassmannian distributions from jumper-free experiment runs
+2. **`src/model/attention.py`** (MODIFIED) -- Multi-head CausalSelfAttention with per-head QKT extraction; `AttentionInternals.qkt` becomes `[B, H, T, T]`
+3. **`src/evaluation/pipeline.py`** (MODIFIED) -- Per-head SVD extraction loop, full spectrum storage, dual key emission for backward compatibility
+4. **`src/analysis/auroc_horizon.py`** (EXTENDED) -- PR curves and calibration added as new functions alongside existing AUROC (not modifying it)
+5. **`src/analysis/softmax_bound.py`** (NEW) -- Theoretical bound verification using existing NPZ data; no new data collection needed
+6. **`src/analysis/spectrum.py`** (NEW) -- Curvature/torsion via discrete Frenet-Serret on full singular value trajectories
+7. **`src/benchmarks/svd_overhead.py`** (NEW) -- Standalone SVD timing benchmarks; zero integration risk
 
-**Key patterns to follow:**
-- Config-driven everything: no hardcoded parameters in any module
-- `return_qkt=True` flag for QK^T extraction (preferred over forward hooks since model code is fully controlled)
-- Batched SVD: group same-size QK^T matrices (all positions >= w have identical shape) into a batch tensor and call `torch.linalg.svd` once per group
-- Hybrid storage: `result.json` holds summary scalars and curves; `token_metrics.npz` holds full per-step arrays (loading multi-GB JSON for a single plot is the primary reporting antipattern)
-- Graph and walk caching by config hash: many sweep configs vary only model architecture while sharing the same graph -- do not regenerate
+**Key architectural patterns:**
+- Feature flags via config tags (e.g., `tags=("null_model",)`) rather than boolean config fields
+- Dual key emission for backward compatibility when NPZ key formats change
+- Post-hoc aggregation over in-pipeline computation for cross-experiment analysis (compliance curve, null comparison)
+- New functions alongside existing ones (PR curves next to AUROC), never modifying existing computation
 
-See `.planning/research/ARCHITECTURE.md` for full data flow, module dependency graph, build sequence, interface contracts, and scalability projections across anchor vs. large-n configs.
+See `.planning/research/ARCHITECTURE.md` for full integration map, data flow changes, build order analysis, and anti-patterns to avoid.
 
 ### Critical Pitfalls
 
-1. **Degenerate DCSBM graphs** -- With small n, many blocks, and low p_out, blocks become disconnected and block jumper rules become unsatisfiable before training even begins. Budget is burned on configs that were dead on arrival. Prevention: validate strong connectivity, minimum expected degree >= 3, and valid path existence for every block jumper immediately after graph generation. Pre-filter the entire sweep grid on CPU before any GPU time is allocated. (PITFALLS.md, Pitfall 1)
+1. **Null model confounded with signal** -- Using a different graph, unmatched temporal structure, or a model trained only on clean data produces a bad null that does not answer the reviewer's question. Prevention: same graph, same trained model, jumper-free evaluation walks only, position-matched Grassmannian comparison, report Cohen's d effect sizes and full percentile envelope (5th/25th/50th/75th/95th). Must be the first analysis feature built.
 
-2. **SVD memory and compute scaling** -- Collecting full per-step SVD metrics for all evaluation walks produces GB-scale data that overwhelms RunPod storage (typically 20-50 GB). The O(w^3) cost per step makes w=256 configs 64x more expensive than w=64. Prevention: collect SVD only during evaluation (not training), use streaming writes to `.npz`, store only scalar metrics (never U/S/Vh tensors), evaluate only walks containing jumper events, batch same-size QK^T matrices for GPU efficiency. Profile the anchor config before launching the sweep. (PITFALLS.md, Pitfalls 3 and 8)
+2. **Multi-head breaks SVD extraction semantics** -- Shape changes from `[B, T, T]` to `[B, H, T, T]` propagate silently through 10+ modules. Per-head QKT rank is bounded by d_k (32 for 4h), not d_model (128), fundamentally changing metric interpretation. Prevention: add head dimension to all tensor contracts, per-head metric keys, unit test that rank(QKT) <= d_k, report d_k context with all multi-head metrics. Build multi-head in 4 stages with passing tests at each stage.
 
-3. **Position confounds masquerading as predictive signal** -- SVD metrics have inherent positional trends (condition number grows with context length); if jumper events cluster at specific walk positions, AUROC appears significant by coincidence. This would make the paper's central claim wrong. Prevention: use position-matched baselines (control events sampled at the same absolute position in non-jumper walks), run shuffle controls (AUROC > 0.6 with permuted labels means the signal is positional, not predictive), detrend SVD metrics by subtracting position-wise means from non-jumper walks. Design these baselines into the evaluation schema from the start. (PITFALLS.md, Pitfall 7)
+3. **Softmax bound math errors** -- Using Lipschitz constant of 1 instead of 1/2 (cite arXiv:2510.23012), forgetting 1/sqrt(d_k) scaling (11x error for d_k=128), confusing row-wise and matrix-wise bounds, ignoring causal mask effects on per-row entropy. Prevention: empirical verification with 1000+ perturbations; if >5% exceed the bound, the derivation has an error. Test both random and adversarial perturbation directions.
 
-4. **Budget exhaustion before core results** -- The sweep space has thousands of configs; $100 at $0.44/hr buys ~227 GPU-hours. Without priority ordering, the budget can be consumed before the r-vs-w interaction (the headline scientific result) is fully characterized. Prevention: anchor config always runs first (calibrates timing and verifies the pipeline), three-tier job queue (Tier 1: core r-sweep at anchor config, 24 runs; Tier 2: architecture and w sweeps, ~63 runs; Tier 3: everything else), hard budget halt at $10 reserve. (PITFALLS.md, Pitfall 5)
+4. **Pre-registration invalidated by data-dependent decisions** -- Writing pre-registration after seeing any v1.1 results makes it post-hoc and indefensible. Prevention: commit pre-registration document before any v1.1 analysis code runs. Frame honestly as "informed hypothesis testing" based on v1.0 exploratory results. Implement held-out walk split (50/50 exploratory/confirmatory). Maintain deviation log throughout.
 
-5. **SVD numerical instability** -- Near-zero singular values produce condition number = inf and NaN in entropy; nearly-equal singular values cause the principal singular vector to flip 180 degrees between steps, creating false spikes that correlate with early-context positions and inflate AUROC. Prevention: clamp condition number at 1e6, use epsilon in entropy computation, track k-subspace (Grassmannian distance) instead of single principal vector direction, scan every evaluation sequence for NaN/Inf and replace with sentinels. These guards must be built into metric computation functions, not added as post-processing. (PITFALLS.md, Pitfall 4)
+5. **Breaking v1.0 functionality during integration** -- v1.1 touches nearly every pipeline layer. The v1.0 audit already identified P0 integration breaks. Prevention: fix v1.0 P0 issues first (stub run_experiment.py, set_seed never called, predictive_horizon never written). Create golden regression test suite. Feature flags over modifications. Separate NPZ namespaces for v1.1 data.
 
----
+See `.planning/research/PITFALLS.md` for all 14 pitfalls with detection tests, prevention strategies, and phase-specific warnings.
 
 ## Implications for Roadmap
 
-Based on research, the module dependency chain and pipeline structure strongly dictate phase order. The anchor config must be demonstrated end-to-end before sweep infrastructure is invested in. Statistical rigor features (position-matched baselines, multiple comparison corrections) affect data collection and analysis schema -- they must be designed in from the start, not retrofitted after results accumulate.
+Based on research, the suggested phase structure follows dependency order with the most invasive change (multi-head) deferred to the end. Pre-registration must be committed before any analysis runs. All features except multi-head are additive and low-risk.
 
-### Phase 1: Reproducible Infrastructure and Graph Foundation
+### Phase 1: Foundation -- Pre-Registration and v1.0 Stabilization
+**Rationale:** Pre-registration must be committed before any v1.1 analysis to maintain methodological credibility. v1.0 integration breaks must be fixed before extending the codebase -- building on a broken foundation doubles debugging effort. The golden regression test suite provides the safety net for all subsequent phases.
+**Delivers:** Locked pre-registration document with primary hypothesis, held-out protocol, and deviation log. Stable v1.0 baseline with golden regression tests. Fixed P0 integration issues.
+**Addresses:** Feature [5] (Pre-Registration Framework)
+**Avoids:** Pitfall 4 (post-hoc rationalization), Pitfall 5 (breaking existing functionality)
 
-**Rationale:** Everything else depends on correct config serialization, graph generation, seed management, and the result.json schema. These modules have no upstream dependencies and must be demonstrably correct before any GPU time is spent. The schema and metadata format must be finalized here -- changing result.json schema after 50 runs requires re-running completed experiments.
+### Phase 2: Null Model Baseline
+**Rationale:** All 3 reviewers demanded this. It validates the core signal claim that all other analyses depend on. If the null model shows Grassmannian drift is indistinguishable from background, the entire project premise is challenged -- better to know this first before investing in enrichment features.
+**Delivers:** Null distribution of Grassmannian drift from jumper-free sequences. Statistical comparison (Mann-Whitney U, Cohen's d) of null vs. signal at each lookback distance. Marchenko-Pastur reference distribution. Null overlay on event-aligned plots. `null_baseline` section in result.json.
+**Addresses:** Feature [1] (Null Model Baseline)
+**Avoids:** Pitfall 1 (confounded controls -- same graph, same model, position-matched)
 
-**Delivers:** `ExperimentConfig` dataclass hierarchy with validation and deterministic hashing; custom DCSBM generator with degree-correction sampling (Uniform[0.5, 2.0] theta distribution recommended); graph validation gates (connectivity, path existence, non-triviality); `result.json` schema finalized and validated; seed management with separate graph/walk/model seed streams; RunPod checkpointing strategy documented.
+### Phase 3: Evaluation Enrichment -- PR Curves, Calibration, and SVD Benchmarks
+**Rationale:** These three features are additive (no core module modifications), independent of each other, and address separate reviewer concerns. PR curves and calibration extend the existing AUROC pipeline using the same event extraction and metric values. SVD benchmarks are completely standalone. Grouping allows parallel development with no cross-dependencies.
+**Delivers:** Precision-recall curves with AUPRC per metric per lookback. Reliability diagrams with ECE. SVD timing benchmarks (full vs. randomized vs. values-only). Two-tier SVD strategy recommendation. Cost summary table for report.
+**Addresses:** Feature [4] (PR + Calibration), Feature [8] (SVD Overhead)
+**Avoids:** Pitfall 6 (imbalanced PR baseline -- always report prevalence), Pitfall 8 (GPU timing artifacts -- CUDA events with warmup), Pitfall 12 (no probability outputs -- isotonic regression on exploratory split)
 
-**Addresses features:** Config specification, DCSBM graph generation, block jumper designation, graph validation, result schema.
+### Phase 4: Softmax Filtering Bound
+**Rationale:** Mathematically the hardest feature (novel derivation). Independent of other features -- uses existing NPZ data, does not modify any pipeline. Can be developed in parallel with phases 2-3 if resources allow. The LaTeX derivation is the bottleneck; empirical verification is straightforward once the bound formula exists.
+**Delivers:** LaTeX derivation of epsilon-bound from QKT perturbation to AVWo spectral change. Empirical verification with random and adversarial perturbations. Bound tightness visualization (theoretical envelope vs. empirical measurements). New MATH_SECTIONS entry in math PDF.
+**Addresses:** Feature [2] (Softmax Filtering Bound)
+**Avoids:** Pitfall 3 (wrong Lipschitz constant -- use 1/2, cite arXiv:2510.23012), Pitfall 10 (wrong perturbation direction -- test adversarial)
 
-**Avoids pitfalls:** Degenerate graphs (Pitfall 1), trivial block jumper rules (Pitfall 2), seed conflation (Pitfall 15), schema mismatch (Pitfall 17), missing metadata (Pitfall 20), RunPod preemption (Pitfall 16).
+### Phase 5: Advanced Analysis -- Spectrum Trajectory and Compliance Curve
+**Rationale:** Differentiator features that elevate the paper beyond "addresses reviewer concerns" to "thorough and impressive." Full spectrum tracking requires modifying the evaluation pipeline (store raw S vectors in NPZ), which should happen after the pipeline is stable from phases 2-3. The compliance curve requires 45 training runs (15 r values x 3 seeds), making it GPU-expensive and best scheduled after analysis infrastructure is complete.
+**Delivers:** Full singular value vectors stored per step in NPZ. Curvature and torsion time series as new metrics fed into AUROC pipeline. Sharp compliance curve showing r/w phase transition with dual-axis visualization (compliance + predictive horizon). Spectral trajectory plots.
+**Addresses:** Feature [7] (Full Spectrum Trajectory + Curvature/Torsion), Feature [6] (Sharp Compliance Curve)
+**Avoids:** Pitfall 7 (numerical differentiation noise -- Savitzky-Golay smoothing, Grassmannian curvature preferred over pointwise), Pitfall 9 (undersampled transition -- dense r/w near 0.7-1.0, 3 seeds per value), Pitfall 11 (NPZ size -- separate spectrum file, float16, QKT-only by default)
 
-**Research flag:** Standard patterns -- no additional research needed.
-
-### Phase 2: Walk Generation and Training Pipeline
-
-**Rationale:** The transformer and training loop must be built and proven on the anchor config before the sweep is designed. The sufficiency gate is a hard dependency for all downstream phases; it must exist and be enforced before SVD infrastructure is invested in. Discovering a fundamental architecture issue (model cannot learn the rule) at this phase costs far less than discovering it in Phase 3.
-
-**Delivers:** Walk generator with corpus validation, coverage report (every block jumper appears >= 50 times), and config-hash caching; NanoGPT transformer with `SingleHeadAttention(return_qkt=True)` and unit-tested output shapes; training loop with AdamW, cosine schedule with warmup, checkpointing every N steps, loss and compliance curve logging; sufficiency gate evaluated at 50% and 80% of training budget with early abort; verified anchor config passes the gate.
-
-**Addresses features:** Walk generator, corpus validation, NanoGPT transformer, training loop, seed control, checkpointing, training curves, sufficiency gate.
-
-**Avoids pitfalls:** Training never reaching gate (Pitfall 6), corpus inadequately covering jumper vertices (Pitfall 12), non-deterministic GPU ops breaking reproducibility (Pitfall 11), degree correction choice creating pathological graphs (Pitfall 18).
-
-**Research flag:** Standard patterns for training loop. Light research needed on walk length requirements: for large-r configs (r=2w), walk_length >= r + w = 3w to ensure full rule expression within a walk.
-
-### Phase 3: SVD Collection Pipeline
-
-**Rationale:** This is the most computationally expensive and numerically sensitive phase. It must be built correctly once -- streaming storage, batched GPU SVD, numerical guards, context-window warmup, fused evaluation pass. Retrofitting streaming or numerical guards after the sweep is running is a rewrite. All ~20 SVD metrics must have unit tests against analytical solutions before any sweep run.
-
-**Delivers:** Fused evaluation pass (behavioral labels + SVD metrics in a single forward pass); all ~20 SVD metric functions with unit tests (each metric tested against hand-computed known-matrix answers); streaming write to `token_metrics.npz` (never accumulate full per-step tensors in memory); context-window warmup (metrics collected only for positions >= w); numerical guards (NaN/Inf clamping, entropy epsilon, condition number cap at 1e6, Grassmannian distance for subspace tracking); anchor config profiled for wall time and storage size per phase.
-
-**Addresses features:** 4-class behavioral evaluation, QK^T extraction, all ~20 SVD metrics, token-level time series storage, `failure_index` annotation.
-
-**Avoids pitfalls:** SVD memory blowup (Pitfall 3), numerical instability (Pitfall 4), O(d^3) scaling cost (Pitfall 8), context padding poisoning metrics (Pitfall 19), recomputing metrics in analysis layer (Anti-pattern 5 in ARCHITECTURE.md).
-
-**Research flag:** Needs deeper research before planning. Key questions: (1) what is the actual memory footprint for w=256 configs -- measure on anchor first; (2) float16 precision sufficiency for each metric type -- condition number likely needs float32; (3) how many evaluation walks are needed for 400 violation events at the expected jumper-event frequency. Run anchor profiling as the first task of this phase.
-
-### Phase 4: Analysis, Statistical Rigor, and Reporting
-
-**Rationale:** With a complete `result.json` from the anchor config, the analysis infrastructure can be built and validated against known results before the sweep expands. Discovering a flaw in the AUROC computation after 100 sweep runs is expensive. The position-matched baseline and multiple comparison correction must be validated on the anchor before they are trusted for the full sweep.
-
-**Delivers:** Predictive horizon AUROC at each lookback j with position-matched baselines and shuffle controls; Holm-Bonferroni correction across pre-registered primary metrics; effect sizes (Cohen's d); bootstrap CIs on AUROC (DeLong's method or bootstrap over sequences); all plot types from plotting guide (event-aligned metric plots, AUROC vs j curves, confusion matrix, pre/post failure distributions, heatmaps); single-experiment HTML report with embedded base64 figures and reproduction command; comparison HTML report with config diff table.
-
-**Addresses features:** Predictive horizon analysis, event-aligned plots, AUROC curves, confusion matrix, single-experiment and comparison reports.
-
-**Avoids pitfalls:** Position confounds (Pitfall 7), multiple comparisons inflation (Pitfall 9), AUROC class imbalance (Pitfall 10), incorrect baselines (Pitfall 14).
-
-**Research flag:** Light research needed on DeLong's method availability in scipy (confirm `scipy.stats` has equivalent, or identify the correct package). Statistical methods are well-established; the implementation choices need verification.
-
-### Phase 5: Sweep Infrastructure and Full Execution
-
-**Rationale:** Only after the full pipeline is verified end-to-end on the anchor config should sweep infrastructure be built. Sweep execution is the final phase because its cost is irreversible: GPU time spent on buggy or misconfigured runs cannot be recovered. The comparison report and secondary analyses (metric correlation, importance ranking, predictive horizon heatmap) complete the scientific deliverable.
-
-**Delivers:** Three-tier priority-ordered job queue (Tier 1: anchor r-sweep 24 runs; Tier 2: architecture + w sweeps ~63 runs; Tier 3: graph parameter and corpus sweeps); graph and walk caching by config hash (prevent redundant regeneration across shared-graph configs); 3-seed-per-config outer loop; budget tracker with hard halt at $10 reserve; sweep state persisted as `sweep_state.json` for resume after preemption; secondary analyses (SVD metric correlation matrix, metric importance ranking, predictive horizon heatmap across r/w grid); math verification PDF (pylatex, with Jinja2+raw-LaTeX fallback).
-
-**Addresses features:** Job queue with priority ordering, 3 seeds per config, parameter sweep enumeration, comparison reports with config diffs, metric importance ranking, predictive horizon heatmap, math verification PDF.
-
-**Avoids pitfalls:** Budget exhaustion (Pitfall 5), monolithic sweep script with no resume (Anti-pattern 4 in ARCHITECTURE.md), preemption data loss (Pitfall 16).
-
-**Research flag:** Standard patterns -- job queue and sweep orchestration are straightforward Python. pylatex stability on RunPod's TeXLive install needs a quick verification check before committing to it; have the Jinja2+LaTeX fallback ready.
+### Phase 6: Multi-Head Ablation
+**Rationale:** Built last because it is the most invasive change, touching model, types, config, evaluation, analysis, and visualization. All other features are validated on single-head first, then extended to handle multi-head output. The staged build approach avoids the monolithic refactor anti-pattern: (1) attention.py + types.py + tests, (2) transformer.py + block.py + tests, (3) pipeline.py + tests, (4) analysis + visualization + tests. Each stage has a passing test suite before the next begins.
+**Delivers:** Multi-head CausalSelfAttention (1h/2h/4h variants). Per-head QKT SVD extraction with `[B, n_layers, n_heads, T, T]` tensor contracts. Per-head AUROC with signal concentration analysis. Ablation comparison on matched configs. Backward-compatible dual key emission for single-head.
+**Addresses:** Feature [3] (Multi-Head Ablation)
+**Avoids:** Pitfall 2 (shape/semantics breakage -- staged build, per-head keys, rank bound tests, d_k context), Pitfall 5 (v1.0 breakage -- dual key emission, golden regression tests)
 
 ### Phase Ordering Rationale
 
-- **Infrastructure first**: Config schema, seed management, and result.json format must be frozen before any code writes to them. Changing the schema mid-sweep requires re-running completed experiments.
-- **Gate enforced before measurement**: The sufficiency gate (Phase 2) must be verified passing on the anchor config before SVD infrastructure (Phase 3) is built. SVD machinery for a model that cannot learn the rule is wasted effort.
-- **Anchor profiling gates sweep planning**: Phase 3 ends with a complete anchor config run profiled for wall time and storage. These measurements directly determine which Tier 2 and Tier 3 sweep configs are affordable within the $100 budget.
-- **Analysis validated before sweep expansion**: Phase 4 validates that the analysis pipeline produces sensible results (AUROC ~0.5 on shuffle control, consistent with expectations on anchor) before the sweep is launched. Discovering a confound after 100 runs is expensive.
-- **Sweep last**: Phase 5 consumes most of the $100 budget. Every bug must be caught in Phases 1-4.
+- **Pre-registration before all analysis:** Methodological requirement. Cannot be backdated. The pre-registration document must exist in git history before any v1.1 results are computed.
+- **Null model before enrichment:** All other analyses depend on establishing the signal is real. If null model fails, the project pivots -- better to know in phase 2 than phase 6.
+- **Additive features before invasive changes:** PR curves, calibration, benchmarks, and softmax bound are all additive (new functions, new modules). They pose minimal regression risk and can be developed and tested independently.
+- **Multi-head last:** Every other feature can be built and validated on the single-head architecture. Multi-head changes propagate through the entire stack. Building it first would force every subsequent feature to develop against both single-head and multi-head codepaths, doubling testing complexity.
+- **Compliance curve in phase 5:** Requires 45 GPU training runs. Must be scheduled after analysis infrastructure is complete to avoid wasting compute on pipeline bugs.
 
 ### Research Flags
 
-Phases needing deeper research during planning:
-- **Phase 3 (SVD Collection):** Batching strategy specifics, float16 vs float32 per metric type, actual memory footprint for w=256. Run anchor profiling as the first task; let measurements drive planning decisions rather than estimates.
-- **Phase 4 (Analysis):** Confirm DeLong's method or equivalent is available in scipy. Verify that position-matched baseline sampling produces statistically sufficient violation events at expected jumper-event frequency.
+Phases likely needing deeper research during planning:
+- **Phase 4 (Softmax Bound):** Novel mathematical derivation. The specific bound chain through softmax + value projection + output projection is new work. Bound tightness unknown until derived. The math is the hard part, not the tooling. Needs careful attention to causal mask effects on per-row Lipschitz behavior.
+- **Phase 5 (Spectrum Trajectory):** Discrete Frenet-Serret on noisy SVD output is numerically delicate. Scientific payoff uncertain -- curvature/torsion may or may not outperform existing scalar metrics. Treat as exploratory. Storage overhead needs empirical measurement.
+- **Phase 6 (Multi-Head):** Per-head SVD extraction and signal concentration analysis for this architecture needs careful interface design. WvWo product semantics change (per-head OV circuits are rectangular `[d_head, d_model]`, not square). Metrics like read_write_alignment may not apply.
 
-Phases with standard patterns (can skip research-phase):
-- **Phase 1 (Infrastructure):** Config dataclasses, NetworkX usage, scipy sparse -- all well-documented with standard patterns.
-- **Phase 2 (Walk Generation and Training):** PyTorch training loop, cosine schedule, checkpointing -- established patterns.
-- **Phase 5 (Sweep):** Job queue, file-based caching, JSON state persistence -- straightforward Python.
-
----
+Phases with standard patterns (skip deep research):
+- **Phase 1 (Pre-Registration + Stabilization):** Well-documented methodology. Process, not algorithm.
+- **Phase 2 (Null Model):** Standard null hypothesis testing. Reuses existing pipeline with config change (`n_jumpers_per_block=0`).
+- **Phase 3 (PR + Calibration + Benchmarks):** Well-established techniques. PR curves are simpler than existing AUROC implementation. `torch.utils.benchmark` is purpose-built.
 
 ## Confidence Assessment
 
 | Area | Confidence | Notes |
 |------|------------|-------|
-| Stack | MEDIUM | API choices (torch.linalg.svd, NetworkX SBM gap, custom DCSBM) are HIGH; specific version numbers (PyTorch 2.5, matplotlib 3.8) are MEDIUM -- based on training data through May 2025, not verified against live PyPI. Run `pip index versions torch` before finalizing pyproject.toml. |
-| Features | HIGH | Feature set derived directly from project spec (combined-spec.md). Complexity estimates are MEDIUM -- based on experience with similar systems, not benchmarked against this specific codebase. |
-| Architecture | HIGH | Module boundaries follow directly from spec; data flow is dictated by the pipeline's dependency chain; interface contracts are clearly specified. SVD batching speedup estimates are MEDIUM -- need profiling on actual RunPod hardware. |
-| Pitfalls | HIGH | Pitfalls 1-7 draw on established numerical linear algebra and graph theory. Budget estimates (Pitfall 5) use RunPod pricing that may have changed since research was conducted (MEDIUM). |
+| Stack | HIGH | Zero new dependencies. Every API verified as available in installed environment. Benchmark results for SVD approximations validated empirically. |
+| Features | HIGH | 6 of 8 features use standard, well-documented techniques. Clear table stakes vs. differentiator distinction. Feature prioritization consistent across all 4 research files. |
+| Architecture | HIGH | Dependency graph is clear. Build order well-justified by both dependency analysis and risk mitigation. Backward compatibility strategy (dual key emission, schema versioning) is sound. Multi-head integration complexity is the one MEDIUM area. |
+| Pitfalls | HIGH | 14 pitfalls identified with concrete prevention strategies and detection tests. Critical pitfalls backed by published proofs (softmax Lipschitz), established methodology (pre-registration), and verified codebase analysis (shape propagation). |
 
 **Overall confidence:** HIGH
 
 ### Gaps to Address
 
-- **DCSBM degree correction distribution**: the spec does not specify which distribution to use for theta_i parameters. Research recommends Uniform[0.5, 2.0] (bounded, avoids isolated vertices and pathological hubs). This choice should be documented in the config, fixed across all runs (not swept), and validated by checking that max_degree / median_degree < 20 after graph generation.
+- **Softmax bound tightness:** The theoretical bound may be vacuous (empirical perturbations reach <1% of bound). Cannot be determined until derivation is complete. If vacuous, report honestly as a negative result rather than a contribution.
 
-- **Library version verification**: run `pip index versions torch networkx matplotlib seaborn jinja2 pylatex` on the actual RunPod instance before finalizing `pyproject.toml`. PyTorch 2.6 or 2.7 may be current stable; verify `torch.linalg.svd` API is unchanged.
+- **Curvature/torsion as predictive features:** Scientific payoff uncertain. Discrete Frenet-Serret on noisy data is numerically delicate. Treat as exploratory analysis only. Do not stake paper claims unless signal clearly outperforms existing scalar metrics.
 
-- **Walk length at anchor config**: the spec sweeps walk_length at 2w, 4w, 8w. PITFALLS.md recommends l >= r + w to ensure full rule expression within any walk. For the anchor config (r=0.9w, w=64), l=2w=128 satisfies this (r+w = 1.9w = 121.6). But for large-r configs (r=2w), l=2w is insufficient. Use l=4w as the anchor value. Confirm against spec before locking in the anchor config definition.
+- **Multi-head WvWo semantics:** Per-head OV circuits produce rectangular matrices `[d_head, d_model]`. SVD metrics assuming square input (read_write_alignment) need special handling or must be skipped for multi-head WvWo. Design decision deferred to phase 6 planning.
 
-- **Evaluation walk count for statistical power**: for AUROC CI half-width of 0.05, approximately 400 violation events per config are needed (per PITFALLS.md Pitfall 10). Given the expected frequency of block jumper events in random walks (depends on jumper vertex density and walk length), compute the required number of evaluation walks before locking in the eval corpus size. This affects Phase 3 storage estimates significantly.
+- **GPU benchmark timing:** `torch.cuda.Event` pattern is well-documented but untested locally (CPU-only environment). May reveal that SVD overhead is <1% of evaluation time, making the approximation analysis informational rather than critical.
 
-- **pylatex stability on RunPod**: pylatex's API can be finicky with complex math environments. A quick test of pylatex + pdflatex on the RunPod base image before Phase 5 will determine whether the Jinja2+raw-LaTeX fallback is needed. Do not block any other phase on the math verification PDF.
+- **NPZ storage for full spectrum:** Estimated 125-250 MB per experiment (QKT, float16). Compliance curve sweep (45 runs) reaches ~6 GB. May need selective storage (specific layers or r values only).
 
----
+- **v1.0 P0 integration breaks:** Stub `run_experiment.py`, `set_seed` never called, `predictive_horizon` never written to result.json. Must be fixed in phase 1 before any v1.1 features are added. Scope of fixes needs assessment during phase planning.
 
 ## Sources
 
 ### Primary (HIGH confidence)
-- `combined-spec.md` (repository root) -- PRIMARY source for all feature requirements, result schema, plotting guide, reporting guide
-- `.planning/PROJECT.md` -- project constraints, scope, and anchor configuration definitions
-- PyTorch `torch.linalg.svd` documentation -- batched GPU SVD API, full_matrices flag, CUDA tensor support
-- NetworkX community generators documentation -- confirms `stochastic_block_model` exists, degree-corrected variant does not
-- Karrer & Newman (2011) "Stochastic blockmodels and community structure" -- formal DCSBM definition and degree-correction sampling formula
-- Golub & Van Loan "Matrix Computations" -- SVD numerical stability, condition number behavior, standard eps-clamping practice
+- Existing codebase analysis -- direct code reading of all modules referenced in research files
+- [PyTorch torch.svd_lowrank](https://docs.pytorch.org/docs/stable/generated/torch.svd_lowrank.html) -- API verified, benchmarks run
+- [PyTorch torch.utils.benchmark](https://docs.pytorch.org/docs/stable/benchmark_utils.html) -- Timer API verified working
+- [Softmax Lipschitz constant = 1/2](https://arxiv.org/abs/2510.23012) -- tight bound, published proof
+- [Pre-registration deviation reporting](https://journals.sagepub.com/doi/10.1177/25152459231213802) -- Willroth & Atherton 2024
+- [PR curves for rare events](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0118432) -- Saito & Rehmsmeier
+- [Null models in network neuroscience](https://www.nature.com/articles/s41583-022-00601-9) -- Nature Reviews, design principles
+- [Halko, Martinsson, Tropp (2009)](https://arxiv.org/abs/0909.4061) -- Algorithm behind `torch.svd_lowrank`
+- [Marchenko-Pastur distribution](https://en.wikipedia.org/wiki/Marchenko%E2%80%93Pastur_distribution) -- null model for random matrix singular values
 
 ### Secondary (MEDIUM confidence)
-- Karpathy nanoGPT (github.com/karpathy/nanoGPT) -- architectural reference for NanoGPT-scale single-file transformer
-- PyTorch deterministic algorithm documentation -- `torch.use_deterministic_algorithms`, `CUBLAS_WORKSPACE_CONFIG=:4096:8`
-- Erdos-Renyi connectivity threshold analysis extended to SBM -- minimum expected degree for strong connectivity
-- DeLong et al. (1988) -- AUROC confidence interval method
-- Benjamini & Hochberg (1995) -- FDR control procedure for multiple comparisons
+- [Local Lipschitz bound for self-attention](https://arxiv.org/abs/2507.07814) -- Li et al. 2025, tighter attention-dependent bounds
+- [Small Singular Values Matter](https://arxiv.org/abs/2410.17770) -- Shlens et al., NeurIPS 2025, MP as transformer null model
+- [Shape Analysis under Frenet-Serret](https://arxiv.org/abs/2511.17065) -- Chassat et al. 2023/2025, discrete curvature framework
+- [Interpreting Transformers via Attention Head Intervention](https://arxiv.org/abs/2601.04398) -- Basile et al. 2025, per-head specialization
+- [Pre-registration for predictive modeling](https://arxiv.org/html/2311.18807) -- ML-specific templates
+- [The Lipschitz Constant of Self-Attention](http://proceedings.mlr.press/v139/kim21i/kim21i.pdf) -- Kim et al., ICML 2021
 
-### Tertiary (LOW confidence)
-- Library version ranges in `pyproject.toml` (STACK.md) -- based on training data through May 2025, not verified against live PyPI; verify before committing
-- RunPod pricing (RTX 3090 ~$0.44/hr on-demand, ~$0.22/hr spot) -- pricing subject to change; verify current rates before budget planning
-- NanoGPT training dynamics (3e-4 LR with cosine annealing) -- established community practice, not verified for this specific vocabulary size and architecture
+### Tertiary (needs validation during implementation)
+- [PyTorch batched SVD performance issue](https://discuss.pytorch.org/t/batched-svd-lowrank-being-much-slower-than-loop-implementation-both-cpu-and-gpu/119336) -- performance may vary by version
+- [Canonical angle bounds for randomized SVD](https://arxiv.org/html/2211.04676) -- accuracy bounds for Grassmannian from randomized SVD
+- [Spectral rank collapse in attention layers](https://arxiv.org/html/2410.07799v2) -- recent preprint, needs verification
 
 ---
-*Research completed: 2026-02-24*
+*Research completed: 2026-02-26*
 *Ready for roadmap: yes*

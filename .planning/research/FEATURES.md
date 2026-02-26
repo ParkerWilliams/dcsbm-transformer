@@ -1,242 +1,421 @@
 # Feature Landscape
 
-**Domain:** Synthetic-data transformer research framework for SVD-based hallucination prediction
-**Researched:** 2026-02-24
-**Mode:** Ecosystem (What features does this type of research framework need?)
+**Domain:** Journal feedback capabilities for DCSBM transformer SVD hallucination prediction framework
+**Researched:** 2026-02-26
+**Mode:** Ecosystem (What does each v1.1 capability require and how does it integrate with v1.0?)
+**Focus:** New features only -- null model baselines, softmax filtering bounds, multi-head ablation, PR curves + calibration, pre-registration framework, sharp compliance curves, full spectrum trajectory tracking, SVD computational overhead analysis
 
 ---
 
 ## Table Stakes
 
-Features users (researchers, reviewers, co-authors) expect. Missing = results are not publishable.
+Features that reviewers explicitly requested or that are standard practice for the claims being made. Missing = paper is rejected or returned for major revision.
 
-### Graph Generation and Validation
-
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| DCSBM graph generator with configurable blocks, p_in, p_out, degree correction | Core synthetic data source; without it there is no experiment | Medium | Use networkx for graph primitives, custom DCSBM sampling on top. Do NOT use networkx's built-in SBM generators -- they lack degree correction and the block jumper logic. |
-| Block jumper vertex designation with configurable r and target block | Defines the "hallucination" event; this IS the experiment | Medium | Must validate that valid paths of length r exist from jumper to target block but are not the only paths (non-triviality check) |
-| Graph validation: connectivity, non-triviality, edge density checks | Reviewers will ask "how do you know your graph is well-formed?" | Low | Assert connected components, verify p_in/p_out ratios produce expected density, check path existence |
-| Walk generation on directed graph with configurable walk length | Training corpus; must be random walks respecting directed edges | Low | Simple random walk sampler; ensure walk length >= 2w as specified |
-| Corpus size validation (>= 100x n) | Spec requirement; insufficient corpus means undertrained model | Low | Hard assert at generation time |
-
-### Training Pipeline
+### 1. Null Model Baseline (Grassmannian Drift on Clean Sequences)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| NanoGPT-scale transformer with configurable d_model, n_layers, 1 head | The model under study; architecture must match spec exactly | Medium | Single attention head is non-negotiable. Use standard PyTorch nn.Module, not HuggingFace -- too much overhead for this scale |
-| Cross-entropy next-token prediction training loop | Standard training objective | Low | Vanilla training loop with AdamW, learning rate scheduling |
-| Training sufficiency gate (edge >95%, rule >80%) | Hard gate before SVD analysis; without this, SVD results are noise from undertrained models | Medium | Must evaluate on held-out walks periodically during training, not just at end. Gate failure means the config is excluded, not that training continues forever |
-| Checkpointing (model weights, optimizer state, training step) | Reproducibility and crash recovery on RunPod (spot instances can be preempted) | Low | torch.save/torch.load; checkpoint every N steps + on gate pass |
-| Training loss and compliance curves logged per step | Reviewers expect convergence evidence for every reported config | Low | Store in result.json curves block per the schema |
-| Seed control (torch, numpy, python random, CUDA deterministic) | Reproducibility requirement; 3 seeds per config means seeds must be controlable | Low | Set all seeds from one master seed; use torch.use_deterministic_algorithms(True) |
-| Code hash tracking (git SHA stored with results) | Reproducibility; reviewer must be able to checkout exact code that produced results | Low | Already specified in schema; subprocess git rev-parse |
+| Generate clean (no-jumper) sequences from identical DCSBM graph | All 3 reviewers asked: "How do you know the Grassmannian drift is not just normal attention dynamics?" | Low | Reuse existing `walk/generator.py` with `n_jumpers_per_block=0`. Train a separate model on clean walks, or use same model on clean eval walks |
+| Compute Grassmannian distance time series on clean sequences | Establishes the null distribution for subspace drift | Low | Reuse existing `grassmannian_distance()` from `svd_metrics.py` via `fused_evaluate()` pipeline |
+| Marchenko-Pastur reference distribution for QK^T singular values | Random matrix theory baseline: are the SVD metrics distinguishable from random matrices of matching dimensions? | Medium | Compute theoretical MP distribution for T x T matrices with aspect ratio gamma = T/D. Compare empirical singular value histogram to MP density |
+| Two-sample statistical test: drift(violation) vs drift(clean) | Quantify separation between null and signal. Must be more than AUROC -- need p-value that Grassmannian drift is elevated before violations vs clean baseline | Low | Mann-Whitney U or KS test between matched step positions. Reuse existing `auroc_from_groups()` pattern |
+| Null distribution stored in result.json and visualized | Report must show the null alongside the signal | Low | Extend result.json schema with `null_model` block. Add overlay to event-aligned plots |
 
-### Behavioral Evaluation
+**Standard approach:** Run the full SVD pipeline on walks that never encounter jumper vertices. This gives the "background" Grassmannian drift rate. The signal claim is validated if drift before violations is statistically significantly elevated above this background. The Marchenko-Pastur distribution (Marchenko & Pastur, 1967) provides a theoretical baseline: for a T x T random matrix with i.i.d. entries, the singular value density follows a known distribution. Deviations from MP indicate learned structure rather than noise. Recent work by Shlens et al. (2024, "Small Singular Values Matter," NeurIPS 2025) demonstrates this approach for analyzing transformer weight matrices.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| 4-class outcome classification per step (edge valid/invalid x rule followed/violated/N-A) | Core evaluation taxonomy; defines what counts as hallucination | Medium | Must be computed at generation time, not post-hoc. Each step gets exactly one label |
-| Edge validity check (does chosen token correspond to valid directed edge?) | Fundamental correctness check | Low | Lookup in adjacency matrix |
-| Rule compliance check (at step r from block jumper, is walk in target block?) | Defines the hallucination event | Medium | Must track block jumper encounters and count steps precisely |
-| failure_index annotation on sequences | Alignment anchor for ALL event-aligned analysis | Low | First rule violation in each generated walk |
-| Held-out walk generation for evaluation (separate from training corpus) | Cannot evaluate on training data | Low | Generate separate evaluation walks with different seed |
+**Existing infrastructure dependencies:**
+- `walk/generator.py` -- set `n_jumpers_per_block=0`
+- `evaluation/pipeline.py` `fused_evaluate()` -- runs unchanged on clean walks
+- `svd_metrics.py` `grassmannian_distance()` -- unchanged
+- `analysis/auroc_horizon.py` -- add null comparison mode
+- `visualization/event_aligned.py` -- add null overlay trace
 
-### SVD / Spectral Analysis
+**Confidence:** HIGH -- standard technique, well-understood mathematically, straightforward to implement with existing infrastructure.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Full QK^T matrix extraction at each token step | The measurement instrument; without this there is no experiment | Medium | Hook into attention layer forward pass; extract Q, K, compute QK^T |
-| torch.linalg.svd with full_matrices=False | Performance-critical; O(d^3) per step demands efficient implementation | Low | Standard torch call, but must be batched properly |
-| All ~20 SVD metrics computed per step | Spec lists specific metrics; reviewers will ask why any were omitted | High | This is the most complex feature. Each metric is individually simple but there are ~20, they must all be correct, and they must be computed efficiently in a single pass over the SVD output |
-| Token-level time series storage in result.json | Required by schema; feeds all downstream analysis | Medium | Each metric becomes a float array keyed by name in token_metrics |
-| Metric correctness validation (unit tests with known matrices) | Spectral metrics are easy to get subtly wrong; one bug invalidates all results | Medium | Must have test cases with analytically known SVD decompositions |
+---
 
-### Predictive Horizon Analysis
+### 2. Softmax Filtering Bound (QK^T -> AVWo Perturbation Propagation)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| AUROC at each lookback distance j for each SVD metric | THE core result metric; this is what the paper reports | Medium | For each confirmed rule violation, look back j steps, compute AUROC of metric values at (t-j) for violation vs non-violation events |
-| Predictive horizon calculation (furthest j where AUROC > 0.75) | Headline number per metric per configuration | Low | Simple threshold over AUROC curve |
-| Sweep j from 1 to r | Must cover full range to find signal decay curve | Low | Loop over j values |
-| Per-metric AUROC curves stored in result.json | Must be reproducible and plottable from stored data | Low | Store as curves in metrics block |
+| Theoretical derivation of epsilon-bound from QK^T perturbation to AVWo spectral change | Mathematician reviewer: "Derive the theoretical lag prediction -- why should QK^T instability propagate downstream?" | High | This is a math derivation, not primarily code. The Jacobian of softmax has known spectral norm bounds |
+| LaTeX document with full derivation | Must be peer-reviewable standalone math | Medium | Extend existing `math_pdf.py` MATH_SECTIONS with new derivation section |
+| Empirical verification: measure actual propagation vs theoretical bound | Verify the bound is not vacuous (i.e., it actually constrains the observed propagation) | Medium | Perturb QK^T by controlled epsilon at specific steps, measure resulting AVWo change, compare to bound |
+| Bound tightness visualization | Show theoretical bound alongside empirical measurements | Low | Plot epsilon vs actual downstream change with theoretical envelope |
 
-### Experiment Management
+**Standard approach:** The perturbation path is QK^T -> softmax -> A -> AV -> AVWo. The softmax Jacobian J_softmax has spectral norm bounded by 1/2 in the L1 norm (Gao & Pavel, 2017), or more precisely, the spectral norm depends on the attention distribution's concentration. Recent work by Kim et al. (ICML 2021, "The Lipschitz Constant of Self-Attention") and Li et al. (2025, "Pay Attention to Attention Distribution") provides tighter local Lipschitz bounds that depend on the ordinal statistics of the attention distribution.
+
+The derivation chain:
+1. Start with perturbation: QK^T -> QK^T + epsilon * E
+2. Through softmax: |delta_A| <= (spectral_norm of J_softmax) * |epsilon * E|
+3. Through value multiplication: |delta(AV)| <= |delta_A| * ||V||
+4. Through output projection: |delta(AVWo)| <= |delta(AV)| * ||Wo||
+
+The key insight for the lag prediction is: when QK^T is near a rank transition (spectral gap closing), the softmax Jacobian amplifies perturbations because the attention distribution is transitioning between concentrated and diffuse states.
+
+**Existing infrastructure dependencies:**
+- `model/attention.py` -- extract J_softmax at specific steps (new hook)
+- `evaluation/pipeline.py` -- add perturbation injection mode
+- `reporting/math_pdf.py` -- add new MATH_SECTIONS entry
+- `svd_metrics.py` -- unchanged (metrics computed on perturbed output)
+
+**Confidence:** MEDIUM -- the theoretical framework is well-established (Lipschitz bounds on softmax are known), but the specific derivation chain for this architecture and connecting it to the lag prediction is novel. The bound may be loose.
+
+---
+
+### 3. Multi-Head Ablation (1h, 2h, 4h) with Per-Head SVD Signal Concentration
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Configuration specification (all governing parameters) | Defines what experiment was run; must be complete for reproducibility | Low | Dataclass or dict with all parameters; stored in result.json config block |
-| Result.json per configuration (per the schema) | Contract that makes all downstream analysis work | Low | Already fully specified in combined-spec.md |
-| Parameter sweep definition (which params to vary, ranges) | Core experimental design; must match spec sweep ranges | Medium | Define sweep space declaratively, enumerate combinations |
-| Job queue with priority ordering | Budget constraint ($100) means most important configs run first; budget can be cut at any point | Medium | Priority: anchor config first, then r-vs-w sweep, then secondary sweeps |
-| 3 random seeds per configuration | Statistical validity; single seed results are not publishable | Low | Outer loop over seeds |
+| Multi-head attention module (2h, 4h variants) | Reviewer concern: "Is the signal real or an artifact of single-head multiplexing?" | High | Major model change. Must split d_model into n_heads sub-dimensions, reshape Q/K/V, independent attention per head, concatenate, project through Wo |
+| Per-head QK^T extraction | Each head produces its own T x T attention matrix; SVD analysis per head | Medium | Extend `AttentionInternals` to store per-head matrices. Shape changes from [B, T, T] to [B, n_heads, T, T] |
+| Per-head SVD metric computation | Same metrics, applied independently to each head's QK^T | Medium | Loop over heads or batch the SVD computation. Key question: which head(s) carry the predictive signal? |
+| Signal concentration analysis: entropy of AUROC across heads | Does one head specialize in rule-tracking while others do something else? | Low | Compute AUROC per head, measure entropy/Gini of the AUROC distribution across heads |
+| Ablation comparison: 1h vs 2h vs 4h on matched configs | Same graph, same walks, same training -- only n_heads varies | Medium | Need to relax the `n_heads == 1` constraint in ExperimentConfig, retrain for each head count |
+| Per-head results stored in result.json | Must be queryable per head for comparison reports | Medium | Extend schema: `svd_metrics` keys gain head dimension, e.g., `qkt.layer_0.head_0.grassmannian_distance` |
 
-### Visualization
+**Standard approach:** Standard multi-head attention splits the d_model dimension into n_heads sub-dimensions of size d_model / n_heads. Each head operates independently on its subspace. For SVD analysis, each head's QK^T is a T x T matrix in the head's d_k = d_model/n_heads dimensional subspace.
+
+Recent mechanistic interpretability work (Elhage et al., 2021; Basile et al., 2025) shows that individual heads specialize for different semantic functions. The SVD of per-head QK^T matrices reveals whether the predictive signal concentrates in specific heads. The OV circuit per head (WvWo per head) decomposes into independent low-rank structures via SVD (recent work on "singular vector-based interpretability" by Li et al., 2025).
+
+**Critical implementation detail:** With n_heads > 1, d_k = d_model / n_heads. For the anchor config (d_model=128), 2 heads gives d_k=64 and 4 heads gives d_k=32. The QK^T matrix is still T x T, but the effective rank is constrained by d_k. This means the SVD spectrum will have at most d_k non-zero singular values, which changes the interpretation of metrics like stable rank and spectral entropy.
+
+**Existing infrastructure dependencies:**
+- `model/attention.py` -- rewrite to support n_heads parameter (biggest change)
+- `model/transformer.py` -- pass n_heads through
+- `model/types.py` -- update `AttentionInternals` and `ForwardOutput` shapes
+- `config/experiment.py` -- relax `n_heads == 1` constraint
+- `evaluation/pipeline.py` -- iterate over heads in SVD loop
+- `analysis/auroc_horizon.py` -- per-head AUROC curves
+- All visualization modules -- per-head variants
+
+**Confidence:** HIGH for the approach (standard multi-head + per-head analysis). MEDIUM for implementation complexity -- this touches nearly every module in the pipeline.
+
+---
+
+### 4. Precision-Recall Curves and Calibration (Reliability Diagrams)
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Event-aligned metric plots (position 0 = failure event) | Primary visualization of whether SVD metrics predict failures | Medium | Already specified in plotting guide; align on failure_index, show pre/post with confidence bands |
-| Training convergence curves | Reviewer evidence that model is sufficiently trained | Low | Loss over steps, compliance over steps |
-| AUROC vs lookback distance j curves | Core result visualization | Low | One curve per metric, x=j, y=AUROC |
-| Confusion matrix for 4-class behavioral outcomes | Shows model behavior distribution | Low | Already in plotting guide |
-| Pre/post failure distribution comparison | Shows whether metric distributions actually separate | Low | Already in plotting guide |
+| Precision-recall curve at each lookback j | Reviewer concern: AUROC can be misleading for imbalanced classes (violations are rare events) | Medium | Use sklearn or manual implementation. Violations are the positive class |
+| AUPRC (area under PR curve) per metric per lookback | Summary statistic complementing AUROC | Low | `sklearn.metrics.average_precision_score` or trapezoidal integration |
+| Reliability diagram (calibration curve) | Shows whether predicted probabilities match observed frequencies | Medium | Bin predictions into 10 deciles, plot fraction positive vs mean predicted probability per bin |
+| Expected Calibration Error (ECE) | Single-number calibration summary | Low | Weighted average of |accuracy - confidence| per bin |
+| PR and calibration figures integrated into HTML reports | Must appear alongside existing AUROC plots | Low | New visualization functions, embed in existing report templates |
 
-### Reporting
+**Standard approach:** AUROC measures discrimination (can the metric separate violations from controls?) but not calibration (do high metric values reliably correspond to high violation probability?). For rare events like rule violations, precision-recall curves are more informative than ROC curves because they are sensitive to the positive class base rate (Saito & Rehmsmeier, PLOS ONE 2015; recent PMC article 2025 on AUPRC for rare critical events).
+
+The calibration approach for this project requires framing the SVD metric as a predictor:
+1. At each lookback j, threshold the SVD metric value to produce a binary prediction
+2. Sweep thresholds to generate the PR curve
+3. For calibration: bin the metric values, compute fraction of actual violations per bin
+
+**Important nuance:** The existing AUROC analysis uses raw metric values and the rank-based method (equivalent to Mann-Whitney U). PR curves require the same data but compute precision = TP/(TP+FP) and recall = TP/(TP+FN) at each threshold. This is a different view of the same data, not new data collection.
+
+**Existing infrastructure dependencies:**
+- `analysis/auroc_horizon.py` -- extend to compute PR curves alongside AUROC
+- `analysis/statistical_controls.py` -- add calibration metrics
+- `visualization/auroc.py` -- add PR curve and reliability diagram plot functions
+- `reporting/single.py` -- add PR and calibration sections to template
+- `reporting/math_pdf.py` -- add ECE formula to math sections
+
+**Confidence:** HIGH -- standard techniques, well-implemented in scikit-learn, direct extension of existing AUROC infrastructure.
+
+---
+
+### 5. Pre-Registration Framework
 
 | Feature | Why Expected | Complexity | Notes |
 |---------|--------------|------------|-------|
-| Single-experiment HTML report | Self-contained documentation of each run | Medium | Already specified; base64-embedded figures |
-| Comparison report across configurations | Primary deliverable; must support filtering by parameter subsets | High | Most complex reporting feature; must overlay metrics across filtered configs |
-| Reproduction command in every report | Reproducibility; reviewer must be able to re-run | Low | Auto-generated from config + code hash |
+| Formal hypothesis specification document | Distinguishes confirmatory from exploratory analysis. Reviewers want to know Grassmannian distance was chosen a priori, not cherry-picked | Low | Markdown document specifying: primary hypothesis, primary metric (Grassmannian distance of QK^T), secondary metrics, alpha level, correction method |
+| Held-out evaluation protocol | Data splitting: some walks reserved for confirmatory test, others for exploration | Medium | Split eval walks into exploratory (60%) and confirmatory (40%). Run exploratory first, lock analysis plan, then run confirmatory |
+| Analysis plan lock mechanism | Prevent p-hacking by committing to analysis plan before seeing confirmatory results | Low | Git commit the analysis plan before running confirmatory analysis. Timestamp serves as proof |
+| Deviation log | Any changes to pre-registered plan must be documented with rationale | Low | Markdown file tracking any deviations from the pre-registered protocol |
+| Pre-registration metadata in result.json | Results must indicate whether they are exploratory or confirmatory | Low | Add `pre_registration` block to result.json with status field |
+
+**Standard approach:** Pre-registration separates hypothesis-generating (exploratory) from hypothesis-testing (confirmatory) research (Nosek et al., 2018). The NeurIPS pre-registration workshop (2020, 2021) established templates for ML experiments. The key elements are:
+
+1. **Primary hypothesis:** Grassmannian distance of QK^T is elevated before rule violations
+2. **Primary test:** AUROC > 0.75 at lookback j >= 2, with Holm-Bonferroni correction across 5 primary metrics
+3. **Held-out protocol:** Evaluate on 40% of eval walks not used during exploratory analysis
+4. **Decision criterion:** Reject null if corrected p-value < 0.05 on held-out data
+
+The existing `PRIMARY_METRICS` frozenset in `auroc_horizon.py` already captures the pre-registered metric set. The framework needs to formalize the held-out split and enforce the temporal ordering (explore, lock, confirm).
+
+**Existing infrastructure dependencies:**
+- `walk/corpus.py` -- add exploratory/confirmatory split
+- `analysis/auroc_horizon.py` -- already has PRIMARY_METRICS; add held-out mode
+- `analysis/statistical_controls.py` -- Holm-Bonferroni already implemented
+- `results/schema.py` -- extend validation for pre_registration block
+- New file: `.planning/pre_registration.md` or `docs/pre_registration.md`
+
+**Confidence:** HIGH -- pre-registration is a process, not a complex algorithm. The existing Holm-Bonferroni and PRIMARY_METRICS infrastructure already supports the core mechanism.
 
 ---
 
 ## Differentiators
 
-Features that strengthen the paper but are not strictly required for publishability. These elevate the work from "technically correct" to "impressive and thorough."
+Features that elevate the paper from "addresses reviewer concerns" to "thorough and impressive." Not required for acceptance but strengthen the manuscript.
+
+### 6. Sharp Compliance Curve (r/w Sweep Showing Phase Transition)
 
 | Feature | Value Proposition | Complexity | Notes |
 |---------|-------------------|------------|-------|
-| Non-triviality verification for block jumper paths | Proves the experiment is actually testing learning, not just graph structure memorization. Strengthens the "controlled environment" claim significantly | Medium | For each block jumper, verify that valid paths of length r to target block exist but alternative (non-compliant) paths also exist at length r. Compute path entropy as a non-triviality score |
-| Training sufficiency gate with early stopping and budget accounting | Prevents wasting compute on configs that will never converge, and tracks $ spent vs remaining | Medium | Monitor compliance curves; if rate of improvement drops below threshold, stop early and mark as gate-failed. Track GPU-hours per config against budget |
-| SVD metric correlation matrix across metrics | Shows which of the ~20 metrics are redundant vs independent; reviewers will appreciate dimensionality reduction of the metric space | Low | Pearson/Spearman correlation across all metric time series; identify clusters of redundant metrics |
-| Metric importance ranking (which SVD metrics are most predictive) | Tells the story of which spectral properties matter most; natural "main result" table | Low | Rank metrics by max AUROC across j values or by predictive horizon length |
-| Effect size reporting (Cohen's d, not just p-values) | Modern statistical practice demands effect sizes, not just significance. Reviewers increasingly reject p-value-only analysis | Low | Cohen's d for pre-failure vs post-failure metric distributions |
-| Bootstrap confidence intervals on AUROC and predictive horizon | Uncertainty quantification on the core results; strengthens claims substantially | Medium | Bootstrap over sequences (not steps) to respect dependence structure |
-| Wall-time profiling per pipeline stage | Proves $100 budget is realistic; helps others reproduce on similar hardware | Low | Time each stage: graph gen, walk gen, training, SVD collection, analysis |
-| Automated parameter sensitivity analysis | Shows which parameters matter most for the core result (r/w ratio vs graph density vs model size) | Medium | Variance decomposition or partial correlation of config parameters with predictive horizon |
-| LaTeX math verification PDF | Specified in project context; peer-reviewable math documentation | Medium | Extract all math-heavy modules, generate LaTeX, compile PDF |
-| Heatmap of predictive horizon across (r, w) grid | The "money figure" for the paper; instantly communicates the r/w interaction | Low | 2D heatmap where cell color = predictive horizon, axes = r and w values |
-| Grassmannian distance visualization between consecutive subspaces | Makes the abstract "subspace drift" concept visually intuitive | Medium | Plot subspace trajectory on a low-dimensional embedding of the Grassmannian |
-| Config diff in comparison reports | Immediately shows what changed between runs; essential for iteration velocity | Low | Already specified in combined-spec; table of parameters that differ |
+| r/w sweep with fine granularity | Shows the phase transition from near-perfect compliance (r << w) to failure (r >> w) | Medium | Sweep r across [0.3w, 0.5w, 0.7w, 0.9w, 1.0w, 1.1w, 1.3w, 1.5w, 2.0w]. Already partially specified in jumper r-scale values |
+| Compliance rate vs r/w ratio curve | The "step function" that demonstrates the context window boundary effect | Low | Plot rule_compliance rate as function of r/w. Should show sigmoid-like transition |
+| Predictive horizon vs r/w overlay | Shows that predictive horizon is longest just before the compliance cliff | Low | Overlay predictive horizon (from existing AUROC analysis) on the compliance curve |
+| Visualization as publication figure | This is a "money figure" for the paper | Low | Clean matplotlib with dual y-axis (compliance rate + predictive horizon) |
+
+**Standard approach:** The compliance curve should show a sharp transition: when r << w (rule deadline well within context window), the transformer easily learns the rule. When r >> w (deadline beyond context window), the model cannot retain the jumper encounter. The transition region around r ~ w is where the predictive signal should be strongest -- the model is "trying" to comply but failing, creating the spectral instability that precedes violation.
+
+This is analogous to phase transitions in statistical mechanics: the system exhibits critical behavior at the transition point. The sharpness of the transition (how steep the compliance drop is) depends on model capacity and training quality.
+
+**Existing infrastructure dependencies:**
+- `config/experiment.py` -- already supports varying r via training.r
+- `graph/jumpers.py` -- already computes r from scale factors
+- `evaluation/behavioral.py` -- compliance rate is already computed
+- `analysis/auroc_horizon.py` -- predictive horizon already computed per r
+- New visualization function for the composite curve
+
+**Confidence:** HIGH -- this is primarily a sweep + visualization feature. The infrastructure exists; the main work is running multiple configs and producing the composite figure.
+
+---
+
+### 7. Full Spectrum Trajectory Tracking with Curvature and Torsion
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Store full singular value vector sigma_1...sigma_k at each step | Goes beyond scalar summaries to track the complete spectral shape over time | Medium | Currently only scalars (stable_rank, entropy, etc.) are stored. Need to store the full sigma vector per step |
+| Spectral curve as trajectory in R^k | Treat the sequence of sigma vectors as a curve in R^k and analyze its geometry | Medium | Each step maps to a point in R^k; the sequence is a discrete curve |
+| Curvature (discrete Frenet-Serret) | Measures how fast the spectral curve is "turning" -- sudden curvature = spectral regime change | High | Discrete approximation: curvature at step t = |T(t+1) - T(t)| / |ds| where T is the unit tangent vector |
+| Torsion (3D+ generalized) | Measures "twisting" of the spectral trajectory out of a plane -- detects spectral transitions that are invisible to curvature alone | High | Requires computing the binormal vector from consecutive tangent and normal vectors. Numerically delicate for discrete data |
+| Curvature/torsion spikes as predictive features | Do curvature/torsion spikes precede violations better than individual metric summaries? | Medium | Feed curvature/torsion into the AUROC analysis pipeline as additional metrics |
+
+**Standard approach:** The Frenet-Serret apparatus generalizes from R^3 to R^k. For a curve gamma(t) in R^k, the generalized curvatures kappa_1, ..., kappa_{k-1} are defined via the Gram-Schmidt process on consecutive derivatives. Recent work by Chassat et al. (ICCV 2023, with 2025 extension) provides a shape analysis framework for Euclidean curves under the Frenet-Serret framework, showing that curvature and torsion capture geometric features invisible to simpler representations.
+
+The connection to SVD: if the singular value vector sigma(t) at step t is treated as a point in R^k, then:
+- **Curvature kappa_1** measures how fast the singular value distribution is changing direction (a spectral "turning point")
+- **Torsion kappa_2** measures whether the change is planar (torsion=0) or genuinely three-dimensional (the spectrum is evolving in a complex, non-planar way)
+
+**Implementation detail:** For discrete data, use finite differences:
+1. Tangent: T(t) = (sigma(t+1) - sigma(t)) / ||sigma(t+1) - sigma(t)||
+2. Curvature: kappa(t) = ||T(t+1) - T(t)|| / ||sigma(t+1) - sigma(t)||
+3. Torsion requires the binormal vector from the Gram-Schmidt process on T, dT/ds, d^2T/ds^2
+
+**Existing infrastructure dependencies:**
+- `evaluation/pipeline.py` -- store full sigma vectors (currently only scalars extracted)
+- `svd_metrics.py` -- new functions for discrete curvature and torsion
+- `analysis/auroc_horizon.py` -- include curvature/torsion as additional metrics
+- `visualization/` -- new trajectory and curvature plots
+- NPZ storage -- sigma vectors are arrays, not scalars; increases storage
+
+**Confidence:** MEDIUM -- the math is well-established, but discrete Frenet-Serret is numerically delicate. Torsion computation for noisy discrete curves requires careful smoothing. The scientific payoff is uncertain: curvature/torsion spikes may or may not be better predictors than existing scalar metrics.
+
+---
+
+### 8. SVD Computational Overhead Analysis
+
+| Feature | Value Proposition | Complexity | Notes |
+|---------|-------------------|------------|-------|
+| Wall-clock timing of SVD computation per step | Quantifies the practical cost of the analysis pipeline | Low | `torch.cuda.Event` timing around `torch.linalg.svd` calls |
+| Breakdown by SVD target (QK^T vs WvWo vs AVWo) | Which targets dominate the cost? WvWo is static (computed once), others are per-step | Low | Separate timers per target |
+| Scaling analysis: timing vs matrix dimension (T x T, T x D) | How does cost scale with context window w? | Low | Run with w = 32, 64, 128, 256 and measure |
+| Randomized SVD comparison: `torch.svd_lowrank` vs `torch.linalg.svd` | Can we get acceptable metrics from a cheaper approximation? | Medium | `torch.svd_lowrank(A, q=k+5, niter=2)` from Halko et al. (2009). Compare metric values and AUROC results against full SVD |
+| Approximation quality analysis | Are the Grassmannian distances from randomized SVD within acceptable tolerance of full SVD? | Medium | Compute metrics from both full and randomized SVD on same data, measure relative error |
+| Cost summary table in report | Reviewers want to know the practical overhead of SVD monitoring | Low | Table with: matrix size, time per step, total time per experiment, % of total evaluation time |
+
+**Standard approach:** Full SVD of a T x T matrix costs O(T^3) via LAPACK/cuSOLVER. For the anchor config (T = w = 64), this is modest. For larger context windows, randomized SVD (`torch.svd_lowrank` based on Halko et al., 2009, Algorithm 5.1) provides O(T^2 * k) cost where k is the target rank.
+
+**Critical finding from research:** PyTorch's `torch.svd_lowrank` has known performance issues with batched inputs (2x slower than loop on some GPU configurations per PyTorch issue #119336). For dense matrices of the sizes in this project (64x64 to 256x256), full SVD via `torch.linalg.svd` is likely faster than randomized SVD because the overhead of the random projection dominates at small matrix sizes. The crossover where randomized SVD wins is typically around T > 512 for target rank k ~ 10.
+
+Recommendation: benchmark both approaches on the actual matrix sizes used in the project, report the crossover point, and use full SVD for the published results (accuracy) while noting the randomized alternative for larger-scale future work.
+
+**Existing infrastructure dependencies:**
+- `evaluation/pipeline.py` -- add timing instrumentation
+- New module: `analysis/svd_overhead.py` or section in evaluation pipeline
+- `reporting/single.py` -- add overhead table to report template
+- No changes to core SVD computation logic (benchmarking is additive)
+
+**Confidence:** HIGH -- benchmarking is straightforward. The PyTorch APIs exist and are well-documented.
 
 ---
 
 ## Anti-Features
 
-Features to explicitly NOT build. Building these would waste time, add complexity, or hurt the project.
+Features to explicitly NOT build for v1.1. Building these would be scope creep that delays addressing reviewer feedback.
 
 | Anti-Feature | Why Avoid | What to Do Instead |
 |--------------|-----------|-------------------|
-| Multi-head attention support | Single head is the entire point -- it makes QK^T analysis unambiguous. Adding multi-head support invites confusion, doubles testing surface, and solves no problem for this paper | Hard-code single head. Do not parameterize number of heads beyond asserting it equals 1 |
-| Real-world / clinical data ingestion | This is a synthetic controlled-environment study. Adding real data pipelines conflates two very different research questions and adds months of work (IRB, data cleaning, label noise) | Keep the data pipeline strictly: DCSBM -> walks -> tokens. No data loading from external sources |
-| HuggingFace Transformers integration | Massive dependency for a NanoGPT-scale model. Brings tokenizer complexity, config inheritance, model hub overhead -- none of which is needed when vocabulary IS graph vertices | Write a clean 200-line transformer in raw PyTorch. It will be faster, more debuggable, and the attention hook will be trivial |
-| Distributed training / multi-GPU | RTX 3090/4090 single GPU is sufficient for NanoGPT-scale. Distributed training adds NCCL complexity, debugging difficulty, and non-determinism | Single GPU, single process. Keep it simple |
-| Web UI / dashboard | Research framework, not a product. Jupyter notebooks and HTML reports are sufficient. A dashboard adds frontend dependencies, maintenance burden, and zero scientific value | Generate static HTML reports. Use Jupyter for interactive exploration |
-| Weights & Biases / MLflow integration | Adds external service dependency, API key management, and network requirements (RunPod may have spotty connectivity). The result.json schema already covers logging needs comprehensively | Use the project's own result.json schema. It is more than sufficient. If W&B is desired later, it is trivial to add a write-through layer |
-| Automatic hyperparameter optimization (Optuna, Ray Tune) | The sweep space is fully specified in the research design. Auto-tuning would optimize for the wrong objective (loss) rather than the right one (predictive horizon). The sweep IS the experiment, not a means to an end | Implement the specified sweep grid. Priority ordering is more important than search strategy |
-| GPU cluster orchestration | Runs on single RunPod instances within $100. Cluster orchestration (SLURM, Kubernetes) is massive overhead for a single-machine workload | Simple sequential job queue with priority ordering. Save/resume between RunPod sessions |
-| Streaming / real-time inference | Research framework runs offline experiments, generates results, and produces reports. There is no inference serving use case | Batch generation, batch evaluation, batch SVD collection |
-| Abstract base classes and plugin architecture | This is a single-purpose research framework with a known, fixed pipeline. Extensibility through abstraction adds cognitive overhead without payoff | Concrete implementations. Functions, not frameworks. If something needs to change, change it directly |
+| Multi-head beyond 4 heads | Diminishing returns; 1h/2h/4h demonstrates the principle. 8h or 16h requires larger d_model to maintain meaningful d_k per head | Document as future work. State that 4h with d_k=32 is the smallest meaningful head dimension for 128-dim model |
+| Full Bayesian calibration (Platt scaling, isotonic regression) | The AUROC-based predictor is not a deployed classifier -- it is a research measurement. Post-hoc calibration methods (Platt, isotonic) require fitting additional parameters, introducing degrees of freedom that undermine the "pre-registered" claim | Use raw reliability diagrams only. Show calibration properties of the raw metric, do not fit a calibration model |
+| Real-time SVD monitoring system | v1.1 is about offline analysis for a paper, not deploying a monitoring tool | Store timing benchmarks and note the feasibility in the discussion section |
+| Automated pre-registration platform (OSF integration) | Over-engineering the process. A git commit + markdown document is sufficient for a single-lab study | Use git timestamps as pre-registration proof. Commit the analysis plan before running confirmatory analysis |
+| Symbolic math verification (SymPy) of the softmax bound | The derivation is a manual mathematical proof, not a symbolic computation. Automating it with SymPy would take longer than writing the LaTeX directly and adds no scientific value | Write the LaTeX derivation by hand. Verify with numerical examples in Python |
+| General-purpose spectral trajectory analysis library | The Frenet-Serret computation is specific to this project's spectral curves. Generalizing to a library is premature | Implement curvature/torsion as functions in svd_metrics.py, not a separate package |
+| Gradient-based attribution for SVD metrics | Would answer "why does QK^T change before violations?" but this is a different research question than "does it change?" | Acknowledge as future work. The v1.1 scope is establishing that the signal exists, not explaining its mechanism |
 
 ---
 
 ## Feature Dependencies
 
 ```
-DCSBM Graph Generator
-  -> Block Jumper Designation
-    -> Non-Triviality Verification (differentiator)
-  -> Walk Generator
-    -> Corpus Size Validation
-    -> Training Corpus (training set)
-    -> Evaluation Walks (held-out set)
-
-NanoGPT Transformer (single head)
-  -> Training Loop (cross-entropy)
-    -> Seed Control
-    -> Checkpointing
-    -> Training Loss/Compliance Logging
-    -> Training Sufficiency Gate
-      -> [GATE PASS required for all downstream]
-      -> Behavioral Evaluation (4-class)
-        -> failure_index Annotation
-      -> QK^T Extraction
-        -> SVD Computation (torch.linalg.svd)
-          -> All ~20 SVD Metrics
-            -> Token-Level Time Series Storage
-              -> Predictive Horizon Analysis (AUROC @ j)
-                -> Metric Importance Ranking (differentiator)
-                -> Bootstrap CIs (differentiator)
-              -> SVD Metric Correlation Matrix (differentiator)
-
-Configuration Specification
-  -> Parameter Sweep Definition
-    -> Job Queue with Priority Ordering
-      -> 3 Seeds Per Config
-        -> Result.json Per Config
-          -> Single-Experiment Report
-          -> Comparison Report (across configs)
-            -> Config Diff
-            -> Parameter Sensitivity Analysis (differentiator)
-
-Result.json (stored)
-  -> All Visualization (event-aligned plots, AUROC curves, confusion matrices, etc.)
-  -> All Reports (single and comparison)
-  -> Reproduction Command
+v1.0 Infrastructure (existing, unchanged)
+  |
+  +-- [1] Null Model Baseline
+  |     Requires: walk/generator.py (no-jumper mode)
+  |     Requires: evaluation/pipeline.py (unchanged)
+  |     Requires: svd_metrics.py (unchanged)
+  |     New: null comparison in auroc_horizon.py
+  |     New: overlay in event_aligned plots
+  |     New: Marchenko-Pastur reference computation
+  |
+  +-- [2] Softmax Filtering Bound
+  |     Requires: model/attention.py (add Jacobian extraction hook)
+  |     Requires: reporting/math_pdf.py (add derivation section)
+  |     New: perturbation injection mode in eval pipeline
+  |     New: bound tightness visualization
+  |
+  +-- [3] Multi-Head Ablation  *** LARGEST CHANGE ***
+  |     Modifies: model/attention.py (multi-head support)
+  |     Modifies: model/transformer.py (pass n_heads)
+  |     Modifies: model/types.py (shape changes)
+  |     Modifies: config/experiment.py (relax n_heads constraint)
+  |     Modifies: evaluation/pipeline.py (per-head SVD loop)
+  |     Modifies: analysis/auroc_horizon.py (per-head AUROC)
+  |     Modifies: all visualization modules (per-head variants)
+  |     New: signal concentration analysis
+  |
+  +-- [4] Precision-Recall + Calibration
+  |     Requires: analysis/auroc_horizon.py (extend, not replace)
+  |     New: PR curve computation alongside AUROC
+  |     New: calibration/reliability diagram functions
+  |     New: visualization functions for PR and calibration
+  |     Extends: reporting templates
+  |
+  +-- [5] Pre-Registration Framework
+  |     Requires: walk/corpus.py (exploratory/confirmatory split)
+  |     Requires: analysis/auroc_horizon.py (PRIMARY_METRICS already set)
+  |     Requires: statistical_controls.py (Holm-Bonferroni exists)
+  |     New: held-out evaluation protocol
+  |     New: pre_registration.md document
+  |     Extends: result.json schema
+  |
+  +-- [6] Sharp Compliance Curve
+  |     Requires: multiple r-value configs (existing sweep infrastructure)
+  |     Requires: behavioral evaluation (existing)
+  |     New: composite compliance + horizon visualization
+  |
+  +-- [7] Full Spectrum Trajectory + Curvature/Torsion
+  |     Modifies: evaluation/pipeline.py (store full sigma vectors)
+  |     New: discrete Frenet-Serret functions in svd_metrics.py
+  |     New: trajectory + curvature visualization
+  |     Extends: NPZ storage format (arrays instead of scalars)
+  |     Feeds into: auroc_horizon.py (curvature as additional metric)
+  |
+  +-- [8] SVD Computational Overhead
+        Requires: evaluation/pipeline.py (add timing)
+        New: timing instrumentation
+        New: randomized SVD comparison benchmarks
+        New: overhead table in report template
 ```
 
-Key dependency insight: The training sufficiency gate is a hard dependency for all SVD analysis. The pipeline must be structured so that gate-failed configs produce a result.json that records the failure but skips SVD entirely. This prevents wasted compute and noisy results.
+**Critical path:** Feature [3] (multi-head ablation) is the largest and most invasive change. It should be built first or with careful interface design so that other features (especially [1], [4], [5]) can work with both 1h and multi-head models.
+
+**Independence:** Features [1], [4], [5], [6], [8] are largely independent and can be developed in parallel. Feature [7] depends on modified NPZ storage but not on other v1.1 features. Feature [2] is mathematically independent but touches the attention module.
+
+---
+
+## Complexity Assessment
+
+| Feature | Code Complexity | Math Complexity | Infrastructure Impact | Overall |
+|---------|-----------------|------------------|-----------------------|---------|
+| [1] Null Model Baseline | Low | Medium (MP distribution) | Low (additive) | **Low-Medium** |
+| [2] Softmax Filtering Bound | Medium | High (novel derivation) | Low (additive) | **High** |
+| [3] Multi-Head Ablation | High | Low | High (modifies core model) | **High** |
+| [4] PR + Calibration | Low | Low | Low (additive) | **Low** |
+| [5] Pre-Registration | Low | Low | Low (mostly process) | **Low** |
+| [6] Compliance Curve | Low | Low | Low (sweep + viz) | **Low** |
+| [7] Spectrum Trajectory | Medium | High (Frenet-Serret) | Medium (storage format) | **Medium-High** |
+| [8] SVD Overhead | Low | Low | Low (additive) | **Low** |
 
 ---
 
 ## MVP Recommendation
 
-### Phase 1: Core Pipeline (must work end-to-end on anchor config)
+### Priority 1: Core Reviewer Concerns (must address for resubmission)
 
-Prioritize in this order:
+1. **[1] Null Model Baseline** -- All 3 reviewers asked for this. Fastest to implement, highest review impact.
+2. **[4] Precision-Recall + Calibration** -- Standard practice for rare-event classifiers. Quick addition to existing infrastructure.
+3. **[5] Pre-Registration Framework** -- Process + documentation, not complex code. Shows methodological rigor.
+4. **[3] Multi-Head Ablation** -- Largest effort but directly addresses "is the signal real?" question. Build 2h first, then 4h.
 
-1. **DCSBM graph generator** with block jumper designation -- the data source
-2. **Walk generator** with validation -- the training corpus
-3. **NanoGPT transformer** (single head, d_model=128, n_layers=4) -- the model
-4. **Training loop** with loss logging, seed control, checkpointing -- train the model
-5. **Training sufficiency gate** -- the go/no-go decision
-6. **4-class behavioral evaluation** with failure_index -- define hallucination events
-7. **QK^T extraction and SVD metrics** (start with top 5 most interpretable metrics, not all 20) -- the measurement
-8. **Predictive horizon AUROC** at each j -- the core result
-9. **Result.json writer** -- store everything
-10. **Basic event-aligned plot** -- visualize the result
+### Priority 2: Mathematical Depth (strengthens the paper)
 
-This gives a complete end-to-end pipeline for one configuration. If this works on the anchor config (n=500, w=64, t=200k, d_model=128, n_layers=4), the experiment is viable.
+5. **[2] Softmax Filtering Bound** -- The mathematical derivation is the hardest part. Start the LaTeX early, implement empirical verification in parallel.
+6. **[6] Sharp Compliance Curve** -- Requires running the r/w sweep. Can be done in parallel with implementation work.
 
-### Phase 2: Full Metric Suite and Sweep
+### Priority 3: Advanced Analysis (elevates if time permits)
 
-11. **All ~20 SVD metrics** -- complete the measurement battery
-12. **Parameter sweep infrastructure** with job queue and priority ordering
-13. **Full visualization suite** (all plot types from plotting guide)
-14. **Single-experiment and comparison HTML reports**
-
-### Phase 3: Statistical Rigor and Polish
-
-15. **Bootstrap confidence intervals** on AUROC and predictive horizon
-16. **Effect size reporting** (Cohen's d)
-17. **Metric correlation and importance analysis**
-18. **Parameter sensitivity analysis**
-19. **Non-triviality verification** for block jumper paths
-20. **Math verification PDF**
+7. **[7] Full Spectrum Trajectory** -- Novel analysis. Scientific payoff uncertain.
+8. **[8] SVD Computational Overhead** -- Useful for the paper's methods section but not a reviewer concern.
 
 ### Defer
 
-- **Grassmannian trajectory visualization**: Conceptually interesting but not required for the paper's claims. Build only if time permits after core results are in.
-- **Automated budget tracking**: Nice for operations but does not affect scientific results. Manual tracking in a spreadsheet is fine.
+- **Curvature/torsion as predictive features** (part of [7]): Compute and report, but do not stake claims on it unless the signal is clearly superior to existing metrics. This is exploratory, not confirmatory.
 
 ---
 
-## Complexity Budget
+## Expected Output Formats and Integration
 
-Total estimated complexity for table stakes: **HIGH** (individually most are Low-Medium, but there are many features and the SVD metric suite is substantial).
-
-The critical complexity concentration is in two areas:
-
-1. **SVD metrics implementation (~20 metrics, each must be correct)**: This is where bugs hide. Each metric is simple in isolation but getting all 20 right, tested, and efficient in aggregate is the hardest single feature. Budget 30% of implementation effort here.
-
-2. **Comparison reporting with parameter filtering**: The comparison report must handle arbitrary subsets of the sweep space. This is a combinatorial UI problem that can easily balloon. Keep it simple: filter by exact parameter values, no complex query language.
+| Feature | Output Format | Integration Point |
+|---------|---------------|-------------------|
+| [1] Null Model | `null_model` block in result.json; null overlay on event-aligned plots; MP histogram figure | HTML report new section; math PDF MP derivation |
+| [2] Softmax Bound | LaTeX derivation in math PDF; `softmax_bound` block in result.json; bound tightness figure | Math PDF new section; HTML report new section |
+| [3] Multi-Head | Per-head metric arrays in NPZ; per-head AUROC in result.json; signal concentration heatmap | HTML report head-comparison section; comparison report across head counts |
+| [4] PR + Calibration | PR curves + AUPRC in result.json; reliability diagram figures; ECE scalar | HTML report alongside AUROC section |
+| [5] Pre-Registration | pre_registration.md document; `pre_registration` block in result.json; exploratory/confirmatory tags | Report section showing pre-reg compliance |
+| [6] Compliance Curve | Composite figure (compliance + horizon vs r/w); sweep results | HTML comparison report; publication figure |
+| [7] Spectrum Trajectory | Full sigma vectors in NPZ; curvature/torsion time series; trajectory figures | HTML report new section |
+| [8] SVD Overhead | Timing data in result.json; overhead table; randomized SVD comparison | HTML report methods section |
 
 ---
 
 ## Sources
 
-- Project specification (combined-spec.md) -- PRIMARY source for all feature requirements
-- PROJECT.md -- Requirements and constraints
-- Training data knowledge of: NanoGPT (Karpathy), mechanistic interpretability research (Elhage et al., Olsson et al.), spectral methods in machine learning, stochastic block models (Holland et al., Karrer & Newman 2011), experiment management patterns
-- Confidence: HIGH for feature categorization (derived directly from project spec), MEDIUM for complexity estimates (based on training data experience with similar systems, not verified against this specific codebase)
+**Null model / random matrix baseline:**
+- [Marchenko-Pastur distribution](https://en.wikipedia.org/wiki/Marchenko%E2%80%93Pastur_distribution) -- foundational null for random matrix singular value distributions
+- [Small Singular Values Matter: A Random Matrix Analysis of Transformer Models](https://arxiv.org/abs/2410.17770) -- NeurIPS 2025, demonstrates MP as null model for transformer weight matrices
+- [Uncovering functional signature in neural systems via random matrix theory](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1006934) -- RMT baseline approach
+
+**Softmax perturbation bounds:**
+- [The Lipschitz Constant of Self-Attention](http://proceedings.mlr.press/v139/kim21i/kim21i.pdf) -- Kim et al., ICML 2021, foundational Lipschitz analysis
+- [Pay Attention to Attention Distribution: A New Local Lipschitz Bound for Transformers](https://arxiv.org/abs/2507.07814) -- Li et al., 2025, tighter local bounds
+- [Softmax is 1/2-Lipschitz](https://www.lakernewhouse.com/assets/writing/softmax-is-0-5-lipschitz.pdf) -- direct softmax Jacobian spectral norm result
+
+**Multi-head SVD analysis:**
+- [Interpreting Transformers Through Attention Head Intervention](https://arxiv.org/abs/2601.04398) -- Basile et al., 2025/2026, per-head specialization
+- [Beyond Components: Singular Vector-Based Interpretability of Transformer Circuits](https://arxiv.org/abs/2511.20273) -- SVD decomposition within heads
+- [Attention-Head OV Circuits in Transformers](https://www.emergentmind.com/topics/attention-head-ov-circuits) -- overview of per-head OV circuit analysis
+
+**Precision-recall and calibration:**
+- [Use of the Area Under the Precision-Recall Curve to Evaluate Prediction Models of Rare Critical Illness Events](https://pmc.ncbi.nlm.nih.gov/articles/PMC12133047/) -- 2025, AUPRC for rare events
+- [The Precision-Recall Plot Is More Informative than the ROC Plot](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0118432) -- Saito & Rehmsmeier, foundational PR vs ROC comparison
+- [scikit-learn calibration documentation](https://scikit-learn.org/stable/modules/calibration.html) -- implementation reference
+
+**Pre-registration:**
+- [NeurIPS Pre-Registration Workshop](https://preregister.science) -- ML-specific pre-registration templates
+- [Pre-registration for Predictive Modeling](https://arxiv.org/abs/2311.18807) -- framework for ML pre-registration
+- [Introducing the Simulation Studies Preregistration Template](https://www.cos.io/blog/introducing-the-simulation-studies-preregistration-template) -- simulation study template
+
+**Frenet-Serret / spectral trajectory:**
+- [Shape Analysis of Euclidean Curves under Frenet-Serret Framework](https://arxiv.org/abs/2511.17065) -- Chassat et al., 2023/2025
+- [Frenet-Serret and the Estimation of Curvature and Torsion](https://ieeexplore.ieee.org/document/6377229/) -- discrete estimation methods
+- [Frenet-Serret formulas (Wikipedia)](https://en.wikipedia.org/wiki/Frenet%E2%80%93Serret_formulas) -- mathematical reference
+
+**SVD computational cost:**
+- [torch.svd_lowrank documentation](https://docs.pytorch.org/docs/stable/generated/torch.svd_lowrank.html) -- API: `torch.svd_lowrank(A, q=6, niter=2)`
+- [torch.linalg.svd documentation](https://docs.pytorch.org/docs/stable/generated/torch.linalg.svd.html) -- full SVD API
+- [PyTorch batched SVD performance issue](https://discuss.pytorch.org/t/batched-svd-lowrank-being-much-slower-than-loop-implementation-both-cpu-and-gpu/119336) -- known performance caveats
+- [Grassmann Manifold Handbook](https://link.springer.com/article/10.1007/s10444-023-10090-8) -- computational Grassmannian methods
+
+**Confidence:** HIGH for features [1], [3], [4], [5], [6], [8] (standard techniques, well-documented). MEDIUM for [2] (novel derivation, bound tightness unknown). MEDIUM for [7] (numerically delicate, scientific payoff uncertain).
