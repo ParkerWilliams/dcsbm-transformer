@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: milestone
-status: unknown
-last_updated: "2026-02-26T05:48:24.063Z"
+status: executing
+last_updated: "2026-02-26T17:41:31Z"
 progress:
   total_phases: 10
   completed_phases: 10
-  total_plans: 21
-  completed_plans: 21
+  total_plans: 22
+  completed_plans: 22
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Phase 11 -- Pre-Registration Framework (v1.1 Journal Feedback)
+**Current focus:** Phase 12 -- Null Model Baseline (v1.1 Journal Feedback)
 
 ## Current Position
 
-Phase: 11 of 16 (Pre-Registration Framework)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-02-26 -- Roadmap created for v1.1 Journal Feedback milestone (phases 11-16)
+Phase: 12 of 16 (Null Model Baseline)
+Plan: 1 of 2 in current phase
+Status: Executing
+Last activity: 2026-02-26 -- Completed 12-01-PLAN.md (null walk generator, MP reference)
 
-Progress: [░░░░░░░░░░░░░░] 0/14 plans (0%)
+Progress: [##░░░░░░░░░░░░] 1/14 plans (7%)
 
 ## Performance Metrics
 
@@ -37,9 +37,13 @@ Progress: [░░░░░░░░░░░░░░] 0/14 plans (0%)
 - Total execution time: ~1.25 hours
 
 **Velocity (v1.1):**
-- Total plans completed: 0
-- Average duration: --
-- Total execution time: 0
+- Total plans completed: 1
+- Average duration: 5 min
+- Total execution time: 5 min
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 12    | 01   | 5min     | 2     | 2     |
 
 ## Accumulated Context
 
@@ -53,6 +57,9 @@ Recent decisions affecting current work:
 - [v1.1 roadmap]: Null model before enrichment -- if null model fails, project pivots; validate core signal first
 - [v1.1 roadmap]: d_k constant across ablation (128) -- d_model scales with n_heads (1h=128, 2h=256, 4h=512)
 - [v1.1 roadmap]: Phases 13 and 14 can parallelize after Phase 12 (independent dependencies)
+- [12-01]: Column-filtered adjacency (zero jumper columns) instead of discard approach for null walk generation
+- [12-01]: Data-calibrated sigma2 for MP reference via mean formula sigma2 = mean(sv^2) / (1 + gamma)
+- [12-01]: Vectorized CDF for scipy.stats.kstest compatibility
 
 ### Pending Todos
 
@@ -70,6 +77,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Roadmap created for v1.1 milestone
+Stopped at: Completed 12-01-PLAN.md
 Resume file: None
-Next action: Plan Phase 11 (Pre-Registration Framework)
+Next action: Execute 12-02-PLAN.md (statistical comparison, result storage, visualization)
