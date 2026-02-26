@@ -101,8 +101,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Math Verification
 
-- [ ] **MATH-01**: System generates a peer-review PDF containing: title page, table of contents, one section per math-heavy source file with plain-language summary, full code block, LaTeX representation of implemented mathematics, and appendix listing all other source files
-- [ ] **MATH-02**: PDF title page notes clearly that LaTeX was AI-generated and requires researcher sign-off
+- [x] **MATH-01**: System generates a peer-review PDF containing: title page, table of contents, one section per math-heavy source file with plain-language summary, full code block, LaTeX representation of implemented mathematics, and appendix listing all other source files
+- [x] **MATH-02**: PDF title page notes clearly that LaTeX was AI-generated and requires researcher sign-off
 
 ## v2 Requirements
 
@@ -187,8 +187,8 @@ Deferred to future release. Tracked but not in current roadmap.
 | REPT-01 | Phase 9 | Complete |
 | REPT-02 | Phase 9 | Pending |
 | REPT-03 | Phase 9 | Complete |
-| MATH-01 | Phase 9 | Pending |
-| MATH-02 | Phase 9 | Pending |
+| MATH-01 | Phase 9 | Complete |
+| MATH-02 | Phase 9 | Complete |
 | MGMT-02 | Phase 10 | Pending |
 | MGMT-03 | Phase 10 | Pending |
 | MGMT-04 | Phase 10 | Pending |
