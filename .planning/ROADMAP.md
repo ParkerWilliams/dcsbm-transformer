@@ -13,7 +13,7 @@ This roadmap addresses convergent reviewer concerns about the DCSBM transformer 
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 11: Pre-Registration Framework** - Lock primary hypothesis, held-out protocol, and deviation log before any v1.1 confirmatory analysis
+- [x] **Phase 11: Pre-Registration Framework** - Lock primary hypothesis, held-out protocol, and deviation log before any v1.1 confirmatory analysis (completed 2026-02-26)
 - [ ] **Phase 12: Null Model Baseline** - Validate the core SVD signal claim with jumper-free null distribution and statistical comparison
 - [ ] **Phase 13: Evaluation Enrichment** - Add precision-recall curves, calibration diagnostics, and SVD computational overhead benchmarks
 - [ ] **Phase 14: Softmax Filtering Bound** - Derive and empirically verify the epsilon-bound from QK^T perturbation through softmax to AVWo spectral change
@@ -121,7 +121,7 @@ Note: Phase 14 depends on Phase 12 (not 13), so Phases 13 and 14 could theoretic
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 11. Pre-Registration Framework | 0/1 | Not started | - |
+| 11. Pre-Registration Framework | 1/1 | Complete   | 2026-02-26 |
 | 12. Null Model Baseline | 0/2 | Not started | - |
 | 13. Evaluation Enrichment | 0/3 | Not started | - |
 | 14. Softmax Filtering Bound | 0/2 | Not started | - |
