@@ -93,11 +93,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Statistical Rigor
 
-- [ ] **STAT-01**: System applies Holm-Bonferroni correction for multiple comparisons across pre-registered primary metrics (3-5 metrics selected before sweep)
-- [ ] **STAT-02**: System computes bootstrap confidence intervals on AUROC and predictive horizon estimates
-- [ ] **STAT-03**: System reports effect sizes (Cohen's d) for pre-failure vs post-failure metric distributions
-- [ ] **STAT-04**: System computes SVD metric correlation matrix to identify redundant metrics
-- [ ] **STAT-05**: System produces metric importance ranking by max AUROC across j values
+- [x] **STAT-01**: System applies Holm-Bonferroni correction for multiple comparisons across pre-registered primary metrics (3-5 metrics selected before sweep)
+- [x] **STAT-02**: System computes bootstrap confidence intervals on AUROC and predictive horizon estimates
+- [x] **STAT-03**: System reports effect sizes (Cohen's d) for pre-failure vs post-failure metric distributions
+- [x] **STAT-04**: System computes SVD metric correlation matrix to identify redundant metrics
+- [x] **STAT-05**: System produces metric importance ranking by max AUROC across j values
 
 ### Math Verification
 
@@ -171,11 +171,11 @@ Deferred to future release. Tracked but not in current roadmap.
 | PRED-03 | Phase 7 | Complete |
 | PRED-04 | Phase 7 | Complete |
 | PRED-05 | Phase 7 | Complete |
-| STAT-01 | Phase 7 | Pending |
-| STAT-02 | Phase 7 | Pending |
-| STAT-03 | Phase 7 | Pending |
-| STAT-04 | Phase 7 | Pending |
-| STAT-05 | Phase 7 | Pending |
+| STAT-01 | Phase 7 | Complete |
+| STAT-02 | Phase 7 | Complete |
+| STAT-03 | Phase 7 | Complete |
+| STAT-04 | Phase 7 | Complete |
+| STAT-05 | Phase 7 | Complete |
 | PLOT-01 | Phase 8 | Pending |
 | PLOT-02 | Phase 8 | Pending |
 | PLOT-03 | Phase 8 | Pending |

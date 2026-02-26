@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2026-02-24)
 ## Current Position
 
 Phase: 7 of 10 (Predictive Horizon and Statistical Analysis)
-Plan: 1 of 2 in current phase
-Status: Plan 07-01 complete, advancing to 07-02
-Last activity: 2026-02-26 -- Completed 07-01: Event extraction and AUROC horizon
+Plan: 2 of 2 in current phase
+Status: Phase 7 complete -- all plans executed
+Last activity: 2026-02-26 -- Completed 07-02: Statistical controls
 
-Progress: [███████░░░] 70%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
-- Average duration: 3.8 min
-- Total execution time: ~0.89 hours
+- Total plans completed: 15
+- Average duration: 3.9 min
+- Total execution time: ~0.98 hours
 
 **By Phase:**
 
@@ -33,10 +33,10 @@ Progress: [███████░░░] 70%
 | 4 | 1/1 | 4 min | 4.0 min |
 | 5 | 2/2 | 7 min | 3.5 min |
 | 6 | 3/3 | 11 min | 3.7 min |
-| 7 | 1/2 | 8 min | 8.0 min |
+| 7 | 2/2 | 14 min | 7.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 05-01 (2 min), 05-02 (5 min), 06-01 (3 min), 06-02 (3 min), 06-03 (5 min), 07-01 (8 min)
+- Last 5 plans: 05-02 (5 min), 06-01 (3 min), 06-02 (3 min), 06-03 (5 min), 07-01 (8 min), 07-02 (6 min)
 - Trend: Slight increase (TDD + statistical pipeline complexity)
 
 *Updated after each plan completion*
@@ -90,6 +90,12 @@ Recent decisions affecting current work:
 - [07-01]: PRIMARY_METRICS frozenset of 5 pre-registered metrics (target.metric_name pattern)
 - [07-01]: Event count tiers: skip (0-1), low_n (2-4), moderate_n (5-9), full (10+)
 - [07-01]: Shuffle control uses max AUROC across lookback distances
+- [07-02]: BCa bootstrap with automatic fallback to percentile for degenerate AUROC distributions
+- [07-02]: Holm-Bonferroni applies to exactly 5 primary metrics (correction factor at most 5, not 21)
+- [07-02]: Cohen's d returns NaN for pooled_std < 1e-12 or insufficient samples (< 2 per group)
+- [07-02]: Measurement correlation uses resolution_step - 1 as representative event position
+- [07-02]: Predictive correlation replaces NaN AUROC with 0.5 for correlation computation
+- [07-02]: Headline comparison identifies QK^T/AVWo by key prefix, filters to primary metrics
 
 ### Pending Todos
 
@@ -103,6 +109,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 07-01 (event extraction + AUROC horizon). Advancing to 07-02.
+Stopped at: Completed 07-02 (statistical controls). Phase 7 complete.
 Resume file: None
-Next action: Execute 07-02-PLAN.md (statistical controls: bootstrap, Holm-Bonferroni, correlation, ranking)
+Next action: Execute Phase 8 planning and execution (results assembly)
