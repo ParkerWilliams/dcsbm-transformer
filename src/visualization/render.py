@@ -183,6 +183,135 @@ def render_all(result_dir: str | Path) -> list[Path]:
         except Exception as e:
             log.warning("Failed to generate event-aligned plots: %s", e)
 
+    # ── NULL MODEL: Null overlay on event-aligned plots ───────────────
+    null_model = result.get("metrics", {}).get("null_model")
+    null_npz_path = result_dir / "null_token_metrics.npz"
+    null_metric_arrays: dict[str, np.ndarray] = {}
+    if null_npz_path.exists():
+        null_npz = np.load(str(null_npz_path), allow_pickle=False)
+        null_metric_arrays = dict(null_npz)
+
+    if null_metric_arrays and failure_index is not None and np.any(failure_index >= 0):
+        try:
+            from src.visualization.null_overlay import (
+                compute_null_distribution_stats,
+                plot_event_aligned_with_null,
+            )
+
+            # Rebuild events (reuse logic from event-aligned section above)
+            generated = metric_arrays.get("generated")
+            rule_outcome = metric_arrays.get("rule_outcome")
+
+            if generated is not None and rule_outcome is not None:
+                from src.analysis.event_extraction import AnalysisEvent
+                from src.evaluation.behavioral import RuleOutcome
+
+                null_events = []
+                event_positions = []
+                for seq_idx in range(len(failure_index)):
+                    fi = int(failure_index[seq_idx])
+                    if fi >= 0:
+                        null_events.append(
+                            AnalysisEvent(
+                                walk_idx=seq_idx,
+                                encounter_step=max(0, fi - 5),
+                                resolution_step=fi,
+                                r_value=5,
+                                outcome=RuleOutcome.VIOLATED,
+                                is_first_violation=True,
+                            )
+                        )
+                        event_positions.append(fi)
+                    else:
+                        svd_keys = [
+                            k for k in metric_arrays.keys()
+                            if "." in k and k.split(".")[0] in ("qkt", "avwo", "wvwo")
+                        ]
+                        pos = min(50, metric_arrays[svd_keys[0]].shape[1] - 1) if svd_keys else 50
+                        null_events.append(
+                            AnalysisEvent(
+                                walk_idx=seq_idx,
+                                encounter_step=max(0, pos - 5),
+                                resolution_step=pos,
+                                r_value=5,
+                                outcome=RuleOutcome.FOLLOWED,
+                                is_first_violation=False,
+                            )
+                        )
+
+                # Generate null overlay for primary metrics
+                primary_prefixes = (
+                    "qkt.layer_0.stable_rank",
+                    "qkt.layer_0.grassmannian_distance",
+                    "avwo.layer_0.grassmannian_distance",
+                )
+                for metric_key in null_metric_arrays.keys():
+                    if not any(metric_key.startswith(p) or metric_key == p for p in primary_prefixes):
+                        continue
+                    if metric_key not in metric_arrays:
+                        continue
+
+                    try:
+                        null_stats = compute_null_distribution_stats(
+                            null_metric_arrays[metric_key],
+                            event_positions,
+                            window=10,
+                        )
+                        fig = plot_event_aligned_with_null(
+                            metric_arrays[metric_key],
+                            null_events,
+                            null_stats,
+                            window=10,
+                            metric_name=metric_key,
+                        )
+                        safe_name = metric_key.replace(".", "_")
+                        paths = save_figure(fig, figures_dir, f"null_overlay_{safe_name}")
+                        generated_files.extend(paths)
+                        log.info("Generated: null_overlay_%s", safe_name)
+                    except Exception as e:
+                        log.warning("Failed to generate null_overlay_%s: %s", metric_key, e)
+
+        except Exception as e:
+            log.warning("Failed to generate null overlay plots: %s", e)
+
+    # ── NULL MODEL: MP histogram ──────────────────────────────────────
+    if null_model and "marchenko_pastur" in null_model:
+        try:
+            from src.visualization.mp_histogram import plot_mp_histogram
+
+            mp_data = null_model["marchenko_pastur"]
+            gamma_val = mp_data.get("gamma", 0.5)
+
+            for anchor_name, anchor_data in mp_data.get("anchor_positions", {}).items():
+                # Check if we have raw SV data in null NPZ for this anchor
+                sv_key = f"mp_svs_{anchor_name}"
+                if sv_key in null_metric_arrays:
+                    sv_data = null_metric_arrays[sv_key]
+                else:
+                    # Fall back to using null metric arrays at a representative position
+                    continue
+
+                try:
+                    mp_result_for_plot = {
+                        "sigma2": mp_data.get("sigma2", 1.0),
+                        "lambda_minus": mp_data.get("lambda_minus"),
+                        "lambda_plus": mp_data.get("lambda_plus"),
+                        "ks_statistic": anchor_data.get("ks_statistic", 0.0),
+                        "ks_p_value": anchor_data.get("ks_p_value", 0.0),
+                    }
+                    fig = plot_mp_histogram(
+                        sv_data, gamma_val, mp_result_for_plot,
+                        position_label=anchor_name,
+                    )
+                    paths = save_figure(fig, figures_dir, f"mp_histogram_{anchor_name}")
+                    generated_files.extend(paths)
+                    log.info("Generated: mp_histogram_%s", anchor_name)
+                except Exception as e:
+                    log.warning("Failed to generate mp_histogram_%s: %s", anchor_name, e)
+
+        except Exception as e:
+            log.warning("Failed to generate MP histogram: %s", e)
+
     # ── PLOT-05: Distribution plots ───────────────────────────────────
     if failure_index is not None:
         try:
