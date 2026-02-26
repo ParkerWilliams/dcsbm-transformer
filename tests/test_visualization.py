@@ -1,7 +1,8 @@
 """Tests for the visualization module.
 
 Tests cover: style application, dual-format save, palette constants,
-event-aligned plots, training curves, AUROC curves, and confusion matrix.
+event-aligned plots, training curves, AUROC curves, confusion matrix,
+distribution plots, predictive horizon heatmap, and render orchestrator.
 """
 
 import matplotlib
@@ -307,3 +308,262 @@ def test_confusion_matrix_counts():
     fig = plot_confusion_matrix(edge_valid, rule_outcome)
     assert isinstance(fig, plt.Figure)
     plt.close(fig)
+
+
+# ── Distribution Plot Tests ───────────────────────────────────────────
+
+
+def test_distribution_plot_returns_figure():
+    """plot_pre_post_distributions returns a valid Figure."""
+    from src.visualization.style import apply_style
+    from src.visualization.distributions import plot_pre_post_distributions
+
+    apply_style()
+    n_seq = 20
+    max_steps = 100
+    rng = np.random.default_rng(42)
+    metric_values = rng.normal(0, 1, (n_seq, max_steps))
+    # Some sequences have violations
+    failure_index = np.full(n_seq, -1, dtype=np.int32)
+    failure_index[:10] = 50  # 10 sequences have violation at step 50
+
+    fig = plot_pre_post_distributions(
+        metric_values, failure_index, window=5, metric_name="qkt.stable_rank"
+    )
+    assert isinstance(fig, plt.Figure)
+    assert len(fig.axes) >= 1
+    plt.close(fig)
+
+
+def test_distribution_plot_shows_two_groups():
+    """Distribution plot has visual elements for pre and post groups."""
+    from src.visualization.style import apply_style
+    from src.visualization.distributions import plot_pre_post_distributions
+
+    apply_style()
+    n_seq = 20
+    max_steps = 100
+    rng = np.random.default_rng(42)
+    metric_values = rng.normal(0, 1, (n_seq, max_steps))
+    failure_index = np.full(n_seq, -1, dtype=np.int32)
+    failure_index[:10] = 50
+
+    fig = plot_pre_post_distributions(
+        metric_values, failure_index, window=5, metric_name="qkt.stable_rank"
+    )
+    ax = fig.axes[0]
+    # Should have at least 2 collections (violin bodies or box bodies) or lines
+    # For box plots, check for multiple patches; for violin, check collections
+    has_visual_elements = (
+        len(ax.collections) >= 2
+        or len(ax.get_lines()) >= 2
+        or len(ax.patches) >= 2
+    )
+    assert has_visual_elements
+    plt.close(fig)
+
+
+def test_distribution_plot_handles_no_violations():
+    """Distribution plot handles no violations (all failure_index == -1)."""
+    from src.visualization.style import apply_style
+    from src.visualization.distributions import plot_pre_post_distributions
+
+    apply_style()
+    n_seq = 20
+    max_steps = 100
+    rng = np.random.default_rng(42)
+    metric_values = rng.normal(0, 1, (n_seq, max_steps))
+    failure_index = np.full(n_seq, -1, dtype=np.int32)  # No violations
+
+    fig = plot_pre_post_distributions(
+        metric_values, failure_index, window=5, metric_name="qkt.stable_rank"
+    )
+    assert isinstance(fig, plt.Figure)
+    plt.close(fig)
+
+
+# ── Heatmap Tests ─────────────────────────────────────────────────────
+
+
+def test_horizon_heatmap_single_point():
+    """Heatmap renders a single (r, w) data point."""
+    from src.visualization.style import apply_style
+    from src.visualization.heatmap import plot_horizon_heatmap
+
+    apply_style()
+    horizon_data = {(57, 64): 3.0}
+
+    fig = plot_horizon_heatmap(horizon_data)
+    assert isinstance(fig, plt.Figure)
+    assert len(fig.axes) >= 1
+    plt.close(fig)
+
+
+def test_horizon_heatmap_full_grid():
+    """Heatmap renders a 3x3 grid correctly."""
+    from src.visualization.style import apply_style
+    from src.visualization.heatmap import plot_horizon_heatmap
+
+    apply_style()
+    horizon_data = {}
+    for r in [32, 45, 57]:
+        for w in [32, 64, 128]:
+            horizon_data[(r, w)] = float(r // 10)
+
+    fig = plot_horizon_heatmap(horizon_data)
+    assert isinstance(fig, plt.Figure)
+    plt.close(fig)
+
+
+def test_horizon_heatmap_sparse_grid():
+    """Heatmap handles sparse data with NaN cells."""
+    from src.visualization.style import apply_style
+    from src.visualization.heatmap import plot_horizon_heatmap
+
+    apply_style()
+    # Only 2 out of 9 possible cells
+    horizon_data = {(32, 64): 2.0, (57, 128): 5.0}
+
+    fig = plot_horizon_heatmap(horizon_data)
+    assert isinstance(fig, plt.Figure)
+    plt.close(fig)
+
+
+# ── Render Orchestrator Tests ─────────────────────────────────────────
+
+
+def _create_minimal_result(result_dir, include_curves=True, include_violations=True):
+    """Create a minimal but valid result directory for testing render_all."""
+    import json
+    from pathlib import Path
+
+    result_dir = Path(result_dir)
+    result_dir.mkdir(parents=True, exist_ok=True)
+
+    # Build result.json
+    result = {
+        "schema_version": "1.0",
+        "experiment_id": "test-exp",
+        "timestamp": "2026-02-26T00:00:00+00:00",
+        "description": "Test experiment",
+        "tags": ["test"],
+        "config": {
+            "graph": {"n": 100, "K": 4, "p_in": 0.25, "p_out": 0.03, "n_jumpers_per_block": 2},
+            "model": {"d_model": 64, "n_layers": 2, "n_heads": 1, "dropout": 0.0},
+            "training": {"w": 16, "walk_length": 64, "corpus_size": 10000, "r": 8,
+                        "learning_rate": 3e-4, "batch_size": 64, "max_steps": 50000,
+                        "eval_interval": 1000, "checkpoint_interval": 5000},
+            "seed": 42,
+            "description": "Test",
+            "tags": ["test"],
+        },
+        "metrics": {
+            "scalars": {
+                "final_train_loss": 0.5,
+                "gate_passed": True,
+            },
+        },
+        "sequences": [],
+        "metadata": {"code_hash": "abc1234"},
+    }
+
+    if include_curves:
+        result["metrics"]["curves"] = {
+            "train_loss": [3.0, 2.5, 2.0, 1.5, 1.0],
+            "edge_compliance": [0.5, 0.7, 0.8, 0.9, 0.97],
+            "rule_compliance": [0.3, 0.5, 0.6, 0.7, 0.85],
+        }
+
+    with open(result_dir / "result.json", "w") as f:
+        json.dump(result, f)
+
+    # Build token_metrics.npz
+    n_seq, max_steps = 10, 30
+    rng = np.random.default_rng(42)
+    npz_data = {}
+    npz_data["edge_valid"] = rng.choice([True, False], size=(n_seq, max_steps - 1), p=[0.9, 0.1])
+    npz_data["rule_outcome"] = np.full((n_seq, max_steps - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+    npz_data["rule_outcome"][:, :15] = RuleOutcome.FOLLOWED
+    npz_data["sequence_lengths"] = np.full(n_seq, max_steps, dtype=np.int32)
+    npz_data["generated"] = rng.integers(0, 100, size=(n_seq, max_steps))
+
+    if include_violations:
+        npz_data["rule_outcome"][:5, 15:20] = RuleOutcome.VIOLATED
+        npz_data["failure_index"] = np.full(n_seq, -1, dtype=np.int32)
+        npz_data["failure_index"][:5] = 15
+    else:
+        npz_data["failure_index"] = np.full(n_seq, -1, dtype=np.int32)
+
+    # Add a sample SVD metric
+    npz_data["qkt.layer_0.stable_rank"] = rng.normal(0, 1, (n_seq, max_steps - 1)).astype(np.float32)
+
+    np.savez_compressed(str(result_dir / "token_metrics.npz"), **npz_data)
+
+    return result_dir
+
+
+def test_render_all_creates_figures_directory(tmp_path):
+    """render_all creates a figures/ subdirectory."""
+    from src.visualization.render import render_all
+
+    result_dir = _create_minimal_result(tmp_path / "test-exp")
+    render_all(result_dir)
+
+    assert (result_dir / "figures").exists()
+
+
+def test_render_all_produces_png_and_svg_pairs(tmp_path):
+    """render_all produces matching PNG+SVG pairs."""
+    from src.visualization.render import render_all
+
+    result_dir = _create_minimal_result(tmp_path / "test-exp")
+    render_all(result_dir)
+
+    figures_dir = result_dir / "figures"
+    png_files = sorted(figures_dir.glob("*.png"))
+    svg_files = sorted(figures_dir.glob("*.svg"))
+
+    # Every PNG should have a matching SVG
+    png_names = {p.stem for p in png_files}
+    svg_names = {p.stem for p in svg_files}
+    assert png_names == svg_names
+    # At least training_curves and confusion_matrix
+    assert len(png_files) >= 2
+
+
+def test_render_all_handles_missing_curves(tmp_path):
+    """render_all doesn't crash when curves are missing."""
+    from src.visualization.render import render_all
+
+    result_dir = _create_minimal_result(tmp_path / "test-exp", include_curves=False)
+    # Should not raise
+    render_all(result_dir)
+
+    figures_dir = result_dir / "figures"
+    assert figures_dir.exists()
+
+
+def test_render_all_handles_no_violations(tmp_path):
+    """render_all works when there are no violations."""
+    from src.visualization.render import render_all
+
+    result_dir = _create_minimal_result(tmp_path / "test-exp", include_violations=False)
+    # Should not raise
+    render_all(result_dir)
+
+    figures_dir = result_dir / "figures"
+    assert figures_dir.exists()
+
+
+def test_load_result_data_returns_expected_keys(tmp_path):
+    """load_result_data returns dict with expected keys."""
+    from src.visualization.render import load_result_data
+
+    result_dir = _create_minimal_result(tmp_path / "test-exp")
+    data = load_result_data(result_dir)
+
+    assert "result" in data
+    assert "metric_arrays" in data
+    assert "curves" in data
+    assert isinstance(data["result"], dict)
+    assert isinstance(data["metric_arrays"], dict)
