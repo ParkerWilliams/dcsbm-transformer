@@ -159,12 +159,12 @@ Plans:
   2. A comparison HTML report is generated across multiple experiments with scalar metrics comparison table, curve overlays, config diff table, and aligned sequence plot overlays
   3. Every report includes a reproduction block with git checkout command and full CLI arguments
   4. A math verification PDF is generated with title page (noting AI-generated LaTeX requiring researcher sign-off), table of contents, and per-source-file sections with code blocks and LaTeX math
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 09-01: Single-experiment HTML report with Jinja2 templates
-- [ ] 09-02: Comparison HTML report and reproduction blocks
-- [ ] 09-03: Math verification PDF generation
+- [ ] 09-01-PLAN.md — Single-experiment HTML report with base64 embedding, config tables, and reproduction block
+- [ ] 09-02-PLAN.md — Comparison HTML report with sparklines, config diff, and auto-generated verdict
+- [ ] 09-03-PLAN.md — Math verification PDF with LaTeX formulas for all math-heavy source files
 
 ### Phase 10: Sweep Infrastructure and Execution
 **Goal**: The full parameter sweep runs in priority order across the $100 GPU budget, with automatic caching, multi-seed replication, and crash recovery
