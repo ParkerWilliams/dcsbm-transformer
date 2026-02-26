@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ experiment_id }} - Experiment Report</title>
+  <style>
+    /* Academic style: serif fonts, paper-like feel */
+    body {
+      font-family: Georgia, "Times New Roman", Times, serif;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2em 1.5em;
+      background: #fff;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    h1 {
+      font-size: 1.8em;
+      border-bottom: 2px solid #333;
+      padding-bottom: 0.3em;
+      margin-bottom: 0.5em;
+    }
+
+    h2 {
+      font-size: 1.4em;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.2em;
+      margin-top: 2em;
+    }
+
+    h3 {
+      font-size: 1.15em;
+      margin-top: 1.5em;
+    }
+
+    .header-meta {
+      color: #666;
+      font-size: 0.95em;
+      margin-bottom: 1.5em;
+    }
+
+    .header-meta p {
+      margin: 0.2em 0;
+    }
+
+    /* Tables */
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0;
+      font-size: 0.95em;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5em 0.8em;
+      text-align: left;
+    }
+
+    th {
+      background: #f5f5f5;
+      font-weight: bold;
+    }
+
+    tr:nth-child(even) {
+      background: #fafafa;
+    }
+
+    /* Figures */
+    .figure-container {
+      margin: 1.5em 0;
+      text-align: center;
+    }
+
+    .figure-container img {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .figure-container .figure-title {
+      font-weight: bold;
+      margin-bottom: 0.5em;
+      font-size: 1.05em;
+    }
+
+    /* Not available placeholder */
+    .not-available {
+      color: #999;
+      font-style: italic;
+    }
+
+    /* Dirty warning */
+    .dirty-warning {
+      color: #cc6600;
+      font-weight: bold;
+    }
+
+    /* Diff highlight for comparison reports */
+    .diff-highlight {
+      background: #fff3cd;
+    }
+
+    /* Reproduction block */
+    .repro-block {
+      position: relative;
+      background: #f8f8f8;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 1em;
+      margin: 1em 0;
+    }
+
+    .repro-block pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 0.9em;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 0.5em;
+      right: 0.5em;
+      background: #e0e0e0;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      padding: 0.3em 0.8em;
+      cursor: pointer;
+      font-size: 0.85em;
+      font-family: sans-serif;
+    }
+
+    .copy-btn:hover {
+      background: #d0d0d0;
+    }
+
+    /* Footer */
+    .report-footer {
+      margin-top: 3em;
+      padding-top: 1em;
+      border-top: 1px solid #ccc;
+      color: #999;
+      font-size: 0.85em;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <h1>Experiment Report</h1>
+  <div class="header-meta">
+    <p><strong>Experiment ID:</strong> {{ experiment_id }}</p>
+    {% if timestamp %}
+    <p><strong>Timestamp:</strong> {{ timestamp }}</p>
+    {% endif %}
+    {% if description %}
+    <p><strong>Description:</strong> {{ description }}</p>
+    {% endif %}
+  </div>
+
+  <!-- Configuration -->
+  <h2>Configuration</h2>
+  {% if config_tables %}
+  {% for category, params in config_tables.items() %}
+  <h3>{{ category }}</h3>
+  <table>
+    <thead>
+      <tr><th>Parameter</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      {% for param in params %}
+      <tr>
+        <td>{{ param.name }}</td>
+        <td>{{ param.value }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endfor %}
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Scalar Metrics -->
+  <h2>Scalar Metrics</h2>
+  {% if scalar_metrics %}
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      {% for name, value in scalar_metrics.items() %}
+      <tr>
+        <td>{{ name }}</td>
+        <td>{{ "%.6f"|format(value) if value is number else value }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Training Curves -->
+  <h2>Training Curves</h2>
+  {% if training_curves_figure %}
+  <div class="figure-container">
+    <img src="{{ training_curves_figure }}" alt="Training Curves">
+  </div>
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Confusion Matrix -->
+  <h2>Confusion Matrix</h2>
+  {% if confusion_matrix_figure %}
+  <div class="figure-container">
+    <img src="{{ confusion_matrix_figure }}" alt="Confusion Matrix">
+  </div>
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- AUROC Curves -->
+  <h2>AUROC Curves</h2>
+  {% if auroc_figures %}
+  {% for fig in auroc_figures %}
+  <div class="figure-container">
+    <div class="figure-title">{{ fig.title }}</div>
+    <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Event-Aligned Plots -->
+  <h2>Event-Aligned Plots</h2>
+  {% if event_aligned_figures %}
+  {% for fig in event_aligned_figures %}
+  <div class="figure-container">
+    <div class="figure-title">{{ fig.title }}</div>
+    <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Distribution Plots -->
+  <h2>Distribution Plots</h2>
+  {% if distribution_figures %}
+  {% for fig in distribution_figures %}
+  <div class="figure-container">
+    <div class="figure-title">{{ fig.title }}</div>
+    <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+  </div>
+  {% endfor %}
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Statistical Tests -->
+  <h2>Statistical Tests</h2>
+  {% if statistical_tests %}
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>AUROC</th>
+        <th>p-value</th>
+        <th>CI (95%)</th>
+        <th>Effect Size (d)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for test in statistical_tests %}
+      <tr>
+        <td>{{ test.metric }}</td>
+        <td>{{ "%.4f"|format(test.auroc) if test.auroc is number else test.auroc }}</td>
+        <td>{{ "%.4f"|format(test.p_value) if test.p_value is number else test.p_value }}</td>
+        <td>
+          {% if test.ci_lower is number and test.ci_upper is number %}
+          [{{ "%.4f"|format(test.ci_lower) }}, {{ "%.4f"|format(test.ci_upper) }}]
+          {% else %}
+          {{ test.ci_lower }} - {{ test.ci_upper }}
+          {% endif %}
+        </td>
+        <td>{{ "%.4f"|format(test.effect_size) if test.effect_size is number else test.effect_size }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Predictive Horizon -->
+  <h2>Predictive Horizon</h2>
+  {% if predictive_horizon %}
+  <table>
+    <thead>
+      <tr>
+        <th>r-value</th>
+        <th>Best Metric</th>
+        <th>Best AUROC</th>
+        <th>Significant</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in predictive_horizon %}
+      <tr>
+        <td>{{ row.r_value }}</td>
+        <td>{{ row.best_metric }}</td>
+        <td>{{ "%.4f"|format(row.best_auroc) if row.best_auroc is number else row.best_auroc }}</td>
+        <td>{{ row.significant }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Sequence Analysis -->
+  <h2>Sequence Analysis</h2>
+  {% if sequence_analysis %}
+  {{ sequence_analysis }}
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Reproduction -->
+  <h2>Reproduction</h2>
+  {% if reproduction %}
+  {% if reproduction.dirty_warning %}
+  <p class="dirty-warning">{{ reproduction.dirty_warning }}</p>
+  {% endif %}
+
+  <h3>1. Checkout code version</h3>
+  <div class="repro-block">
+    <button class="copy-btn" onclick="copyToClipboard(this, 'checkout-cmd')">Copy</button>
+    <pre id="checkout-cmd">{{ reproduction.checkout_cmd }}</pre>
+  </div>
+
+  <h3>2. Run experiment</h3>
+  <div class="repro-block">
+    <button class="copy-btn" onclick="copyToClipboard(this, 'run-cmd')">Copy</button>
+    <pre id="run-cmd">{{ reproduction.run_cmd }}</pre>
+  </div>
+
+  <p><strong>Seed:</strong> {{ reproduction.seed }}</p>
+  {% else %}
+  <p class="not-available">Not available</p>
+  {% endif %}
+
+  <!-- Footer -->
+  <div class="report-footer">
+    Generated by DCSBM-Transformer reporting module
+  </div>
+
+  <script>
+    function copyToClipboard(btn, elementId) {
+      var text = document.getElementById(elementId).textContent;
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function() {
+          btn.textContent = 'Copied!';
+          setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+        }).catch(function() {
+          fallbackCopy(btn, text);
+        });
+      } else {
+        fallbackCopy(btn, text);
+      }
+    }
+
+    function fallbackCopy(btn, text) {
+      var textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        btn.textContent = 'Copied!';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+      } catch (e) {
+        btn.textContent = 'Failed';
+        setTimeout(function() { btn.textContent = 'Copy'; }, 2000);
+      }
+      document.body.removeChild(textarea);
+    }
+  </script>
+
+</body>
+</html>
