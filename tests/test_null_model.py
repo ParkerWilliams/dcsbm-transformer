@@ -9,6 +9,7 @@ import scipy.sparse
 from scipy.integrate import quad
 
 from src.analysis.null_model import (
+    compare_null_vs_violation,
     extract_position_matched_drift,
     generate_null_walks,
     marchenko_pastur_cdf,
@@ -466,3 +467,160 @@ class TestRunMPKSTest:
         assert expected_keys.issubset(result.keys()), (
             f"Missing keys: {expected_keys - result.keys()}"
         )
+
+
+# ---------------------------------------------------------------------------
+# Statistical Comparison Tests (17-21)
+# ---------------------------------------------------------------------------
+
+
+class TestCompareNullVsViolation:
+    """Tests for compare_null_vs_violation()."""
+
+    def test_basic(self):
+        """Test 17: Basic comparison returns correct structure and fields."""
+        rng = np.random.default_rng(42)
+
+        # Synthetic null drift: low values, small variance
+        null_drift = {
+            j: rng.normal(0.1, 0.02, size=50).astype(np.float32)
+            for j in range(1, 6)
+        }
+        # Synthetic violation drift: higher values, larger variance
+        violation_drift = {
+            j: rng.normal(0.5, 0.1, size=30).astype(np.float32)
+            for j in range(1, 6)
+        }
+
+        result = compare_null_vs_violation(null_drift, violation_drift)
+
+        # Check top-level keys
+        assert "by_lookback" in result
+        assert "aggregate" in result
+
+        # Check per-lookback structure
+        for j in range(1, 6):
+            key = str(j)
+            assert key in result["by_lookback"], f"Missing lookback j={j}"
+            entry = result["by_lookback"][key]
+            expected_fields = {
+                "null_mean", "null_std", "violation_mean", "violation_std",
+                "mann_whitney_U", "p_value_raw", "p_value_adjusted",
+                "cohens_d", "reject", "n_null_valid", "n_violation_valid",
+            }
+            assert expected_fields.issubset(entry.keys()), (
+                f"Missing fields at j={j}: {expected_fields - entry.keys()}"
+            )
+
+        # Check aggregate structure
+        agg = result["aggregate"]
+        agg_fields = {
+            "n_lookbacks_tested", "n_lookbacks_rejected",
+            "max_cohens_d", "max_cohens_d_lookback", "signal_exceeds_noise",
+        }
+        assert agg_fields.issubset(agg.keys()), (
+            f"Missing aggregate fields: {agg_fields - agg.keys()}"
+        )
+
+        # Consistency check: tested count matches number of lookback distances
+        assert agg["n_lookbacks_tested"] == 5
+        assert agg["n_lookbacks_rejected"] <= agg["n_lookbacks_tested"]
+
+    def test_separate_family(self):
+        """Test 18: Holm-Bonferroni applied ONLY across lookback distances in null comparison.
+
+        Verifies the number of adjusted p-values equals the number of tested
+        lookback distances (not mixed with any external family).
+        """
+        rng = np.random.default_rng(42)
+
+        null_drift = {
+            j: rng.normal(0.1, 0.02, size=50).astype(np.float32)
+            for j in range(1, 8)  # 7 lookback distances
+        }
+        violation_drift = {
+            j: rng.normal(0.5, 0.1, size=30).astype(np.float32)
+            for j in range(1, 8)
+        }
+
+        result = compare_null_vs_violation(null_drift, violation_drift)
+
+        # Count adjusted p-values that are not NaN
+        adjusted_count = sum(
+            1 for j in range(1, 8)
+            if np.isfinite(result["by_lookback"][str(j)]["p_value_adjusted"])
+        )
+
+        # Should equal the number of tested lookbacks (all 7 have enough samples)
+        assert adjusted_count == 7, (
+            f"Expected 7 adjusted p-values, got {adjusted_count}"
+        )
+        assert result["aggregate"]["n_lookbacks_tested"] == 7
+
+    def test_insufficient_samples(self):
+        """Test 19: Lookback with fewer than 5 samples is excluded from HB correction."""
+        rng = np.random.default_rng(42)
+
+        null_drift = {
+            1: rng.normal(0.1, 0.02, size=50).astype(np.float32),
+            2: rng.normal(0.1, 0.02, size=3).astype(np.float32),   # < 5 samples
+            3: rng.normal(0.1, 0.02, size=50).astype(np.float32),
+        }
+        violation_drift = {
+            1: rng.normal(0.5, 0.1, size=30).astype(np.float32),
+            2: rng.normal(0.5, 0.1, size=30).astype(np.float32),
+            3: rng.normal(0.5, 0.1, size=30).astype(np.float32),
+        }
+
+        result = compare_null_vs_violation(null_drift, violation_drift)
+
+        # Lookback j=2 should be marked insufficient
+        assert result["by_lookback"]["2"]["insufficient_samples"] is True
+        assert np.isnan(result["by_lookback"]["2"]["p_value_adjusted"])
+        assert result["by_lookback"]["2"]["reject"] is False
+
+        # Lookbacks j=1 and j=3 should be tested
+        assert result["by_lookback"]["1"]["insufficient_samples"] is False
+        assert result["by_lookback"]["3"]["insufficient_samples"] is False
+
+        # Only 2 lookbacks should be in the HB family
+        assert result["aggregate"]["n_lookbacks_tested"] == 2
+
+    def test_signal_exceeds_noise(self):
+        """Test 20: Clear separation triggers signal_exceeds_noise = True."""
+        rng = np.random.default_rng(42)
+
+        # Null: tight distribution around 0.1
+        null_drift = {
+            j: rng.normal(0.1, 0.01, size=100).astype(np.float32)
+            for j in range(1, 4)
+        }
+        # Violation: clearly separated at 0.5 (Cohen's d >> 0.5)
+        violation_drift = {
+            j: rng.normal(0.5, 0.01, size=100).astype(np.float32)
+            for j in range(1, 4)
+        }
+
+        result = compare_null_vs_violation(null_drift, violation_drift)
+
+        assert result["aggregate"]["signal_exceeds_noise"] is True
+        assert result["aggregate"]["n_lookbacks_rejected"] > 0
+        assert result["aggregate"]["max_cohens_d"] > 0.5
+
+    def test_no_signal(self):
+        """Test 21: Identical distributions yield signal_exceeds_noise = False."""
+        rng = np.random.default_rng(42)
+
+        # Same distribution for both null and violation
+        null_drift = {
+            j: rng.normal(0.3, 0.05, size=50).astype(np.float32)
+            for j in range(1, 4)
+        }
+        violation_drift = {
+            j: rng.normal(0.3, 0.05, size=50).astype(np.float32)
+            for j in range(1, 4)
+        }
+
+        result = compare_null_vs_violation(null_drift, violation_drift)
+
+        assert result["aggregate"]["signal_exceeds_noise"] is False
