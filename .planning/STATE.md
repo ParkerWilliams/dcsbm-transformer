@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2026-02-24)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Phase 6 - Behavioral Evaluation and SVD Collection (complete)
+**Current focus:** Phase 7 - Predictive Horizon and Statistical Analysis
 
 ## Current Position
 
-Phase: 6 of 10 (Behavioral Evaluation and SVD Collection) -- COMPLETE
-Plan: 3 of 3 in current phase (all complete)
-Status: Phase 6 execution complete
-Last activity: 2026-02-25 -- Completed 06-03: Fused evaluation pipeline
+Phase: 7 of 10 (Predictive Horizon and Statistical Analysis)
+Plan: 1 of 2 in current phase
+Status: Plan 07-01 complete, advancing to 07-02
+Last activity: 2026-02-26 -- Completed 07-01: Event extraction and AUROC horizon
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
-- Average duration: 3.5 min
-- Total execution time: ~0.76 hours
+- Total plans completed: 14
+- Average duration: 3.8 min
+- Total execution time: ~0.89 hours
 
 **By Phase:**
 
@@ -33,10 +33,11 @@ Progress: [██████░░░░] 60%
 | 4 | 1/1 | 4 min | 4.0 min |
 | 5 | 2/2 | 7 min | 3.5 min |
 | 6 | 3/3 | 11 min | 3.7 min |
+| 7 | 1/2 | 8 min | 8.0 min |
 
 **Recent Trend:**
-- Last 5 plans: 04-01 (4 min), 05-01 (2 min), 05-02 (5 min), 06-01 (3 min), 06-02 (3 min), 06-03 (5 min)
-- Trend: Stable
+- Last 5 plans: 05-01 (2 min), 05-02 (5 min), 06-01 (3 min), 06-02 (3 min), 06-03 (5 min), 07-01 (8 min)
+- Trend: Slight increase (TDD + statistical pipeline complexity)
 
 *Updated after each plan completion*
 
@@ -83,6 +84,12 @@ Recent decisions affecting current work:
 - [06-03]: read_write_alignment only for square matrices (WvWo); skipped for QK^T, AVWo
 - [06-03]: WvWo SVD computed once and broadcast (static weight matrices)
 - [06-03]: NaN for WvWo Grassmannian distance (static, no step-to-step change)
+- [07-01]: resolution_step = encounter_step + r; rule_outcome at resolution_step - 1
+- [07-01]: Only violations contaminate subsequent encounters (FOLLOWED does not)
+- [07-01]: is_first_violation matched via failure_index[walk] == outcome_idx
+- [07-01]: PRIMARY_METRICS frozenset of 5 pre-registered metrics (target.metric_name pattern)
+- [07-01]: Event count tiers: skip (0-1), low_n (2-4), moderate_n (5-9), full (10+)
+- [07-01]: Shuffle control uses max AUROC across lookback distances
 
 ### Pending Todos
 
@@ -95,7 +102,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-25
-Stopped at: Completed Phase 6 (all 3 plans: 06-01, 06-02, 06-03). Verification passed.
+Last session: 2026-02-26
+Stopped at: Completed 07-01 (event extraction + AUROC horizon). Advancing to 07-02.
 Resume file: None
-Next action: Begin Phase 7 (Predictive Horizon and Statistical Analysis)
+Next action: Execute 07-02-PLAN.md (statistical controls: bootstrap, Holm-Bonferroni, correlation, ranking)

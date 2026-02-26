@@ -59,11 +59,11 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Predictive Horizon Analysis
 
-- [ ] **PRED-01**: System computes AUROC at each lookback distance j (from 1 to r) for each SVD metric, comparing metric values at step (t-j) for violation vs non-violation events
-- [ ] **PRED-02**: System calculates predictive horizon as the furthest j at which AUROC exceeds 0.75 for each metric
-- [ ] **PRED-03**: System uses position-matched baselines (control events sampled at same absolute position in non-jumper walks) to control for positional confounds
-- [ ] **PRED-04**: System runs shuffle controls (permuted labels) to verify signal is not positional artifact (AUROC > 0.6 on shuffled = flag)
-- [ ] **PRED-05**: System stores per-metric AUROC curves in result.json metrics block
+- [x] **PRED-01**: System computes AUROC at each lookback distance j (from 1 to r) for each SVD metric, comparing metric values at step (t-j) for violation vs non-violation events
+- [x] **PRED-02**: System calculates predictive horizon as the furthest j at which AUROC exceeds 0.75 for each metric
+- [x] **PRED-03**: System uses position-matched baselines (control events sampled at same absolute position in non-jumper walks) to control for positional confounds
+- [x] **PRED-04**: System runs shuffle controls (permuted labels) to verify signal is not positional artifact (AUROC > 0.6 on shuffled = flag)
+- [x] **PRED-05**: System stores per-metric AUROC curves in result.json metrics block
 
 ### Experiment Management
 
@@ -166,11 +166,11 @@ Deferred to future release. Tracked but not in current roadmap.
 | SVD-05 | Phase 6 | Complete |
 | SVD-06 | Phase 6 | Complete |
 | SVD-07 | Phase 6 | Complete |
-| PRED-01 | Phase 7 | Pending |
-| PRED-02 | Phase 7 | Pending |
-| PRED-03 | Phase 7 | Pending |
-| PRED-04 | Phase 7 | Pending |
-| PRED-05 | Phase 7 | Pending |
+| PRED-01 | Phase 7 | Complete |
+| PRED-02 | Phase 7 | Complete |
+| PRED-03 | Phase 7 | Complete |
+| PRED-04 | Phase 7 | Complete |
+| PRED-05 | Phase 7 | Complete |
 | STAT-01 | Phase 7 | Pending |
 | STAT-02 | Phase 7 | Pending |
 | STAT-03 | Phase 7 | Pending |
