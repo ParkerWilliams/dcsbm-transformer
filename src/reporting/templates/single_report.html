@@ -299,6 +299,100 @@
   <p class="not-available">Not available</p>
   {% endif %}
 
+  <!-- Null Model Baseline -->
+  {% if null_model %}
+  <h2>Null Model Baseline</h2>
+
+  <p class="summary">
+    {% if null_model.aggregate.signal_exceeds_noise %}
+    <strong>Signal exceeds noise:</strong> The Grassmannian drift signal at violation events
+    is statistically distinguishable from the null (jumper-free) distribution.
+    {{ null_model.aggregate.n_lookbacks_rejected }} of {{ null_model.aggregate.n_lookbacks_tested }}
+    lookback distances rejected (Holm-Bonferroni corrected, &alpha; = {{ null_model.config.alpha }}).
+    Maximum Cohen's d = {{ "%.3f"|format(null_model.aggregate.max_cohens_d) }} at lookback j={{ null_model.aggregate.max_cohens_d_lookback }}.
+    {% else %}
+    <strong>Signal does not exceed noise:</strong> The Grassmannian drift at violation events
+    is not statistically distinguishable from the null distribution with Cohen's d &ge; 0.5.
+    {% endif %}
+  </p>
+
+  <h3>Per-Lookback Statistical Comparison</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Lookback j</th>
+        <th>Null (mean &plusmn; std)</th>
+        <th>Violation (mean &plusmn; std)</th>
+        <th>Mann-Whitney U</th>
+        <th>p (raw)</th>
+        <th>p (adjusted)</th>
+        <th>Cohen's d</th>
+        <th>Reject?</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for j, data in null_model.by_lookback|dictsort %}
+      <tr>
+        <td>{{ j }}</td>
+        <td>{{ "%.4f"|format(data.null_mean) }} &plusmn; {{ "%.4f"|format(data.null_std) }}</td>
+        <td>{{ "%.4f"|format(data.violation_mean) }} &plusmn; {{ "%.4f"|format(data.violation_std) }}</td>
+        <td>{{ "%.1f"|format(data.mann_whitney_U) }}</td>
+        <td>{{ "%.4f"|format(data.p_value_raw) }}</td>
+        <td>{{ "%.4f"|format(data.p_value_adjusted) }}</td>
+        <td>{{ "%.3f"|format(data.cohens_d) }}</td>
+        <td>{{ "Yes" if data.reject else "No" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if null_model.marchenko_pastur %}
+  <h3>Marchenko-Pastur Reference</h3>
+  <p>
+    Aspect ratio &gamma; = {{ "%.3f"|format(null_model.marchenko_pastur.gamma) }},
+    &sigma;&sup2; = {{ "%.6f"|format(null_model.marchenko_pastur.sigma2) }},
+    &lambda;<sub>&minus;</sub> = {{ "%.6f"|format(null_model.marchenko_pastur.lambda_minus) }},
+    &lambda;<sub>+</sub> = {{ "%.6f"|format(null_model.marchenko_pastur.lambda_plus) }}.
+  </p>
+
+  <table>
+    <thead>
+      <tr><th>Anchor Position</th><th>KS Statistic</th><th>KS p-value</th></tr>
+    </thead>
+    <tbody>
+      {% for pos, data in null_model.marchenko_pastur.anchor_positions|dictsort %}
+      <tr>
+        <td>{{ pos }}</td>
+        <td>{{ "%.4f"|format(data.ks_statistic) }}</td>
+        <td>{{ "%.4f"|format(data.ks_p_value) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+
+  {% if null_overlay_figures %}
+  <h3>Null Overlay Plots</h3>
+  {% for fig in null_overlay_figures %}
+  <div class="figure-container">
+    <div class="figure-title">{{ fig.title }}</div>
+    <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% if mp_histogram_figures %}
+  <h3>Marchenko-Pastur Histograms</h3>
+  {% for fig in mp_histogram_figures %}
+  <div class="figure-container">
+    <div class="figure-title">{{ fig.title }}</div>
+    <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  {% endif %}
+
   <!-- Predictive Horizon -->
   <h2>Predictive Horizon</h2>
   {% if predictive_horizon %}

@@ -91,6 +91,8 @@ def _collect_figures(figures_dir: Path) -> dict[str, Any]:
         "auroc_figures": [],
         "event_aligned_figures": [],
         "distribution_figures": [],
+        "null_overlay_figures": [],
+        "mp_histogram_figures": [],
     }
 
     if not figures_dir.exists():
@@ -113,6 +115,10 @@ def _collect_figures(figures_dir: Path) -> dict[str, Any]:
             result["auroc_figures"].append({"title": title, "data_uri": data_uri})
         elif name.startswith("event_aligned"):
             result["event_aligned_figures"].append({"title": title, "data_uri": data_uri})
+        elif name.startswith("null_overlay"):
+            result["null_overlay_figures"].append({"title": title, "data_uri": data_uri})
+        elif name.startswith("mp_histogram"):
+            result["mp_histogram_figures"].append({"title": title, "data_uri": data_uri})
         elif name.startswith("distribution"):
             result["distribution_figures"].append({"title": title, "data_uri": data_uri})
         else:
@@ -239,6 +245,9 @@ def generate_single_report(
     )
     template = env.get_template("single_report.html")
 
+    # Null model data (Phase 12)
+    null_model = metrics.get("null_model")
+
     # Render
     html = template.render(
         experiment_id=result.get("experiment_id", "Unknown"),
@@ -255,6 +264,9 @@ def generate_single_report(
         predictive_horizon=predictive_horizon,
         sequence_analysis=None,
         reproduction=reproduction,
+        null_model=null_model,
+        null_overlay_figures=figures.get("null_overlay_figures", []),
+        mp_histogram_figures=figures.get("mp_histogram_figures", []),
     )
 
     # Write output

@@ -95,6 +95,41 @@ def validate_result(result: dict[str, Any]) -> list[str]:
                             f"metrics.scalars.split_assignment missing field: {field}"
                         )
 
+    # Optional null_model validation (Phase 12, backward compatible)
+    if "metrics" in result and isinstance(result["metrics"], dict):
+        null_model = result["metrics"].get("null_model")
+        if null_model is not None:
+            if not isinstance(null_model, dict):
+                errors.append("metrics.null_model must be a dict")
+            else:
+                # Validate required sub-blocks
+                for block_name in ["config", "by_lookback", "aggregate"]:
+                    if block_name not in null_model:
+                        errors.append(
+                            f"metrics.null_model missing required block: {block_name}"
+                        )
+                # Validate config fields
+                nm_config = null_model.get("config", {})
+                if isinstance(nm_config, dict):
+                    for nm_field in [
+                        "n_null_walks",
+                        "n_violation_walks",
+                        "null_seed",
+                        "alpha",
+                    ]:
+                        if nm_field not in nm_config:
+                            errors.append(
+                                f"metrics.null_model.config missing field: {nm_field}"
+                            )
+                # Validate aggregate fields
+                nm_agg = null_model.get("aggregate", {})
+                if isinstance(nm_agg, dict):
+                    for nm_field in ["n_lookbacks_tested", "signal_exceeds_noise"]:
+                        if nm_field not in nm_agg:
+                            errors.append(
+                                f"metrics.null_model.aggregate missing field: {nm_field}"
+                            )
+
     # Sequence array length consistency
     for seq in result.get("sequences", []):
         tokens = seq.get("tokens", [])
