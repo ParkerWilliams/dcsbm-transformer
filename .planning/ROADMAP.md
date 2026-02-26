@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Training Pipeline** - Cross-entropy training loop with sufficiency gate, checkpointing, and training curve logging
 - [x] **Phase 6: Behavioral Evaluation and SVD Collection** - Fused forward pass producing 4-class behavioral labels and all SVD metrics with numerical guards (completed 2026-02-25)
 - [x] **Phase 7: Predictive Horizon and Statistical Analysis** - AUROC at each lookback distance, position-matched baselines, multiple comparison correction, and effect sizes (completed 2026-02-26)
-- [ ] **Phase 8: Visualization** - All publication-quality plot types from event-aligned metrics to predictive horizon heatmaps
+- [x] **Phase 8: Visualization** - All publication-quality plot types from event-aligned metrics to predictive horizon heatmaps (completed 2026-02-26)
 - [ ] **Phase 9: Reporting and Math Verification** - Single-experiment and comparison HTML reports, reproduction blocks, and math verification PDF
 - [ ] **Phase 10: Sweep Infrastructure and Execution** - Priority-ordered job queue, multi-seed execution, budget tracking, preemption recovery, and full parameter sweep
 
@@ -147,8 +147,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — Style foundation and core plot types (event-aligned, training curves, AUROC curves, confusion matrix)
-- [ ] 08-02-PLAN.md — Distribution plots, predictive horizon heatmap, and render orchestrator
+- [x] 08-01-PLAN.md — Style foundation and core plot types (event-aligned, training curves, AUROC curves, confusion matrix)
+- [x] 08-02-PLAN.md — Distribution plots, predictive horizon heatmap, and render orchestrator
 
 ### Phase 9: Reporting and Math Verification
 **Goal**: A complete experiment produces a self-contained HTML report with all figures and reproduction instructions, and the mathematical implementations are documented for peer review
@@ -195,7 +195,7 @@ Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 co
 | 4. Transformer Model | 1/1 | Complete | 2026-02-25 |
 | 5. Training Pipeline | 2/2 | Complete | 2026-02-25 |
 | 6. Behavioral Evaluation and SVD Collection | 3/3 | Complete | 2026-02-25 |
-| 7. Predictive Horizon and Statistical Analysis | 0/2 | Complete    | 2026-02-26 |
-| 8. Visualization | 0/2 | Not started | - |
+| 7. Predictive Horizon and Statistical Analysis | 2/2 | Complete    | 2026-02-26 |
+| 8. Visualization | 2/2 | Complete | 2026-02-26 |
 | 9. Reporting and Math Verification | 0/3 | Not started | - |
 | 10. Sweep Infrastructure and Execution | 0/2 | Not started | - |
