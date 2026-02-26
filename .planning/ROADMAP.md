@@ -121,7 +121,7 @@ Note: Phase 14 depends on Phase 12 (not 13), so Phases 13 and 14 could theoretic
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 11. Pre-Registration Framework | 1/1 | Complete   | 2026-02-26 |
+| 11. Pre-Registration Framework | 1/1 | Complete    | 2026-02-26 |
 | 12. Null Model Baseline | 0/2 | Not started | - |
 | 13. Evaluation Enrichment | 0/3 | Not started | - |
 | 14. Softmax Filtering Bound | 0/2 | Not started | - |
