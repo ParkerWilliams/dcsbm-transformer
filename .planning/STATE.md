@@ -2,46 +2,24 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-24)
+See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Phase 9 - Reporting and Math Verification
+**Current focus:** Milestone v1.1 Journal Feedback — defining requirements
 
 ## Current Position
 
-Phase: 9 of 10 (Reporting and Math Verification) -- COMPLETE
-Plan: 3 of 3 in current phase (all complete)
-Status: Phase 9 complete -- all 3 plans executed
-Last activity: 2026-02-26 -- Completed 09-02: Comparison report generator
-
-Progress: [█████████░] 90%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-02-26 — Milestone v1.1 Journal Feedback started
 
 ## Performance Metrics
 
-**Velocity:**
+**Velocity (v1.0):**
 - Total plans completed: 20
 - Average duration: 3.7 min
 - Total execution time: ~1.25 hours
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1 | 2/2 | 9 min | 4.5 min |
-| 2 | 3/3 | 8 min | 2.7 min |
-| 3 | 2/2 | 9 min | 4.5 min |
-| 4 | 1/1 | 4 min | 4.0 min |
-| 5 | 2/2 | 7 min | 3.5 min |
-| 6 | 3/3 | 11 min | 3.7 min |
-| 7 | 2/2 | 14 min | 7.0 min |
-| 8 | 2/2 | 10 min | 5.0 min |
-| 9 | 3/3 | 12 min | 4.0 min |
-
-**Recent Trend:**
-- Last 5 plans: 08-01 (5 min), 08-02 (5 min), 09-01 (3 min), 09-03 (5 min), 09-02 (4 min)
-- Trend: Stable at ~4 min per plan
-
-*Updated after each plan completion*
 
 ## Accumulated Context
 
@@ -117,16 +95,18 @@ Recent decisions affecting current work:
 
 ### Pending Todos
 
-None yet.
+- v1.0 integration gaps deferred: run_experiment.py stub, set_seed not called in production, predictive_horizon not written to result.json
+- v1.0 Phase 10 (Sweep Infrastructure) not implemented: MGMT-02, MGMT-03, MGMT-04, MGMT-06
 
 ### Blockers/Concerns
 
 - Phase 3 research flag: SVD memory footprint for w=256 needs profiling on anchor config before sweep planning
 - pylatex stability on RunPod needs verification before Phase 9 math PDF work
+- Multi-head ablation requires relaxing the single-head constraint in TransformerLM
 
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed 09-02 (comparison report generator). Phase 9 complete.
+Stopped at: Starting milestone v1.1 Journal Feedback
 Resume file: None
-Next action: Begin Phase 10 (Sweep Execution)
+Next action: Define v1.1 requirements
