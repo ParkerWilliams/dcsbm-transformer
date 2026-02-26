@@ -75,12 +75,12 @@ class TestHolmBonferroni:
         assert adjusted[3] == pytest.approx(0.025)  # p=0.005 -> rank 1 -> 0.005*5=0.025
         assert adjusted[4] == pytest.approx(0.8)    # p=0.8 -> rank 5 -> 0.8*1=0.8
 
-        # Verify reject flags
-        assert reject[0] is True   # 0.04 <= 0.05
-        assert reject[1] is False  # 0.09 > 0.05
-        assert reject[2] is False  # 0.09 > 0.05
-        assert reject[3] is True   # 0.025 <= 0.05
-        assert reject[4] is False  # 0.8 > 0.05
+        # Verify reject flags (use == not 'is' for numpy bool)
+        assert reject[0] == True   # 0.04 <= 0.05
+        assert reject[1] == False  # 0.09 > 0.05
+        assert reject[2] == False  # 0.09 > 0.05
+        assert reject[3] == True   # 0.025 <= 0.05
+        assert reject[4] == False  # 0.8 > 0.05
 
     def test_holm_bonferroni_all_significant(self):
         """All p-values very small. All should be rejected."""
