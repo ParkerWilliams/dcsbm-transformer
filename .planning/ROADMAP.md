@@ -129,11 +129,11 @@ Plans:
   3. Position-matched baselines (control events at same absolute position in non-jumper walks) are used, and shuffle controls with permuted labels flag any metric where shuffled AUROC > 0.6
   4. Holm-Bonferroni correction is applied across pre-registered primary metrics, bootstrap confidence intervals are computed on AUROC estimates, and effect sizes (Cohen's d) are reported
   5. The SVD metric correlation matrix identifies redundant metrics, and a metric importance ranking by max AUROC produces a clear ordering
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 07-01: AUROC computation with position-matched baselines and shuffle controls
-- [ ] 07-02: Statistical rigor (correction, bootstrap CIs, effect sizes, correlation, ranking)
+- [ ] 07-01-PLAN.md — Event extraction, AUROC computation at each lookback distance, predictive horizon, shuffle controls (TDD)
+- [ ] 07-02-PLAN.md — Statistical rigor: Holm-Bonferroni correction, BCa bootstrap CIs, Cohen's d, correlation matrices, metric ranking (TDD)
 
 ### Phase 8: Visualization
 **Goal**: All analysis results can be rendered as publication-quality static figures that follow a consistent visual style
