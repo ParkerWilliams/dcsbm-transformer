@@ -106,7 +106,7 @@ Shipped and verified in v1.0 milestone (phases 1-9). Listed for reference.
 
 ## v1.1 Requirements
 
-Requirements for journal feedback milestone. Each maps to roadmap phases.
+Requirements for journal feedback milestone. Each maps to roadmap phases 11-16.
 
 ### Null Model Baseline
 
@@ -197,37 +197,37 @@ Deferred to future release. Tracked but not in current roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| NULL-01 | TBD | Pending |
-| NULL-02 | TBD | Pending |
-| NULL-03 | TBD | Pending |
-| NULL-04 | TBD | Pending |
-| SFTX-01 | TBD | Pending |
-| SFTX-02 | TBD | Pending |
-| SFTX-03 | TBD | Pending |
-| MHAD-01 | TBD | Pending |
-| MHAD-02 | TBD | Pending |
-| MHAD-03 | TBD | Pending |
-| MHAD-04 | TBD | Pending |
-| PRCL-01 | TBD | Pending |
-| PRCL-02 | TBD | Pending |
-| PRCL-03 | TBD | Pending |
-| PREG-01 | TBD | Pending |
-| PREG-02 | TBD | Pending |
-| PREG-03 | TBD | Pending |
-| COMP-01 | TBD | Pending |
-| COMP-02 | TBD | Pending |
-| SPEC-01 | TBD | Pending |
-| SPEC-02 | TBD | Pending |
-| SPEC-03 | TBD | Pending |
-| OVHD-01 | TBD | Pending |
-| OVHD-02 | TBD | Pending |
-| OVHD-03 | TBD | Pending |
+| PREG-01 | Phase 11 | Pending |
+| PREG-02 | Phase 11 | Pending |
+| PREG-03 | Phase 11 | Pending |
+| NULL-01 | Phase 12 | Pending |
+| NULL-02 | Phase 12 | Pending |
+| NULL-03 | Phase 12 | Pending |
+| NULL-04 | Phase 12 | Pending |
+| PRCL-01 | Phase 13 | Pending |
+| PRCL-02 | Phase 13 | Pending |
+| PRCL-03 | Phase 13 | Pending |
+| OVHD-01 | Phase 13 | Pending |
+| OVHD-02 | Phase 13 | Pending |
+| OVHD-03 | Phase 13 | Pending |
+| SFTX-01 | Phase 14 | Pending |
+| SFTX-02 | Phase 14 | Pending |
+| SFTX-03 | Phase 14 | Pending |
+| SPEC-01 | Phase 15 | Pending |
+| SPEC-02 | Phase 15 | Pending |
+| SPEC-03 | Phase 15 | Pending |
+| COMP-01 | Phase 15 | Pending |
+| COMP-02 | Phase 15 | Pending |
+| MHAD-01 | Phase 16 | Pending |
+| MHAD-02 | Phase 16 | Pending |
+| MHAD-03 | Phase 16 | Pending |
+| MHAD-04 | Phase 16 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 25 total
-- Mapped to phases: 0 (awaiting roadmap)
-- Unmapped: 25
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-02-24 (v1.0)*
-*Last updated: 2026-02-26 after v1.1 Journal Feedback milestone definition*
+*Last updated: 2026-02-26 after v1.1 roadmap creation (phases 11-16)*

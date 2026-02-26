@@ -1,201 +1,129 @@
-# Roadmap: DCSBM Transformer SVD Hallucination Prediction
+# Roadmap: DCSBM Transformer v1.1 -- Journal Feedback
 
 ## Overview
 
-This roadmap delivers a research framework that generates synthetic token sequences from DCSBM graphs with known ground-truth rules, trains a NanoGPT-scale transformer on them, and analyzes whether SVD instability in the QK^T attention matrix predicts rule violations before they occur. The pipeline progresses from foundational infrastructure (config, schema, reproducibility) through data generation (graphs, walks), model training, measurement (behavioral evaluation and SVD collection), analysis (predictive horizon, statistical rigor), visualization, reporting, and finally sweep execution across the full parameter grid. Each phase delivers a verifiable capability; the anchor configuration runs end-to-end through Phases 1-9 before the sweep (Phase 10) consumes GPU budget.
+This roadmap addresses convergent reviewer concerns about the DCSBM transformer SVD hallucination prediction paper. The six phases progress through methodological prerequisites (pre-registration), core signal validation (null model baseline), additive evaluation enrichments (PR curves, calibration, SVD benchmarks), theoretical formalization (softmax filtering bound), advanced analysis features (spectrum trajectory, compliance curve), and finally the most invasive architectural change (multi-head ablation). Pre-registration is committed before any confirmatory analysis. The null model validates the core signal claim that all subsequent work depends on. All additive features are built and validated on the single-head architecture before multi-head support touches 10+ files in the final phase.
 
 ## Phases
 
 **Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+- v1.0 phases (1-10): Archived -- see git history
+- v1.1 phases (11-16): Current milestone
+- Decimal phases (e.g., 12.1): Urgent insertions (marked with INSERTED)
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [x] **Phase 1: Config, Schema, and Reproducibility Foundation** - Experiment configuration, result.json schema, seed management, and code hash tracking
-- [x] **Phase 2: DCSBM Graph Generation** - Custom degree-corrected stochastic block model with block jumper rules, validation gates, and caching
-- [x] **Phase 3: Walk Generation** - Directed random walks on DCSBM graphs with corpus validation, jumper metadata, and caching (completed 2026-02-24)
-- [x] **Phase 4: Transformer Model** - NanoGPT-scale single-head transformer with QK^T extraction capability
-- [x] **Phase 5: Training Pipeline** - Cross-entropy training loop with sufficiency gate, checkpointing, and training curve logging
-- [x] **Phase 6: Behavioral Evaluation and SVD Collection** - Fused forward pass producing 4-class behavioral labels and all SVD metrics with numerical guards (completed 2026-02-25)
-- [x] **Phase 7: Predictive Horizon and Statistical Analysis** - AUROC at each lookback distance, position-matched baselines, multiple comparison correction, and effect sizes (completed 2026-02-26)
-- [x] **Phase 8: Visualization** - All publication-quality plot types from event-aligned metrics to predictive horizon heatmaps (completed 2026-02-26)
-- [ ] **Phase 9: Reporting and Math Verification** - Single-experiment and comparison HTML reports, reproduction blocks, and math verification PDF
-- [ ] **Phase 10: Sweep Infrastructure and Execution** - Priority-ordered job queue, multi-seed execution, budget tracking, preemption recovery, and full parameter sweep
+- [ ] **Phase 11: Pre-Registration Framework** - Lock primary hypothesis, held-out protocol, and deviation log before any v1.1 confirmatory analysis
+- [ ] **Phase 12: Null Model Baseline** - Validate the core SVD signal claim with jumper-free null distribution and statistical comparison
+- [ ] **Phase 13: Evaluation Enrichment** - Add precision-recall curves, calibration diagnostics, and SVD computational overhead benchmarks
+- [ ] **Phase 14: Softmax Filtering Bound** - Derive and empirically verify the epsilon-bound from QK^T perturbation through softmax to AVWo spectral change
+- [ ] **Phase 15: Advanced Analysis** - Full spectrum trajectory with curvature/torsion and sharp compliance curve across r/w ratio sweep
+- [ ] **Phase 16: Multi-Head Ablation** - Extend transformer to 2h/4h with per-head SVD extraction and signal concentration analysis
 
 ## Phase Details
 
-### Phase 1: Config, Schema, and Reproducibility Foundation
-**Goal**: Every experiment is fully specified by a frozen, hashable configuration object; results conform to a validated schema; and all sources of randomness are controlled from a single master seed
-**Depends on**: Nothing (first phase)
-**Requirements**: MGMT-01, MGMT-05, TRNG-02, TRNG-07
+### Phase 11: Pre-Registration Framework
+**Goal**: The primary hypothesis, analysis plan, and held-out evaluation protocol are locked in git history before any v1.1 confirmatory analysis runs
+**Depends on**: Nothing (first v1.1 phase; methodological prerequisite for all subsequent phases)
+**Requirements**: PREG-01, PREG-02, PREG-03
 **Success Criteria** (what must be TRUE):
-  1. An ExperimentConfig can be instantiated with the anchor parameters (n=500, w=64, t=200k, d_model=128, n_layers=4, 1 head), serialized to JSON, deserialized back, and the hash matches
-  2. A result.json file can be created conforming to the project schema (schema_version, experiment_id, timestamp, description, tags, config, metrics, sequences, metadata) and validated against the schema
-  3. Setting the master seed produces identical random number sequences across torch, numpy, and python random on repeated runs
-  4. The current git short SHA is captured and stored in a result.json metadata block
-**Plans**: 2 plans
-
-Plans:
-- [x] 01-01-PLAN.md — ExperimentConfig dataclass system, result.json schema validation, and project scaffolding
-- [x] 01-02-PLAN.md — Seed management, git hash tracking, and reproducibility integration tests
-
-### Phase 2: DCSBM Graph Generation
-**Goal**: The system generates valid, non-trivial DCSBM graphs with block jumper rules that are ready to serve as training data foundations
-**Depends on**: Phase 1
-**Requirements**: GRPH-01, GRPH-02, GRPH-03, GRPH-04, GRPH-05
-**Success Criteria** (what must be TRUE):
-  1. A DCSBM graph with the anchor config parameters (n=500, K blocks, configurable p_in/p_out) is generated and is strongly connected with minimum expected degree >= 3
-  2. Block jumper vertices are designated with jump length r, and for each jumper vertex there exist valid paths of length r to the target block that are not the only paths at that length (non-triviality verified)
-  3. Edge density of the generated graph matches expected p_in/p_out ratios within statistical tolerance
-  4. Regenerating with the same config hash loads from cache instead of recomputing
-  5. Degree correction produces heterogeneous degree distributions following the configured parameters
-**Plans**: 3 plans
-
-Plans:
-- [x] 02-01-PLAN.md — Custom DCSBM generator with degree correction, validation gates, and retry logic
-- [x] 02-02-PLAN.md — Block jumper designation with variable r values and non-triviality verification
-- [x] 02-03-PLAN.md — Graph caching by config hash with gzip-compressed sparse matrix storage
-
-### Phase 3: Walk Generation
-**Goal**: The system produces correctly structured walk corpora with complete jumper-event metadata, ready to serve as transformer training and evaluation data
-**Depends on**: Phase 2
-**Requirements**: WALK-01, WALK-02, WALK-03, WALK-04, WALK-05
-**Success Criteria** (what must be TRUE):
-  1. Directed random walks of configurable length (2w, 4w, 8w) are generated on the DCSBM graph, and each walk follows only valid directed edges
-  2. The corpus size is validated as at least 100x n, and generation fails with a clear error if this threshold is not met
-  3. Train and evaluation walk sets use different seeds and contain no overlapping walks
-  4. Every block jumper encounter during walk generation is recorded with the jumper vertex ID, encounter step, and expected target block at step+r
-  5. Regenerating walks with the same config hash loads from cache instead of recomputing
-**Plans**: 2 plans
-
-Plans:
-- [x] 03-01-PLAN.md — Walk generation engine: types, path-count precomputation, guided/batch walk generation, jumper event tracking
-- [x] 03-02-PLAN.md — Corpus assembly: train/eval split, validation, NPZ storage, and walk caching
-
-### Phase 4: Transformer Model
-**Goal**: A minimal, fully transparent NanoGPT-scale transformer exists that can process token sequences and expose its internal attention components (QK^T, Wv, Wo, A, V) for three-target SVD analysis
-**Depends on**: Phase 1
-**Requirements**: MODL-01, MODL-02, MODL-03
-**Success Criteria** (what must be TRUE):
-  1. The transformer accepts configurable d_model (64, 128, 256), n_layers (2, 4, 6), and enforces exactly 1 attention head
-  2. With return_internals=True, the forward pass returns logits and internal attention components: raw QK^T (causal-masked with zero fill, shape w×w), attention weights A, value matrix V, and access to Wv/Wo parameters — enabling construction of all three SVD targets (QK^T, WvWo, AVWo)
-  3. The vocabulary size equals the number of graph vertices (token IDs are vertex IDs), and the model handles the anchor config vocabulary (n=500) correctly
-**Plans**: 1 plan
-
-Plans:
-- [x] 04-01-PLAN.md — NanoGPT single-head transformer with ExtractionMode-controlled QK^T/A/V extraction, get_wvwo(), and comprehensive tests
-
-### Phase 5: Training Pipeline
-**Goal**: The transformer can be trained to learn edge structure and block jumper rules from walk data, with a hard sufficiency gate that must pass before any downstream SVD analysis
-**Depends on**: Phase 3, Phase 4
-**Requirements**: TRNG-01, TRNG-03, TRNG-04, TRNG-05, TRNG-06
-**Success Criteria** (what must be TRUE):
-  1. The model trains with cross-entropy next-token prediction using AdamW optimizer and cosine learning rate schedule, and training loss decreases monotonically (on average)
-  2. Model weights, optimizer state, and training step are checkpointed periodically and can be resumed from checkpoint
-  3. Training loss and compliance curves (edge compliance, rule compliance) are logged per evaluation interval and stored in result.json curves block
-  4. The anchor configuration passes the sufficiency gate (edge compliance >95%, rule compliance >80%) on held-out evaluation walks
-  5. A configuration that fails the sufficiency gate is flagged with failure metadata in result.json and excluded from SVD analysis
-**Plans**: 2 plans
-
-Plans:
-- [x] 05-01-PLAN.md — Training loop with AdamW, cosine schedule, and data loading (TDD)
-- [x] 05-02-PLAN.md — Sufficiency gate, checkpoint management, and training pipeline (TDD)
-
-### Phase 6: Behavioral Evaluation and SVD Collection
-**Goal**: A single evaluation pass through generated sequences produces both behavioral labels (4-class outcomes) and SVD metrics across three targets (QK^T routing, WvWo OV circuit, AVWo net residual update) with numerical stability guarantees
-**Depends on**: Phase 5
-**Requirements**: EVAL-01, EVAL-02, EVAL-03, EVAL-04, EVAL-05, SVD-01, SVD-02, SVD-03, SVD-04, SVD-05, SVD-06, SVD-07
-**Success Criteria** (what must be TRUE):
-  1. Each generation step is classified into the 4-class outcome (edge valid/invalid x rule followed/violated/not-applicable) and sequences are annotated with failure_index
-  2. SVD is computed on three targets per layer at every token step: QK^T (routing stability), WvWo (OV circuit stability), AVWo (net residual update stability), using batched torch.linalg.svd with full_matrices=False on GPU
-  3. Seven scalar metrics per target per step (stable rank, spectral entropy, spectral gap + generalized k=2,4, condition number, rank-1 residual norm, read-write alignment for WvWo) are computed and stored as token-level time series in token_metrics.npz keyed by target.metric
-  4. SVD metrics are collected only for positions >= w (context window warmup), and numerical guards (NaN/Inf clamping, epsilon in entropy, condition number cap at 1e6) prevent any NaN or Inf in stored metrics
-  5. Each SVD metric function has a unit test that verifies its output against an analytically known matrix decomposition for each target type
-**Plans**: 3 plans
-
-Plans:
-- [x] 06-01-PLAN.md — SVD metric functions (8+1) with numerical guards and unit tests against known matrices (TDD)
-- [x] 06-02-PLAN.md — 4-class behavioral classification with failure_index annotation (TDD)
-- [x] 06-03-PLAN.md — Fused evaluation pipeline with SVD collection, NPZ output, and tail extension
-
-### Phase 7: Predictive Horizon and Statistical Analysis
-**Goal**: For each SVD metric, the system measures how far in advance it can predict rule violations (AUROC at each lookback distance), with position-matched baselines and rigorous statistical controls
-**Depends on**: Phase 6
-**Requirements**: PRED-01, PRED-02, PRED-03, PRED-04, PRED-05, STAT-01, STAT-02, STAT-03, STAT-04, STAT-05
-**Success Criteria** (what must be TRUE):
-  1. AUROC is computed at each lookback distance j (from 1 to r) for each SVD metric, comparing metric values at step (t-j) for violation vs non-violation events
-  2. Predictive horizon (furthest j where AUROC > 0.75) is calculated for each metric and stored in result.json
-  3. Position-matched baselines (control events at same absolute position in non-jumper walks) are used, and shuffle controls with permuted labels flag any metric where shuffled AUROC > 0.6
-  4. Holm-Bonferroni correction is applied across pre-registered primary metrics, bootstrap confidence intervals are computed on AUROC estimates, and effect sizes (Cohen's d) are reported
-  5. The SVD metric correlation matrix identifies redundant metrics, and a metric importance ranking by max AUROC produces a clear ordering
-**Plans**: 2 plans
-
-Plans:
-- [x] 07-01-PLAN.md — Event extraction, AUROC computation at each lookback distance, predictive horizon, shuffle controls (TDD)
-- [x] 07-02-PLAN.md — Statistical rigor: Holm-Bonferroni correction, BCa bootstrap CIs, Cohen's d, correlation matrices, metric ranking (TDD)
-
-### Phase 8: Visualization
-**Goal**: All analysis results can be rendered as publication-quality static figures that follow a consistent visual style
-**Depends on**: Phase 7
-**Requirements**: PLOT-01, PLOT-02, PLOT-03, PLOT-04, PLOT-05, PLOT-06, PLOT-07, PLOT-08
-**Success Criteria** (what must be TRUE):
-  1. Event-aligned SVD metric plots show position 0 = failure event with negative positions before and positive after, including confidence bands and correct-sequence baseline overlay
-  2. Training convergence curves, AUROC vs lookback distance curves, confusion matrices, and pre/post failure distribution plots are all generated from result.json data
-  3. The predictive horizon heatmap across the (r, w) parameter grid renders correctly with at least the anchor config data point
-  4. All plots use seaborn whitegrid style with a consistent palette, and every figure is saved as both PNG (300 dpi) and SVG
-**Plans**: 2 plans
-
-Plans:
-- [x] 08-01-PLAN.md — Style foundation and core plot types (event-aligned, training curves, AUROC curves, confusion matrix)
-- [x] 08-02-PLAN.md — Distribution plots, predictive horizon heatmap, and render orchestrator
-
-### Phase 9: Reporting and Math Verification
-**Goal**: A complete experiment produces a self-contained HTML report with all figures and reproduction instructions, and the mathematical implementations are documented for peer review
-**Depends on**: Phase 8
-**Requirements**: REPT-01, REPT-02, REPT-03, MATH-01, MATH-02
-**Success Criteria** (what must be TRUE):
-  1. A single-experiment HTML report is generated with base64-embedded figures covering header, configuration, scalar metrics, curves, confusion matrix, statistical tests, sequence analysis, and reproduction command
-  2. A comparison HTML report is generated across multiple experiments with scalar metrics comparison table, curve overlays, config diff table, and aligned sequence plot overlays
-  3. Every report includes a reproduction block with git checkout command and full CLI arguments
-  4. A math verification PDF is generated with title page (noting AI-generated LaTeX requiring researcher sign-off), table of contents, and per-source-file sections with code blocks and LaTeX math
-**Plans**: 3 plans
-
-Plans:
-- [ ] 09-01-PLAN.md — Single-experiment HTML report with base64 embedding, config tables, and reproduction block
-- [ ] 09-02-PLAN.md — Comparison HTML report with sparklines, config diff, and auto-generated verdict
-- [ ] 09-03-PLAN.md — Math verification PDF with LaTeX formulas for all math-heavy source files
-
-### Phase 10: Sweep Infrastructure and Execution
-**Goal**: The full parameter sweep runs in priority order across the $100 GPU budget, with automatic caching, multi-seed replication, and crash recovery
-**Depends on**: Phase 9
-**Requirements**: MGMT-02, MGMT-03, MGMT-04, MGMT-06
-**Success Criteria** (what must be TRUE):
-  1. The parameter sweep is defined declaratively matching the spec sweep ranges, and the job queue executes in priority order (Tier 1: anchor r-sweep first, Tier 2: architecture/w sweeps, Tier 3: secondary sweeps)
-  2. Each configuration runs with 3 random seeds, and graph/walk caching prevents redundant regeneration across configs sharing the same graph parameters
-  3. Sweep state is persisted to disk and execution resumes correctly after RunPod preemption without re-running completed configurations
-  4. Budget tracking halts execution at the $10 reserve threshold
+  1. A pre-registration document exists in git specifying Grassmannian distance of QK^T as the primary hypothesis, the primary metric, alpha level (0.05), Holm-Bonferroni correction method, and the decision criterion for confirming/rejecting the hypothesis
+  2. The evaluation pipeline splits walks into exploratory (50%) and confirmatory (50%) sets, and result.json tags each analysis result with its split membership (exploratory vs confirmatory)
+  3. A deviation log file exists and is referenced from the pre-registration document, ready to record any changes to the analysis plan with timestamped rationale
 **Plans**: TBD
 
 Plans:
-- [ ] 10-01: Parameter sweep definition and priority-ordered job queue
-- [ ] 10-02: Multi-seed execution, caching, and preemption recovery
+- [ ] 11-01: Pre-registration document, held-out split implementation, and deviation log
+
+### Phase 12: Null Model Baseline
+**Goal**: The SVD Grassmannian drift signal is demonstrated to be a real response to block jumper events, not an artifact of normal attention dynamics, through statistical comparison against a null distribution from jumper-free sequences
+**Depends on**: Phase 11
+**Requirements**: NULL-01, NULL-02, NULL-03, NULL-04
+**Success Criteria** (what must be TRUE):
+  1. The system generates evaluation walks with zero block jumpers (same graph, same trained model) and computes a Grassmannian drift distribution from these null sequences
+  2. Position-matched Mann-Whitney U tests and Cohen's d effect sizes compare null vs violation Grassmannian drift at each lookback distance, and the results quantify whether the signal exceeds background noise
+  3. A Marchenko-Pastur reference distribution for QK^T singular values at the anchor config matrix dimensions (w x w, aspect ratio from d_k) is computed and available for comparison
+  4. Null model results are stored in a `null_model` block in result.json, and event-aligned plots render a null distribution overlay alongside the violation signal
+**Plans**: TBD
+
+Plans:
+- [ ] 12-01: Null walk generation, null Grassmannian distribution, and Marchenko-Pastur reference
+- [ ] 12-02: Statistical comparison (Mann-Whitney U, Cohen's d), result.json storage, and null overlay visualization
+
+### Phase 13: Evaluation Enrichment
+**Goal**: Violation prediction quality is assessed beyond AUROC with precision-recall curves and calibration diagnostics, and SVD computational cost is benchmarked with cheaper approximation candidates identified
+**Depends on**: Phase 12
+**Requirements**: PRCL-01, PRCL-02, PRCL-03, OVHD-01, OVHD-02, OVHD-03
+**Success Criteria** (what must be TRUE):
+  1. Precision-recall curves and AUPRC are computed per metric per lookback distance using the same event extraction as existing AUROC, and results are stored alongside AUROC in result.json
+  2. Reliability diagrams (calibration curves) with Expected Calibration Error (ECE) are generated for violation prediction, showing whether predicted probabilities match observed frequencies
+  3. PR curves and reliability diagrams are rendered in HTML reports alongside existing AUROC plots
+  4. Wall-clock SVD cost per step is benchmarked by target (QK^T, WvWo, AVWo) and matrix dimension using CUDA events with warmup, and full SVD vs randomized SVD (torch.svd_lowrank) vs values-only SVD (torch.linalg.svdvals) are compared with accuracy-cost tradeoff reported
+  5. A cost summary table (matrix size, time per step, percentage of total evaluation time) is included in HTML reports
+**Plans**: TBD
+
+Plans:
+- [ ] 13-01: Precision-recall curves, AUPRC computation, and report integration
+- [ ] 13-02: Calibration diagnostics (reliability diagrams, ECE) and report integration
+- [ ] 13-03: SVD overhead benchmarks (full vs randomized vs values-only) and cost summary table
+
+### Phase 14: Softmax Filtering Bound
+**Goal**: The theoretical relationship between QK^T perturbation and downstream AVWo spectral change is formalized as an epsilon-bound with a LaTeX derivation, and the bound is empirically verified against controlled perturbation experiments
+**Depends on**: Phase 12
+**Requirements**: SFTX-01, SFTX-02, SFTX-03
+**Success Criteria** (what must be TRUE):
+  1. A LaTeX derivation exists showing the epsilon-bound from QK^T perturbation through softmax (Lipschitz constant 1/2) to AVWo spectral change, incorporating the 1/sqrt(d_k) scaling factor and the correct chain through value projection and output projection
+  2. The bound is empirically verified by injecting controlled perturbations (random and adversarial directions) into QK^T at specific steps and measuring actual AVWo spectral change vs the theoretical bound, with fewer than 5% of perturbations exceeding the bound
+  3. A bound tightness visualization is generated showing the theoretical envelope vs empirical measurements, and the tightness ratio (median empirical / theoretical bound) is reported
+**Plans**: TBD
+
+Plans:
+- [ ] 14-01: LaTeX derivation of softmax filtering epsilon-bound
+- [ ] 14-02: Empirical bound verification and tightness visualization
+
+### Phase 15: Advanced Analysis
+**Goal**: The spectral trajectory is tracked as full singular value vectors with geometric curvature/torsion analysis feeding into the AUROC pipeline, and the compliance phase transition from near-perfect to failure is characterized across fine-grained r/w ratio sweep
+**Depends on**: Phase 13
+**Requirements**: SPEC-01, SPEC-02, SPEC-03, COMP-01, COMP-02
+**Success Criteria** (what must be TRUE):
+  1. Full singular value vectors (sigma_1 through sigma_k) are stored per step in NPZ alongside existing scalar metrics, configurable per target (QK^T by default), and storage overhead is managed (float16, selective targets)
+  2. Discrete Frenet-Serret curvature and torsion are computed on the spectral trajectory curve in R^k with appropriate numerical smoothing, and the resulting time series are stored as additional metrics
+  3. Curvature and torsion time series are fed into the AUROC pipeline as secondary predictive metrics, and their predictive power is compared against existing scalar metrics
+  4. The r/w ratio is swept with at least 8 values spanning r << w through r >> w, with 3 seeds per value, and a composite publication figure shows compliance rate and predictive horizon as a function of r/w ratio with dual y-axes
+**Plans**: TBD
+
+Plans:
+- [ ] 15-01: Full spectrum storage in NPZ and discrete curvature/torsion computation
+- [ ] 15-02: Curvature/torsion as AUROC predictive metrics
+- [ ] 15-03: Compliance curve sweep and dual-axis publication figure
+
+### Phase 16: Multi-Head Ablation
+**Goal**: The transformer supports multi-head attention (1h/2h/4h) with per-head SVD extraction, and an ablation study demonstrates whether the predictive signal concentrates in specific heads or distributes across all heads
+**Depends on**: Phase 15
+**Requirements**: MHAD-01, MHAD-02, MHAD-03, MHAD-04
+**Success Criteria** (what must be TRUE):
+  1. The transformer accepts n_heads = 1, 2, or 4 with d_k held constant at 128 (d_model scales as n_heads * d_k: 1h=128, 2h=256, 4h=512), and per-head QK^T matrices are extractable for SVD analysis
+  2. SVD metrics are computed per-head with NPZ keys in format `target.layer_N.head_H.metric_name`, and single-head runs emit backward-compatible dual keys (both legacy flat format and new per-head format)
+  3. Per-head AUROC is computed and signal concentration analysis (entropy and Gini coefficient of AUROC distribution across heads) identifies which heads carry predictive signal
+  4. An ablation comparison runs on matched configs (same graph, same walks -- 1h d_model=128, 2h d_model=256, 4h d_model=512, all d_k=128) and reports per-head vs aggregate signal strength, with results determining whether single-head multiplexing is an artifact
+**Plans**: TBD
+
+Plans:
+- [ ] 16-01: Multi-head CausalSelfAttention with per-head QK^T extraction
+- [ ] 16-02: Per-head SVD metric computation with dual key emission
+- [ ] 16-03: Per-head AUROC, signal concentration analysis, and ablation comparison
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 -> 8 -> 9 -> 10
-Note: Phase 4 depends only on Phase 1 (not 2 or 3), so Phases 2-3 and Phase 4 could theoretically be parallelized.
+Phases execute in numeric order: 11 -> 12 -> 13 -> 14 -> 15 -> 16
+Note: Phase 14 depends on Phase 12 (not 13), so Phases 13 and 14 could theoretically be parallelized after Phase 12 completes.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Config, Schema, and Reproducibility Foundation | 2/2 | Complete | 2026-02-24 |
-| 2. DCSBM Graph Generation | 3/3 | Complete | 2026-02-24 |
-| 3. Walk Generation | 2/2 | Complete    | 2026-02-24 |
-| 4. Transformer Model | 1/1 | Complete | 2026-02-25 |
-| 5. Training Pipeline | 2/2 | Complete | 2026-02-25 |
-| 6. Behavioral Evaluation and SVD Collection | 3/3 | Complete | 2026-02-25 |
-| 7. Predictive Horizon and Statistical Analysis | 2/2 | Complete    | 2026-02-26 |
-| 8. Visualization | 2/2 | Complete | 2026-02-26 |
-| 9. Reporting and Math Verification | 0/3 | Not started | - |
-| 10. Sweep Infrastructure and Execution | 0/2 | Not started | - |
+| 11. Pre-Registration Framework | 0/1 | Not started | - |
+| 12. Null Model Baseline | 0/2 | Not started | - |
+| 13. Evaluation Enrichment | 0/3 | Not started | - |
+| 14. Softmax Filtering Bound | 0/2 | Not started | - |
+| 15. Advanced Analysis | 0/3 | Not started | - |
+| 16. Multi-Head Ablation | 0/3 | Not started | - |
