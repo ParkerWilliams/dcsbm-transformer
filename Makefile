@@ -1,4 +1,4 @@
-.PHONY: test run sweep pdf clean
+.PHONY: test run sweep pdf report clean
 
 # Run all tests
 test:
@@ -8,13 +8,17 @@ test:
 run:
 	python run_experiment.py --config config.json
 
-# Run parameter sweep (placeholder — implemented in Phase 10)
+# Run parameter sweep (placeholder -- implemented in Phase 10)
 sweep:
 	@echo "Sweep not yet implemented (Phase 10)"
 
-# Generate math verification PDF (placeholder — implemented in Phase 9)
+# Generate math verification PDF
 pdf:
-	@echo "PDF generation not yet implemented (Phase 9)"
+	python -c "from src.reporting import generate_math_pdf; generate_math_pdf('docs')"
+
+# Run full pipeline (alias for run)
+report:
+	python run_experiment.py --config config.json
 
 # Clean generated artifacts
 clean:
