@@ -19,11 +19,12 @@ class TransformerBlock(nn.Module):
 
     Args:
         d_model: Model dimension.
+        n_heads: Number of attention heads (1, 2, or 4).
         max_seq_len: Maximum sequence length (passed to attention).
         dropout: Dropout rate for attention and MLP.
     """
 
-    def __init__(self, d_model: int, max_seq_len: int, dropout: float = 0.0):
+    def __init__(self, d_model: int, n_heads: int = 1, max_seq_len: int = 64, dropout: float = 0.0):
         super().__init__()
 
         # Pre-norm layer norms
@@ -31,7 +32,7 @@ class TransformerBlock(nn.Module):
         self.ln_2 = nn.LayerNorm(d_model)
 
         # Attention sublayer
-        self.attention = CausalSelfAttention(d_model, max_seq_len, dropout)
+        self.attention = CausalSelfAttention(d_model, n_heads, max_seq_len, dropout)
 
         # MLP sublayer: 4x expansion with GELU activation (NanoGPT standard)
         self.mlp = nn.Sequential(

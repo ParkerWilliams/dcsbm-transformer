@@ -423,6 +423,160 @@
   </details>
   {% endif %}
 
+  <!-- Softmax Filtering Bound (SFTX-02, SFTX-03) -->
+  {% if perturbation_bound or perturbation_bound_figures %}
+  <details class="enrichment-section">
+    <summary>Softmax Filtering Bound</summary>
+    <div class="section-content">
+      {% if perturbation_bound %}
+      <h3>Bound Verification Summary</h3>
+      {% if perturbation_bound.by_magnitude %}
+      <table>
+        <thead>
+          <tr>
+            <th>Magnitude (&varepsilon;)</th>
+            <th>Direction</th>
+            <th>Mean Ratio</th>
+            <th>Max Ratio</th>
+            <th>Exceeding Bound</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for eps_str, eps_data in perturbation_bound.by_magnitude|dictsort %}
+          <tr>
+            <td rowspan="2">{{ eps_str }}</td>
+            <td>Adversarial</td>
+            <td>{{ "%.4f"|format(eps_data.adversarial.mean_ratio) if eps_data.adversarial.mean_ratio is number else 'N/A' }}</td>
+            <td>{{ "%.4f"|format(eps_data.adversarial.max_ratio) if eps_data.adversarial.max_ratio is number else 'N/A' }}</td>
+            <td>{{ eps_data.adversarial.n_exceeding_bound }}</td>
+            <td>{{ eps_data.adversarial.n_total }}</td>
+          </tr>
+          <tr>
+            <td>Random</td>
+            <td>{{ "%.4f"|format(eps_data.random.mean_ratio) if eps_data.random.mean_ratio is number else 'N/A' }}</td>
+            <td>{{ "%.4f"|format(eps_data.random.max_ratio) if eps_data.random.max_ratio is number else 'N/A' }}</td>
+            <td>{{ eps_data.random.n_exceeding_bound }}</td>
+            <td>{{ eps_data.random.n_total }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+      <p>
+        <strong>Tightness ratio:</strong> {{ "%.4f"|format(perturbation_bound.tightness_ratio) if perturbation_bound.tightness_ratio is number else 'N/A' }}.
+        <strong>Violation rate:</strong> {{ "%.4f"|format(perturbation_bound.violation_rate) if perturbation_bound.violation_rate is number else 'N/A' }}.
+        <strong>Bound verified:</strong> {{ "Yes" if perturbation_bound.bound_verified else "No" }}.
+      </p>
+      {% endif %}
+
+      {% if perturbation_bound_figures %}
+      <h3>Bound Tightness Plots</h3>
+      {% for fig in perturbation_bound_figures %}
+      <div class="figure-container">
+        <div class="figure-title">{{ fig.title }}</div>
+        <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+
+  <!-- Spectrum Trajectory Analysis (SPEC-03) -->
+  {% if spectrum_analysis or spectrum_figures %}
+  <details class="enrichment-section">
+    <summary><strong>Spectrum Trajectory Analysis (Exploratory)</strong></summary>
+    <div class="section-content">
+      <p><em>Status: Exploratory analysis. Curvature and torsion metrics are secondary
+      and not part of the pre-registered primary hypothesis.</em></p>
+
+      {% if spectrum_analysis %}
+      {% if spectrum_analysis.by_r_value %}
+      <h3>Curvature/Torsion AUROC Summary</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>r-value</th>
+            <th>Metric</th>
+            <th>Peak AUROC</th>
+            <th>Peak Lookback</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r_str, r_data in spectrum_analysis.by_r_value|dictsort %}
+          {% for metric_name, m_data in r_data.by_metric|dictsort %}
+          <tr>
+            <td>{{ r_str }}</td>
+            <td>{{ metric_name }}</td>
+            <td>{{ "%.4f"|format(m_data.peak_auroc) if m_data.peak_auroc is number else 'N/A' }}</td>
+            <td>{{ m_data.peak_lookback if m_data.peak_lookback is number else 'N/A' }}</td>
+          </tr>
+          {% endfor %}
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% endif %}
+
+      {% if spectrum_figures %}
+      <h3>Spectrum Plots</h3>
+      {% for fig in spectrum_figures %}
+      <div class="figure-container">
+        <div class="figure-title">{{ fig.title }}</div>
+        <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+
+  <!-- Compliance Phase Transition (COMP-01, COMP-02) -->
+  {% if compliance_curve or compliance_figures %}
+  <details class="enrichment-section">
+    <summary><strong>Compliance Phase Transition</strong></summary>
+    <div class="section-content">
+      {% if compliance_curve %}
+      {% if compliance_curve.curve %}
+      <h3>Compliance Summary</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>r/w ratio</th>
+            <th>Rule Compliance</th>
+            <th>Edge Compliance</th>
+            <th>Seeds</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in range(compliance_curve.curve.r_over_w_values|length) %}
+          <tr>
+            <td>{{ "%.2f"|format(compliance_curve.curve.r_over_w_values[i]) }}</td>
+            <td>{{ "%.4f"|format(compliance_curve.curve.rule_compliance.mean[i]) }} &plusmn; {{ "%.4f"|format(compliance_curve.curve.rule_compliance.std[i]) }}</td>
+            <td>{{ "%.4f"|format(compliance_curve.curve.edge_compliance.mean[i]) }} &plusmn; {{ "%.4f"|format(compliance_curve.curve.edge_compliance.std[i]) }}</td>
+            <td>{{ compliance_curve.curve.n_seeds[i] }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+      {% endif %}
+
+      {% if compliance_figures %}
+      <h3>Compliance Curve</h3>
+      {% for fig in compliance_figures %}
+      <div class="figure-container">
+        <div class="figure-title">{{ fig.title }}</div>
+        <img src="{{ fig.data_uri }}" alt="{{ fig.title }}">
+      </div>
+      {% endfor %}
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+
   <!-- Event-Aligned Plots -->
   <h2>Event-Aligned Plots</h2>
   {% if event_aligned_figures %}

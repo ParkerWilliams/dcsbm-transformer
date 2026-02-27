@@ -121,9 +121,15 @@ class TestConfigValidation:
         with pytest.raises(ValueError, match="corpus_size"):
             ExperimentConfig(training=TrainingConfig(corpus_size=100))
 
-    def test_validation_n_heads(self):
+    def test_validation_n_heads_invalid(self):
+        """n_heads must be 1, 2, or 4 -- reject 3."""
         with pytest.raises(ValueError, match="n_heads"):
-            ExperimentConfig(model=ModelConfig(n_heads=4))
+            ExperimentConfig(model=ModelConfig(n_heads=3, d_model=384))
+
+    def test_validation_n_heads_d_model_divisibility(self):
+        """d_model must be divisible by n_heads."""
+        with pytest.raises(ValueError, match="divisible"):
+            ExperimentConfig(model=ModelConfig(n_heads=2, d_model=129))
 
     def test_validation_r_exceeds_walk_length(self):
         with pytest.raises(ValueError, match="r"):

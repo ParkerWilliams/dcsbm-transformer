@@ -48,6 +48,10 @@ FULL_SVD_METRIC_NAMES = [
 # SVD targets
 SVD_TARGETS = ["qkt", "wvwo", "avwo"]
 
+# Spectrum trajectory storage (Phase 15: SPEC-01)
+SPECTRUM_TOP_K = 8  # Number of top singular values to store
+SPECTRUM_TARGETS = ["qkt"]  # Only QK^T by default
+
 
 @dataclass
 class EvaluationResult:
@@ -62,6 +66,9 @@ class EvaluationResult:
             Each value has shape [n_sequences, max_steps-1].
         guard_activations: Count of guard activations per target.layer.
         sequence_lengths: Actual length per sequence, shape [n_sequences].
+        spectrum_data: Full singular value vectors per step, keyed as
+            target.layer_N.spectrum -> [n_sequences, n_steps, k] float16.
+            Phase 15: SPEC-01.
     """
 
     generated: np.ndarray
@@ -71,6 +78,7 @@ class EvaluationResult:
     svd_metrics: dict[str, np.ndarray]
     guard_activations: dict[str, int]
     sequence_lengths: np.ndarray
+    spectrum_data: dict[str, np.ndarray] = field(default_factory=dict)
 
 
 def _compute_avwo_for_layer(
@@ -78,25 +86,39 @@ def _compute_avwo_for_layer(
     values: torch.Tensor,
     model: nn.Module,
     layer_idx: int,
+    head_idx: int = 0,
+    n_heads: int = 1,
 ) -> torch.Tensor:
-    """Compute AVWo (net residual update) for a single layer.
+    """Compute AVWo (net residual update) for a single layer and head.
 
-    AVWo = (A @ V) @ W_o.weight.T represents the actual output added to the
-    residual stream. nn.Linear computes x @ W^T internally, so this matches
-    the physical computation.
+    For single-head: AVWo = (A @ V) @ W_o.weight.T [B, T, D].
+    For multi-head: AVWo_h = (A_h @ V_h) @ W_o_h^T where W_o_h is the
+    slice of W_o that maps head h's output back to the residual stream.
 
     Args:
-        attention_weights: Attention weights for this layer, shape [B, T, T].
-        values: Value matrix for this layer, shape [B, T, D].
+        attention_weights: Per-head attention weights, shape [B, T, T].
+        values: Per-head value matrix, shape [B, T, d_head].
         model: TransformerLM model (for accessing W_o weights).
         layer_idx: Index of the transformer block.
+        head_idx: Index of the attention head (0 for single-head).
+        n_heads: Total number of heads.
 
     Returns:
-        AVWo tensor of shape [B, T, D].
+        Per-head AVWo tensor of shape [B, T, d_model].
     """
-    AV = attention_weights @ values  # [B, T, D]
-    Wo = model.blocks[layer_idx].attention.W_o.weight  # [D, D]
-    return AV @ Wo.T  # [B, T, D] -- matches nn.Linear's x @ W^T
+    AV = attention_weights @ values  # [B, T, d_head] (or [B, T, D] for single-head)
+    Wo = model.blocks[layer_idx].attention.W_o.weight  # [d_model, d_model]
+
+    if n_heads == 1:
+        # Single-head: same as v1.0
+        return AV @ Wo.T  # [B, T, D]
+    else:
+        # Multi-head: slice W_o for this head's contribution
+        d_head = values.shape[-1]
+        start = head_idx * d_head
+        end = (head_idx + 1) * d_head
+        Wo_h = Wo[:, start:end]  # [d_model, d_head]
+        return AV @ Wo_h.T  # [B, T, d_model]
 
 
 def fused_evaluate(
@@ -139,25 +161,31 @@ def fused_evaluate(
     max_r = max((j.r for j in jumpers), default=0)
     max_possible_length = default_length + max_r + 1 if max_r > 0 else default_length
 
-    # Compute WvWo SVD once (static weight matrices)
-    wvwo = model.get_wvwo()  # [n_layers, D, D]
+    n_heads = config.model.n_heads
 
-    # Pre-compute WvWo metrics per layer
-    wvwo_layer_metrics: dict[int, dict[str, float]] = {}
+    # Compute WvWo SVD once (static weight matrices)
+    wvwo = model.get_wvwo()  # [n_layers, n_heads, d_model, d_model]
+
+    # Pre-compute WvWo metrics per layer per head
+    wvwo_layer_metrics: dict[tuple[int, int], dict[str, float]] = {}
     guard_activations: dict[str, int] = {}
 
     for layer_idx in range(n_layers):
-        wvwo_matrix = wvwo[layer_idx]  # [D, D]
-        wvwo_clean, guard_fired = guard_matrix_for_svd(wvwo_matrix)
-        guard_key = f"wvwo.layer_{layer_idx}"
-        guard_activations[guard_key] = 1 if guard_fired else 0
+        for head_idx in range(n_heads):
+            wvwo_matrix = wvwo[layer_idx, head_idx]  # [d_model, d_model]
+            wvwo_clean, guard_fired = guard_matrix_for_svd(wvwo_matrix)
+            guard_key_head = f"wvwo.layer_{layer_idx}.head_{head_idx}"
+            guard_activations[guard_key_head] = 1 if guard_fired else 0
+            # Legacy key for single-head
+            if n_heads == 1:
+                guard_activations[f"wvwo.layer_{layer_idx}"] = 1 if guard_fired else 0
 
-        U, S, Vh = torch.linalg.svd(wvwo_clean, full_matrices=False)
-        metrics = compute_all_metrics(S, U=U, Vh=Vh)
-        wvwo_layer_metrics[layer_idx] = {
-            k: v.item() if v.dim() == 0 else v.cpu().numpy()
-            for k, v in metrics.items()
-        }
+            U, S, Vh = torch.linalg.svd(wvwo_clean, full_matrices=False)
+            metrics = compute_all_metrics(S, U=U, Vh=Vh)
+            wvwo_layer_metrics[(layer_idx, head_idx)] = {
+                k: v.item() if v.dim() == 0 else v.cpu().numpy()
+                for k, v in metrics.items()
+            }
 
     # Build SVD metric key list
     all_metric_names = SV_METRIC_NAMES + FULL_SVD_METRIC_NAMES + ["grassmannian_distance"]
@@ -168,11 +196,36 @@ def fused_evaluate(
 
     for target in SVD_TARGETS:
         for layer_idx in range(n_layers):
-            for metric_name in all_metric_names:
-                key = f"{target}.layer_{layer_idx}.{metric_name}"
-                svd_metric_arrays[key] = np.full(
-                    (n_sequences, max_steps - 1), np.nan, dtype=np.float32
+            for head_idx in range(n_heads):
+                for metric_name in all_metric_names:
+                    # v1.1 per-head key (always emitted)
+                    key = f"{target}.layer_{layer_idx}.head_{head_idx}.{metric_name}"
+                    svd_metric_arrays[key] = np.full(
+                        (n_sequences, max_steps - 1), np.nan, dtype=np.float32
+                    )
+                    # Legacy v1.0 key (only for single-head backward compat)
+                    if n_heads == 1:
+                        legacy_key = f"{target}.layer_{layer_idx}.{metric_name}"
+                        svd_metric_arrays[legacy_key] = np.full(
+                            (n_sequences, max_steps - 1), np.nan, dtype=np.float32
+                        )
+
+    # Pre-allocate spectrum trajectory storage (Phase 15: SPEC-01)
+    spectrum_data: dict[str, np.ndarray] = {}
+    spectrum_k = min(SPECTRUM_TOP_K, config.model.d_model, config.training.w)
+    for target in SPECTRUM_TARGETS:
+        for layer_idx in range(n_layers):
+            for head_idx in range(n_heads):
+                key = f"{target}.layer_{layer_idx}.head_{head_idx}.spectrum"
+                spectrum_data[key] = np.full(
+                    (n_sequences, max_steps - 1, spectrum_k),
+                    np.nan,
+                    dtype=np.float16,
                 )
+                # Legacy spectrum key for single-head
+                if n_heads == 1:
+                    legacy_key = f"{target}.layer_{layer_idx}.spectrum"
+                    spectrum_data[legacy_key] = spectrum_data[key]  # alias (shared array)
 
     all_generated = np.zeros((n_sequences, max_steps), dtype=np.int64)
     all_edge_valid = np.zeros((n_sequences, max_steps - 1), dtype=bool)
@@ -196,13 +249,14 @@ def fused_evaluate(
         # Per-sequence target lengths (may extend for tail)
         target_lengths = np.full(B_actual, default_length, dtype=np.int32)
 
-        # Track previous step U for Grassmannian distance per layer per target
-        # Keys: (target, layer_idx) -> U tensor [B, k, grassmannian_k]
+        # Track previous step U for Grassmannian distance per layer per head per target
+        # Keys: (target, layer_idx, head_idx) -> U tensor [B, k, grassmannian_k]
         grassmannian_k = 2
-        u_prev: dict[tuple[str, int], torch.Tensor | None] = {}
+        u_prev: dict[tuple[str, int, int], torch.Tensor | None] = {}
         for target in ["qkt", "avwo"]:
             for layer_idx in range(n_layers):
-                u_prev[(target, layer_idx)] = None
+                for head_idx in range(n_heads):
+                    u_prev[(target, layer_idx, head_idx)] = None
 
         # Per-step autoregressive generation
         with torch.no_grad():
@@ -238,67 +292,99 @@ def fused_evaluate(
                 # SVD collection (only for step >= w per SVD-06)
                 if step >= w - 1:  # step is 0-indexed; position step+1 is where we just generated
                     for layer_idx in range(n_layers):
-                        # --- QK^T SVD ---
-                        qkt_matrix = output.qkt[:, layer_idx]  # [B, T, T]
-                        # Take the last row's context: the QK^T at the prediction position
-                        # For SVD, we use the full T x T matrix at this context window
+                      for head_idx in range(n_heads):
+                        # --- QK^T SVD (per-head) ---
+                        qkt_matrix = output.qkt[:, layer_idx, head_idx]  # [B, T, T]
                         qkt_clean, qkt_guard = guard_matrix_for_svd(qkt_matrix)
-                        qkt_key = f"qkt.layer_{layer_idx}"
-                        guard_activations[qkt_key] = (
-                            guard_activations.get(qkt_key, 0) + (1 if qkt_guard else 0)
+                        qkt_gkey = f"qkt.layer_{layer_idx}.head_{head_idx}"
+                        guard_activations[qkt_gkey] = (
+                            guard_activations.get(qkt_gkey, 0) + (1 if qkt_guard else 0)
                         )
+                        if n_heads == 1:
+                            guard_activations[f"qkt.layer_{layer_idx}"] = (
+                                guard_activations.get(f"qkt.layer_{layer_idx}", 0)
+                                + (1 if qkt_guard else 0)
+                            )
 
                         U_qkt, S_qkt, Vh_qkt = torch.linalg.svd(
                             qkt_clean, full_matrices=False
                         )
+
+                        # Store top-k singular values for spectrum trajectory (Phase 15: SPEC-01)
+                        if "qkt" in SPECTRUM_TARGETS:
+                            spec_key = f"qkt.layer_{layer_idx}.head_{head_idx}.spectrum"
+                            if spec_key in spectrum_data:
+                                s_top = S_qkt[:, :spectrum_k].cpu().to(torch.float16).numpy()
+                                for b_idx in range(B_actual):
+                                    spectrum_data[spec_key][
+                                        batch_start + b_idx, step, :
+                                    ] = s_top[b_idx] if s_top.ndim > 1 else s_top
+
                         qkt_metrics = compute_all_metrics(S_qkt, U=U_qkt, Vh=Vh_qkt)
 
-                        # Store QK^T metrics (take mean over batch dimension T for per-sequence scalar)
-                        # Actually, each sequence gets the last position's metrics
+                        # Store per-head QK^T metrics
                         for metric_name, metric_val in qkt_metrics.items():
-                            key = f"qkt.layer_{layer_idx}.{metric_name}"
+                            key = f"qkt.layer_{layer_idx}.head_{head_idx}.{metric_name}"
                             if key in svd_metric_arrays:
-                                # metric_val is [B] or [B, T] -- we want per-sequence scalar
-                                # For batched matrices, take the mean across T dimension
                                 val = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
                                 vals_np = val.cpu().numpy()
                                 for b_idx in range(B_actual):
                                     svd_metric_arrays[key][
                                         batch_start + b_idx, step
                                     ] = vals_np[b_idx] if vals_np.ndim > 0 else vals_np.item()
+                            # Dual key emission for single-head backward compat
+                            if n_heads == 1:
+                                legacy_key = f"qkt.layer_{layer_idx}.{metric_name}"
+                                if legacy_key in svd_metric_arrays:
+                                    val = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
+                                    vals_np = val.cpu().numpy()
+                                    for b_idx in range(B_actual):
+                                        svd_metric_arrays[legacy_key][
+                                            batch_start + b_idx, step
+                                        ] = vals_np[b_idx] if vals_np.ndim > 0 else vals_np.item()
 
-                        # QK^T Grassmannian distance
-                        u_key = ("qkt", layer_idx)
+                        # QK^T Grassmannian distance (per-head)
+                        u_key = ("qkt", layer_idx, head_idx)
                         U_curr_k = U_qkt[:, :, :grassmannian_k]  # [B, T, k]
-                        # Mean over T to get representative subspace per sequence
                         if u_prev[u_key] is not None:
                             gdist = grassmannian_distance(
                                 u_prev[u_key], U_curr_k, k=grassmannian_k
                             )
                             gdist_vals = gdist.mean(dim=-1) if gdist.dim() > 1 else gdist
                             gdist_np = gdist_vals.cpu().numpy()
-                            gkey = f"qkt.layer_{layer_idx}.grassmannian_distance"
+                            gkey = f"qkt.layer_{layer_idx}.head_{head_idx}.grassmannian_distance"
                             for b_idx in range(B_actual):
                                 svd_metric_arrays[gkey][
                                     batch_start + b_idx, step
                                 ] = gdist_np[b_idx] if gdist_np.ndim > 0 else gdist_np.item()
+                            if n_heads == 1:
+                                gkey_legacy = f"qkt.layer_{layer_idx}.grassmannian_distance"
+                                if gkey_legacy in svd_metric_arrays:
+                                    for b_idx in range(B_actual):
+                                        svd_metric_arrays[gkey_legacy][
+                                            batch_start + b_idx, step
+                                        ] = gdist_np[b_idx] if gdist_np.ndim > 0 else gdist_np.item()
                         u_prev[u_key] = U_curr_k.clone()
 
-                        # --- AVWo SVD ---
-                        A_layer = output.attention_weights[:, layer_idx]  # [B, T, T]
-                        V_layer = output.values[:, layer_idx]  # [B, T, D]
+                        # --- AVWo SVD (per-head) ---
+                        A_layer_head = output.attention_weights[:, layer_idx, head_idx]  # [B, T, T]
+                        V_layer_head = output.values[:, layer_idx, head_idx]  # [B, T, d_head]
                         avwo_matrix = _compute_avwo_for_layer(
-                            A_layer, V_layer, model, layer_idx
-                        )  # [B, T, D]
+                            A_layer_head, V_layer_head, model, layer_idx,
+                            head_idx=head_idx, n_heads=n_heads,
+                        )  # [B, T, d_model]
 
                         avwo_clean, avwo_guard = guard_matrix_for_svd(avwo_matrix)
-                        avwo_key = f"avwo.layer_{layer_idx}"
-                        guard_activations[avwo_key] = (
-                            guard_activations.get(avwo_key, 0) + (1 if avwo_guard else 0)
+                        avwo_gkey = f"avwo.layer_{layer_idx}.head_{head_idx}"
+                        guard_activations[avwo_gkey] = (
+                            guard_activations.get(avwo_gkey, 0) + (1 if avwo_guard else 0)
                         )
+                        if n_heads == 1:
+                            guard_activations[f"avwo.layer_{layer_idx}"] = (
+                                guard_activations.get(f"avwo.layer_{layer_idx}", 0)
+                                + (1 if avwo_guard else 0)
+                            )
 
-                        # SVD on AVWo: [B, T, D] -> treat as batch of T x D matrices per sequence
-                        # For per-step metrics, use the full T x D matrix
                         U_avwo, S_avwo, Vh_avwo = torch.linalg.svd(
                             avwo_clean, full_matrices=False
                         )
@@ -307,7 +393,7 @@ def fused_evaluate(
                         )
 
                         for metric_name, metric_val in avwo_metrics.items():
-                            key = f"avwo.layer_{layer_idx}.{metric_name}"
+                            key = f"avwo.layer_{layer_idx}.head_{head_idx}.{metric_name}"
                             if key in svd_metric_arrays:
                                 val = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
                                 vals_np = val.cpu().numpy()
@@ -315,9 +401,18 @@ def fused_evaluate(
                                     svd_metric_arrays[key][
                                         batch_start + b_idx, step
                                     ] = vals_np[b_idx] if vals_np.ndim > 0 else vals_np.item()
+                            if n_heads == 1:
+                                legacy_key = f"avwo.layer_{layer_idx}.{metric_name}"
+                                if legacy_key in svd_metric_arrays:
+                                    val = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
+                                    vals_np = val.cpu().numpy()
+                                    for b_idx in range(B_actual):
+                                        svd_metric_arrays[legacy_key][
+                                            batch_start + b_idx, step
+                                        ] = vals_np[b_idx] if vals_np.ndim > 0 else vals_np.item()
 
-                        # AVWo Grassmannian distance
-                        avwo_u_key = ("avwo", layer_idx)
+                        # AVWo Grassmannian distance (per-head)
+                        avwo_u_key = ("avwo", layer_idx, head_idx)
                         U_avwo_k = U_avwo[:, :, :grassmannian_k] if U_avwo.dim() == 3 else U_avwo[..., :, :grassmannian_k]
                         if u_prev[avwo_u_key] is not None:
                             gdist_avwo = grassmannian_distance(
@@ -325,25 +420,39 @@ def fused_evaluate(
                             )
                             gdist_avwo_vals = gdist_avwo.mean(dim=-1) if gdist_avwo.dim() > 1 else gdist_avwo
                             gdist_avwo_np = gdist_avwo_vals.cpu().numpy()
-                            gkey_avwo = f"avwo.layer_{layer_idx}.grassmannian_distance"
+                            gkey_avwo = f"avwo.layer_{layer_idx}.head_{head_idx}.grassmannian_distance"
                             for b_idx in range(B_actual):
                                 svd_metric_arrays[gkey_avwo][
                                     batch_start + b_idx, step
                                 ] = gdist_avwo_np[b_idx] if gdist_avwo_np.ndim > 0 else gdist_avwo_np.item()
+                            if n_heads == 1:
+                                gkey_avwo_legacy = f"avwo.layer_{layer_idx}.grassmannian_distance"
+                                if gkey_avwo_legacy in svd_metric_arrays:
+                                    for b_idx in range(B_actual):
+                                        svd_metric_arrays[gkey_avwo_legacy][
+                                            batch_start + b_idx, step
+                                        ] = gdist_avwo_np[b_idx] if gdist_avwo_np.ndim > 0 else gdist_avwo_np.item()
                         u_prev[avwo_u_key] = U_avwo_k.clone()
 
-                    # --- WvWo metrics (static, broadcast) ---
+                    # --- WvWo metrics (static, per-head, broadcast) ---
                     for layer_idx in range(n_layers):
-                        for metric_name, val in wvwo_layer_metrics[layer_idx].items():
-                            key = f"wvwo.layer_{layer_idx}.{metric_name}"
+                      for head_idx in range(n_heads):
+                        for metric_name, val in wvwo_layer_metrics[(layer_idx, head_idx)].items():
+                            key = f"wvwo.layer_{layer_idx}.head_{head_idx}.{metric_name}"
                             if key in svd_metric_arrays:
                                 for b_idx in range(B_actual):
                                     svd_metric_arrays[key][
                                         batch_start + b_idx, step
                                     ] = val
+                            if n_heads == 1:
+                                legacy_key = f"wvwo.layer_{layer_idx}.{metric_name}"
+                                if legacy_key in svd_metric_arrays:
+                                    for b_idx in range(B_actual):
+                                        svd_metric_arrays[legacy_key][
+                                            batch_start + b_idx, step
+                                        ] = val
 
                         # WvWo Grassmannian distance is NaN (static matrix)
-                        gkey_wvwo = f"wvwo.layer_{layer_idx}.grassmannian_distance"
                         # Already NaN from initialization, no action needed
 
         # After generation: behavioral classification
@@ -375,6 +484,7 @@ def fused_evaluate(
         svd_metrics=svd_metric_arrays,
         guard_activations=guard_activations,
         sequence_lengths=all_seq_lengths,
+        spectrum_data=spectrum_data,
     )
 
 
@@ -424,6 +534,11 @@ def save_evaluation_results(
     # Write NPZ
     npz_path = output_path / "token_metrics.npz"
     np.savez_compressed(str(npz_path), **npz_data)
+
+    # Write spectrum trajectories (Phase 15: SPEC-01)
+    if result.spectrum_data:
+        spectrum_path = output_path / "spectrum_trajectories.npz"
+        np.savez_compressed(str(spectrum_path), **result.spectrum_data)
 
     # Compute aggregate summary
     summary: dict[str, Any] = {"scalars": {}}

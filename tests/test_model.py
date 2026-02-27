@@ -77,12 +77,16 @@ class TestMODL01ConfigurableArchitecture:
         model = create_model(config)
         assert len(model.blocks) == n_layers
 
-    def test_single_head_enforced(self):
-        """ExperimentConfig rejects n_heads != 1; model has no head reshaping."""
-        with pytest.raises(ValueError, match="n_heads must be exactly 1"):
-            ExperimentConfig(model=ModelConfig(n_heads=2))
+    def test_n_heads_validation(self):
+        """ExperimentConfig rejects invalid n_heads; accepts 1, 2, 4."""
+        with pytest.raises(ValueError, match="n_heads must be 1, 2, or 4"):
+            ExperimentConfig(model=ModelConfig(n_heads=3, d_model=384))
 
-        # Verify model Q, K, V are [B, T, D] (no head dimension)
+        # n_heads=2 with matching d_model is accepted
+        config = ExperimentConfig(model=ModelConfig(n_heads=2, d_model=256))
+        assert config.model.n_heads == 2
+
+        # Verify single-head Q projection output is [B, T, D]
         model = create_model(ANCHOR_CONFIG)
         model.eval()
         x = torch.randn(2, 16, 128)
@@ -126,9 +130,9 @@ class TestMODL02SVDTargets:
         with torch.no_grad():
             out = model(x, mode=ExtractionMode.SVD_TARGETS)
 
-        assert out.qkt.shape == (2, 4, 64, 64)
-        assert out.attention_weights.shape == (2, 4, 64, 64)
-        assert out.values.shape == (2, 4, 64, 128)
+        assert out.qkt.shape == (2, 4, 1, 64, 64)  # [B, n_layers, n_heads=1, T, T]
+        assert out.attention_weights.shape == (2, 4, 1, 64, 64)
+        assert out.values.shape == (2, 4, 1, 64, 128)  # [B, n_layers, n_heads=1, T, d_head]
         # SVD_TARGETS should NOT include residual stream
         assert out.residual_stream is None
         assert out.residual_norms is None
@@ -142,7 +146,7 @@ class TestMODL02SVDTargets:
             out = model(x, mode=ExtractionMode.SVD_TARGETS)
 
         for layer_idx in range(4):
-            qkt_layer = out.qkt[0, layer_idx]  # [T, T]
+            qkt_layer = out.qkt[0, layer_idx, 0]  # [T, T] (head 0 for single-head)
             # Upper triangle (strictly above diagonal) should be zero
             upper = torch.triu(qkt_layer, diagonal=1)
             assert torch.all(upper == 0.0), (
@@ -160,7 +164,7 @@ class TestMODL02SVDTargets:
         # Check at least one layer has non-zero values in lower triangle
         any_nonzero = False
         for layer_idx in range(4):
-            qkt_layer = out.qkt[0, layer_idx]  # [T, T]
+            qkt_layer = out.qkt[0, layer_idx, 0]  # [T, T] (head 0 for single-head)
             lower = torch.tril(qkt_layer)
             if torch.any(lower != 0.0):
                 any_nonzero = True
@@ -176,7 +180,8 @@ class TestMODL02SVDTargets:
             out = model(x, mode=ExtractionMode.SVD_TARGETS)
 
         # Sum across last dimension (key positions) should be ~1.0
-        row_sums = out.attention_weights.sum(dim=-1)  # [B, n_layers, T]
+        # Shape is [B, n_layers, n_heads, T, T]; sum across dim=-1 gives [B, n_layers, n_heads, T]
+        row_sums = out.attention_weights.sum(dim=-1)
         assert torch.allclose(row_sums, torch.ones_like(row_sums), atol=1e-5), (
             f"Attention weights should sum to 1, got range [{row_sums.min():.6f}, {row_sums.max():.6f}]"
         )
@@ -190,7 +195,7 @@ class TestMODL02SVDTargets:
             out = model(x, mode=ExtractionMode.SVD_TARGETS)
 
         for layer_idx in range(4):
-            attn = out.attention_weights[0, layer_idx]  # [T, T]
+            attn = out.attention_weights[0, layer_idx, 0]  # [T, T] (head 0 for single-head)
             upper = torch.triu(attn, diagonal=1)
             assert torch.all(upper == 0.0), (
                 f"Layer {layer_idx}: attention weights should be zero above diagonal"
@@ -213,10 +218,10 @@ class TestMODL02WvWo:
     """WvWo weight product extraction."""
 
     def test_get_wvwo_shape(self):
-        """get_wvwo() returns [n_layers, d_model, d_model] detached tensor."""
+        """get_wvwo() returns [n_layers, n_heads, d_model, d_model] detached tensor."""
         model = create_model(ANCHOR_CONFIG)
         wvwo = model.get_wvwo()
-        assert wvwo.shape == (4, 128, 128)
+        assert wvwo.shape == (4, 1, 128, 128)  # [n_layers, n_heads=1, d_model, d_model]
         assert not wvwo.requires_grad, "WvWo should be detached"
 
     def test_get_wvwo_input_agnostic(self):
@@ -238,7 +243,7 @@ class TestMODL02Residual:
         with torch.no_grad():
             out = model(x, mode=ExtractionMode.RESIDUAL)
 
-        # n_layers+1 because includes pre-block embedding output
+        # n_layers+1 residual states (includes pre-block embedding output)
         assert out.residual_stream.shape == (2, 32, 5, 128)  # [B, T, n_layers+1, D]
         assert out.residual_norms.shape == (2, 32, 5)  # [B, T, n_layers+1]
         # SVD targets should also be populated

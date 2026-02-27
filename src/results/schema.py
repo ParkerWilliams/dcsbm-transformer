@@ -186,6 +186,56 @@ def validate_result(result: dict[str, Any]) -> list[str]:
                                         f"{target_name} missing field: {field}"
                                     )
 
+    # Optional perturbation_bound validation (Phase 14, backward compatible)
+    if "metrics" in result and isinstance(result["metrics"], dict):
+        pb = result["metrics"].get("perturbation_bound")
+        if pb is not None:
+            if not isinstance(pb, dict):
+                errors.append("metrics.perturbation_bound must be a dict")
+            else:
+                if "by_magnitude" not in pb:
+                    errors.append(
+                        "metrics.perturbation_bound missing required block: "
+                        "by_magnitude"
+                    )
+                for pb_field in [
+                    "tightness_ratio",
+                    "violation_rate",
+                    "bound_verified",
+                ]:
+                    if pb_field not in pb:
+                        errors.append(
+                            f"metrics.perturbation_bound missing field: {pb_field}"
+                        )
+
+    # Optional spectrum_analysis validation (Phase 15, backward compatible)
+    if "metrics" in result and isinstance(result["metrics"], dict):
+        spectrum_analysis = result["metrics"].get("spectrum_analysis")
+        if spectrum_analysis is not None:
+            if not isinstance(spectrum_analysis, dict):
+                errors.append("metrics.spectrum_analysis must be a dict")
+            else:
+                if "status" not in spectrum_analysis:
+                    errors.append(
+                        "metrics.spectrum_analysis missing required field: status"
+                    )
+                if "by_r_value" not in spectrum_analysis:
+                    errors.append(
+                        "metrics.spectrum_analysis missing required block: by_r_value"
+                    )
+
+    # Optional compliance_curve validation (Phase 15, backward compatible)
+    if "metrics" in result and isinstance(result["metrics"], dict):
+        compliance_curve = result["metrics"].get("compliance_curve")
+        if compliance_curve is not None:
+            if not isinstance(compliance_curve, dict):
+                errors.append("metrics.compliance_curve must be a dict")
+            else:
+                if "curve" not in compliance_curve:
+                    errors.append(
+                        "metrics.compliance_curve missing required block: curve"
+                    )
+
     # Sequence array length consistency
     for seq in result.get("sequences", []):
         tokens = seq.get("tokens", [])

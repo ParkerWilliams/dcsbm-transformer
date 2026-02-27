@@ -20,7 +20,7 @@ class ModelConfig:
 
     d_model: int = 128
     n_layers: int = 4
-    n_heads: int = 1  # locked: always 1 (single-head constraint)
+    n_heads: int = 1  # 1, 2, or 4 (multi-head ablation support)
     dropout: float = 0.0
 
 
@@ -82,8 +82,15 @@ class ExperimentConfig:
                 f"corpus_size ({self.training.corpus_size}) must be "
                 f">= 100 * n ({100 * self.graph.n})"
             )
-        if self.model.n_heads != 1:
-            raise ValueError("n_heads must be exactly 1 (single-head constraint)")
+        if self.model.n_heads not in (1, 2, 4):
+            raise ValueError(
+                f"n_heads must be 1, 2, or 4, got {self.model.n_heads}"
+            )
+        if self.model.d_model % self.model.n_heads != 0:
+            raise ValueError(
+                f"d_model ({self.model.d_model}) must be divisible by "
+                f"n_heads ({self.model.n_heads})"
+            )
         if self.training.r > self.training.walk_length:
             raise ValueError(
                 f"r ({self.training.r}) must be "

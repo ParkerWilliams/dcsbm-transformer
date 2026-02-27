@@ -208,21 +208,62 @@ def run_shuffle_control(
 def _is_primary_metric(metric_key: str) -> bool:
     """Check if a metric key matches a pre-registered primary metric.
 
-    Metric keys follow the pattern: target.layer_N.metric_name
-    Primary metrics are identified by target.metric_name (without layer).
+    Handles both legacy format (target.layer_N.metric_name) and
+    per-head format (target.layer_N.head_H.metric_name).
 
     Args:
-        metric_key: Full metric key like 'qkt.layer_0.grassmannian_distance'.
+        metric_key: Full metric key like 'qkt.layer_0.grassmannian_distance'
+            or 'qkt.layer_0.head_0.grassmannian_distance'.
 
     Returns:
         True if this metric is in the primary set.
     """
     parts = metric_key.split(".")
     if len(parts) == 3:
-        # target.layer_N.metric_name -> target.metric_name
+        # Legacy: target.layer_N.metric_name -> target.metric_name
         target_metric = f"{parts[0]}.{parts[2]}"
         return target_metric in PRIMARY_METRICS
+    elif len(parts) == 4:
+        # Per-head: target.layer_N.head_H.metric_name -> target.metric_name
+        target_metric = f"{parts[0]}.{parts[3]}"
+        return target_metric in PRIMARY_METRICS
     return False
+
+
+def parse_metric_key(metric_key: str) -> dict[str, str | int | None]:
+    """Parse a metric key into its components.
+
+    Handles both legacy (3-part) and per-head (4-part) key formats.
+
+    Args:
+        metric_key: NPZ key like 'qkt.layer_0.head_1.grassmannian_distance'
+            or 'qkt.layer_0.grassmannian_distance'.
+
+    Returns:
+        Dict with keys: target, layer_idx, head_idx (None for legacy), metric_name.
+    """
+    parts = metric_key.split(".")
+    if len(parts) == 4:
+        return {
+            "target": parts[0],
+            "layer_idx": int(parts[1].split("_")[1]),
+            "head_idx": int(parts[2].split("_")[1]),
+            "metric_name": parts[3],
+        }
+    elif len(parts) == 3:
+        return {
+            "target": parts[0],
+            "layer_idx": int(parts[1].split("_")[1]),
+            "head_idx": None,
+            "metric_name": parts[2],
+        }
+    else:
+        return {
+            "target": "",
+            "layer_idx": -1,
+            "head_idx": None,
+            "metric_name": metric_key,
+        }
 
 
 def _classify_event_count(n_violations: int, n_controls: int) -> str:

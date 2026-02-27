@@ -5,10 +5,10 @@ milestone_name: milestone
 status: unknown
 last_updated: "2026-02-26T18:00:27.625Z"
 progress:
-  total_phases: 11
-  completed_phases: 11
-  total_plans: 23
-  completed_plans: 23
+  total_phases: 12
+  completed_phases: 12
+  total_plans: 25
+  completed_plans: 25
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-26)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Phase 14 -- Softmax Filtering Bound (v1.1 Journal Feedback)
+**Current focus:** Phase 15 -- Advanced Analysis (v1.1 Journal Feedback)
 
 ## Current Position
 
-Phase: 13 of 16 (Evaluation Enrichment) -- COMPLETE
-Plan: 3 of 3 in current phase
-Status: Phase Complete
-Last activity: 2026-02-26 -- Completed 13-03-PLAN.md (SVD overhead benchmarks)
+Phase: 15 of 16 (Advanced Analysis) -- NOT STARTED
+Plan: 0 of 3 in current phase
+Status: Phase 14 complete, ready for Phase 15 planning
+Last activity: 2026-02-26 -- Completed Phase 14 (LaTeX derivation + empirical verification)
 
-Progress: [#####░░░░░░░░░] 5/14 plans (36%)
+Progress: [#######░░░░░░░] 7/14 plans (50%)
 
 ## Performance Metrics
 
@@ -37,9 +37,9 @@ Progress: [#####░░░░░░░░░] 5/14 plans (36%)
 - Total execution time: ~1.25 hours
 
 **Velocity (v1.1):**
-- Total plans completed: 5
-- Average duration: 5.6 min
-- Total execution time: 28 min
+- Total plans completed: 7
+- Average duration: 5.7 min
+- Total execution time: 43 min
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
@@ -48,6 +48,8 @@ Progress: [#####░░░░░░░░░] 5/14 plans (36%)
 | 13    | 01   | 5min     | 2     | 7     |
 | 13    | 02   | 5min     | 2     | 4     |
 | 13    | 03   | 5min     | 2     | 4     |
+| 14    | 01   | 5min     | 1     | 1     |
+| 14    | 02   | 10min    | 2     | 7     |
 
 ## Accumulated Context
 
@@ -77,7 +79,7 @@ Recent decisions affecting current work:
 ### Blockers/Concerns
 
 - Multi-head ablation requires relaxing the single-head constraint in TransformerLM (Phase 16)
-- Softmax bound tightness unknown until derivation is complete -- may be vacuous (Phase 14)
+- Softmax bound tightness: derivation complete, bound is epsilon * ||QK^T||_F * ||V||_2 * ||W_O||_2 / (2*sqrt(d_k)), expected tightness ratio 0.1-0.5 (Phase 14 RESOLVED)
 - Curvature/torsion on noisy SVD output is numerically delicate -- treat as exploratory (Phase 15)
 - Compliance curve requires ~45 training runs (15 r values x 3 seeds) -- GPU budget sensitive (Phase 15)
 - NPZ storage for full spectrum: estimated 125-250 MB per experiment (Phase 15)
@@ -85,6 +87,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-26
-Stopped at: Completed Phase 13 (Evaluation Enrichment) -- all 3 plans executed, verification passed
+Stopped at: Phase 14 execution complete -- all artifacts created and verified by code review
 Resume file: None
-Next action: Begin Phase 14 planning (Softmax Filtering Bound)
+Next action: Plan Phase 15 (Advanced Analysis)

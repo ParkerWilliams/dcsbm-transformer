@@ -219,16 +219,21 @@ class TestNPZOutput:
         assert "sequence_lengths" in loaded
 
     def test_npz_key_convention(self, fused_result, tmp_path):
-        """Keys follow target.layer_N.metric_name pattern."""
+        """Keys follow target.layer_N.metric_name or target.layer_N.head_H.metric_name pattern."""
         save_evaluation_results(fused_result, tmp_path)
         loaded = np.load(str(tmp_path / "token_metrics.npz"))
         for key in loaded.files:
             if key in ("edge_valid", "rule_outcome", "failure_index", "sequence_lengths", "generated"):
                 continue
             parts = key.split(".")
-            assert len(parts) == 3, f"Key '{key}' doesn't follow target.layer.metric pattern"
+            assert len(parts) in (3, 4), (
+                f"Key '{key}' doesn't follow target.layer.metric or "
+                f"target.layer.head.metric pattern"
+            )
             assert parts[0] in SVD_TARGETS, f"Unknown target in key: {key}"
             assert parts[1].startswith("layer_"), f"Layer part malformed in key: {key}"
+            if len(parts) == 4:
+                assert parts[2].startswith("head_"), f"Head part malformed in key: {key}"
 
     def test_behavioral_arrays_in_npz(self, fused_result, tmp_path):
         """edge_valid, rule_outcome, failure_index stored correctly."""

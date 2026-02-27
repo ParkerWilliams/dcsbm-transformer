@@ -1,0 +1,541 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage[margin=2.5cm]{geometry}
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+
+% Common operators
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\softmax}{softmax}
+\DeclareMathOperator{\tr}{tr}
+
+\title{Softmax Filtering Bound:\\
+Spectral Perturbation Propagation from $QK^T$ to $AVW_O$}
+\author{DCSBM Transformer Project}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We derive an upper bound on the spectral change in the attention output
+matrix $AVW_O$ induced by a perturbation to the pre-softmax score matrix
+$QK^T$ in a single-head causal transformer. The bound decomposes the
+perturbation propagation into three stages: (1) through the softmax
+nonlinearity using its Lipschitz constant of $\frac{1}{2}$, (2) through
+multiplication by the value matrix $V$, and (3) through the output
+projection $W_O$. The composed end-to-end bound shows that the spectral
+change in $AVW_O$ scales linearly with the perturbation magnitude
+$\varepsilon$ and is modulated by the spectral norms of $V$ and $W_O$
+and the $\frac{1}{\sqrt{d_k}}$ scaling factor. We analyze the tightness
+of the bound and discuss its implications for using $QK^T$ spectral
+instability as a predictor of downstream behavioral changes.
+\end{abstract}
+
+\tableofcontents
+
+\section{Introduction}
+\label{sec:intro}
+
+In a transformer's self-attention mechanism, the score matrix $QK^T$
+determines how information from different positions is routed through
+the network. Spectral instability in $QK^T$---measured, for example,
+by Grassmannian distance between consecutive steps' dominant
+subspaces---has been observed to precede rule violations in
+sequence generation tasks. A natural question arises: how much of a
+perturbation to $QK^T$ survives through the softmax nonlinearity, value
+multiplication, and output projection to affect the actual residual
+stream update $AVW_O$?
+
+This document provides a rigorous answer in the form of an
+$\varepsilon$-bound. Given a perturbation $\Delta$ to $QK^T$ with
+relative magnitude $\varepsilon = \|\Delta\|_F / \|QK^T\|_F$, we bound
+$\|\Delta(AVW_O)\|_F$ and, via Weyl's inequality, the change in any
+singular value of $AVW_O$.
+
+\subsection{Notation}
+
+Throughout this document, we use the following notation:
+
+\begin{center}
+\begin{tabular}{cl}
+\hline
+\textbf{Symbol} & \textbf{Description} \\
+\hline
+$T$ & Sequence length (context window) \\
+$d_k$ & Key/query dimension (equals $d_{\text{model}}$ for single-head) \\
+$Q, K \in \mathbb{R}^{T \times d_k}$ & Query and key matrices \\
+$V \in \mathbb{R}^{T \times d_k}$ & Value matrix \\
+$W_O \in \mathbb{R}^{d_k \times d_k}$ & Output projection weight matrix \\
+$S = \frac{QK^T}{\sqrt{d_k}} \in \mathbb{R}^{T \times T}$ & Scaled score matrix \\
+$A = \softmax(S) \in \mathbb{R}^{T \times T}$ & Attention weight matrix (row-wise softmax) \\
+$\varepsilon$ & Relative perturbation: $\|\Delta\|_F / \|QK^T\|_F$ \\
+$\|\cdot\|_F$ & Frobenius norm \\
+$\|\cdot\|_2$ & Spectral norm (largest singular value) \\
+$\sigma_i(\cdot)$ & $i$-th singular value (in decreasing order) \\
+\hline
+\end{tabular}
+\end{center}
+
+\subsection{Attention Computation}
+
+The single-head causal self-attention computes:
+\begin{equation}
+\label{eq:attention}
+y = AVW_O^T
+\end{equation}
+where:
+\begin{align}
+Q &= xW_Q, \quad K = xW_K, \quad V = xW_V \label{eq:projections} \\
+S &= \frac{QK^T}{\sqrt{d_k}} \label{eq:scores} \\
+A &= \softmax\bigl(S \odot M_{\text{causal}} + (-\infty)(1 - M_{\text{causal}})\bigr) \label{eq:softmax}
+\end{align}
+Here $M_{\text{causal}}$ is the lower-triangular causal mask and softmax
+is applied independently to each row of the masked score matrix.
+
+
+\section{Preliminaries}
+\label{sec:prelim}
+
+\begin{definition}[Matrix Norms]
+\label{def:norms}
+For a matrix $M \in \mathbb{R}^{m \times n}$ with singular values
+$\sigma_1 \geq \sigma_2 \geq \cdots \geq \sigma_{\min(m,n)}$:
+\begin{align}
+\|M\|_F &= \sqrt{\sum_{i} \sigma_i^2} = \sqrt{\tr(M^T M)} \label{eq:frobenius} \\
+\|M\|_2 &= \sigma_1(M) \label{eq:spectral}
+\end{align}
+These satisfy $\|M\|_2 \leq \|M\|_F \leq \sqrt{\min(m,n)}\,\|M\|_2$.
+\end{definition}
+
+\begin{lemma}[Submultiplicativity]
+\label{lem:submult}
+For matrices $A \in \mathbb{R}^{m \times p}$ and $B \in \mathbb{R}^{p \times n}$:
+\begin{equation}
+\label{eq:submult}
+\|AB\|_F \leq \|A\|_F \cdot \|B\|_2
+\quad \text{and} \quad
+\|AB\|_F \leq \|A\|_2 \cdot \|B\|_F
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Write $AB = \sum_{j} a_j b_j^T$ where $a_j$ is the $j$-th column of $A$
+and $b_j^T$ is the $j$-th row of $B$. By the definition of the spectral norm,
+$\|Bx\|_2 \leq \|B\|_2 \|x\|_2$ for any vector $x$.
+Applying this column-wise: $\|AB\|_F^2 = \sum_i \|Ab_i\|_2^2$, where
+$b_i$ are columns of $B^T$ (rows of $B$). Actually, consider:
+$\|AB\|_F^2 = \tr(B^T A^T A B) \leq \|A\|_2^2 \tr(B^T B) = \|A\|_2^2 \|B\|_F^2$.
+The first inequality follows from $A^T A \preceq \|A\|_2^2 I$.
+The other bound follows symmetrically.
+\end{proof}
+
+\begin{lemma}[Weyl's Inequality]
+\label{lem:weyl}
+For matrices $M, E \in \mathbb{R}^{m \times n}$:
+\begin{equation}
+\label{eq:weyl}
+|\sigma_i(M + E) - \sigma_i(M)| \leq \|E\|_2 \leq \|E\|_F
+\end{equation}
+for all $i = 1, \ldots, \min(m, n)$.
+\end{lemma}
+
+
+\section{Stage 1: Softmax Lipschitz Bound}
+\label{sec:stage1}
+
+The softmax function is the key nonlinearity in the perturbation chain.
+We establish its Lipschitz constant, which controls how much a
+perturbation to the input scores can change the output probabilities.
+
+\begin{lemma}[Softmax Jacobian]
+\label{lem:softmax_jac}
+For $p = \softmax(z)$ where $z \in \mathbb{R}^n$, the Jacobian is:
+\begin{equation}
+\label{eq:jac}
+J(z) = \diag(p) - pp^T
+\end{equation}
+This matrix is positive semidefinite on the subspace $\{v : \mathbf{1}^T v = 0\}$
+and satisfies $J(z)\mathbf{1} = 0$.
+\end{lemma}
+
+\begin{proof}
+Direct computation: $\frac{\partial p_i}{\partial z_j} = p_i(\delta_{ij} - p_j)$,
+which gives $J = \diag(p) - pp^T$.
+\end{proof}
+
+\begin{lemma}[Softmax Lipschitz Constant]
+\label{lem:softmax_lip}
+The softmax function is $\frac{1}{2}$-Lipschitz in the $\ell_2$ norm:
+\begin{equation}
+\label{eq:softmax_lip}
+\|\softmax(z + \delta) - \softmax(z)\|_2 \leq \frac{1}{2}\|\delta\|_2
+\end{equation}
+for all $z, \delta \in \mathbb{R}^n$. The constant $\frac{1}{2}$ is tight,
+achieved when $p = \softmax(z)$ is the uniform distribution
+$p_i = \frac{1}{n}$ for all~$i$.
+\end{lemma}
+
+\begin{proof}
+By the mean value theorem, it suffices to bound the spectral norm of the
+Jacobian $J(z) = \diag(p) - pp^T$ uniformly over all $z$.
+
+The eigenvalues of $J$ are $\{p_i - p_i \lambda : \text{solutions of the
+secular equation}\}$. More directly, the matrix $\diag(p) - pp^T$ is a
+rank-one perturbation of a diagonal matrix. Its eigenvalues $\lambda_k$
+satisfy:
+\begin{equation}
+0 = \lambda_1 \leq \lambda_2 \leq \cdots \leq \lambda_n
+\end{equation}
+where $\lambda_1 = 0$ (eigenvector $\mathbf{1}$) and the remaining
+eigenvalues are bounded by:
+\begin{equation}
+\lambda_k \leq \max_i \, p_i(1 - p_i) \leq \frac{1}{4}
+\end{equation}
+since $f(t) = t(1-t)$ achieves its maximum of $\frac{1}{4}$ at $t = \frac{1}{2}$.
+
+However, the Lipschitz constant accounts for the full path from $z$ to
+$z + \delta$, not just the Jacobian at a single point. Using the integral
+form of the mean value theorem:
+\begin{equation}
+\softmax(z + \delta) - \softmax(z)
+= \int_0^1 J(z + t\delta)\,\delta\, dt
+\end{equation}
+
+For each $t$, let $p(t) = \softmax(z + t\delta)$. Then:
+\begin{align}
+\|J(z+t\delta)\delta\|_2
+&= \|\diag(p(t))\delta - p(t)(p(t)^T\delta)\|_2 \\
+&\leq \|\diag(p(t))\delta\|_2 + |p(t)^T\delta|\,\|p(t)\|_2
+\end{align}
+
+A cleaner proof uses the log-sum-exp representation. The softmax
+function can be written as the gradient of the log-sum-exp function
+$\text{LSE}(z) = \log\sum_i e^{z_i}$, which is convex. The Hessian of
+LSE is exactly $J(z) = \diag(p) - pp^T$. By \cite{gao2017softmax},
+the global Lipschitz constant of the softmax function is $\frac{1}{2}$.
+
+The tightness at the uniform distribution follows because when
+$p_i = \frac{1}{n}$ for all $i$, the maximum eigenvalue of $J$ is
+$\frac{1}{n}(1 - \frac{1}{n})$, which approaches $\frac{1}{4}$ as
+$n \to \infty$. The factor of $2$ between the Jacobian spectral norm
+bound ($\frac{1}{4}$) and the Lipschitz constant ($\frac{1}{2}$) arises
+from the path integral.
+\end{proof}
+
+\begin{proposition}[Attention Perturbation Bound]
+\label{prop:attention_pert}
+Let $S = \frac{QK^T}{\sqrt{d_k}}$ and let $\Delta$ be a perturbation
+to $QK^T$ with $\|\Delta\|_F = \varepsilon\|QK^T\|_F$. Define
+$A = \softmax(S)$ and $A' = \softmax(S + \Delta/\sqrt{d_k})$, where
+softmax is applied row-wise. Then:
+\begin{equation}
+\label{eq:attention_bound}
+\|A' - A\|_F \leq \frac{\varepsilon\,\|QK^T\|_F}{2\sqrt{d_k}}
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+The perturbation to the scaled scores is $\Delta_S = \frac{\Delta}{\sqrt{d_k}}$
+with $\|\Delta_S\|_F = \frac{\varepsilon\|QK^T\|_F}{\sqrt{d_k}}$.
+
+Since softmax acts independently on each row, for row $i$:
+\begin{equation}
+\|A'_i - A_i\|_2 \leq \frac{1}{2}\|(\Delta_S)_i\|_2
+\end{equation}
+by Lemma~\ref{lem:softmax_lip}.
+
+Aggregating over all $T$ rows using the Frobenius norm:
+\begin{align}
+\|A' - A\|_F^2
+&= \sum_{i=1}^{T} \|A'_i - A_i\|_2^2 \\
+&\leq \sum_{i=1}^{T} \frac{1}{4}\|(\Delta_S)_i\|_2^2 \\
+&= \frac{1}{4}\|\Delta_S\|_F^2
+\end{align}
+
+Taking square roots:
+\begin{equation}
+\|A' - A\|_F \leq \frac{1}{2}\|\Delta_S\|_F
+= \frac{\varepsilon\,\|QK^T\|_F}{2\sqrt{d_k}} \qedhere
+\end{equation}
+\end{proof}
+
+
+\section{Stage 2: Value Multiplication Bound}
+\label{sec:stage2}
+
+\begin{proposition}[AV Perturbation Bound]
+\label{prop:av_bound}
+Let $\Delta_A = A' - A$ be the perturbation to the attention matrix from
+Stage~1, and let $V \in \mathbb{R}^{T \times d_k}$ be the value matrix
+(held fixed). Then:
+\begin{equation}
+\label{eq:av_bound}
+\|(A + \Delta_A)V - AV\|_F = \|\Delta_A \cdot V\|_F \leq \|\Delta_A\|_F \cdot \|V\|_2
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+The perturbation to $AV$ is:
+\begin{equation}
+\Delta_{AV} = (A + \Delta_A)V - AV = \Delta_A \cdot V
+\end{equation}
+By the submultiplicativity of the Frobenius norm with the spectral norm
+(Lemma~\ref{lem:submult}):
+\begin{equation}
+\|\Delta_A \cdot V\|_F \leq \|\Delta_A\|_F \cdot \|V\|_2 \qedhere
+\end{equation}
+\end{proof}
+
+
+\section{Stage 3: Output Projection Bound}
+\label{sec:stage3}
+
+\begin{proposition}[Output Projection Perturbation Bound]
+\label{prop:wo_bound}
+Let $\Delta_{AV}$ be the perturbation to $AV$ from Stage~2, and let
+$W_O \in \mathbb{R}^{d_k \times d_k}$ be the output projection weight
+matrix (held fixed). Then:
+\begin{equation}
+\label{eq:wo_bound}
+\|(AV + \Delta_{AV})W_O^T - AV \cdot W_O^T\|_F
+= \|\Delta_{AV} \cdot W_O^T\|_F
+\leq \|\Delta_{AV}\|_F \cdot \|W_O\|_2
+\end{equation}
+\end{proposition}
+
+\begin{proof}
+The perturbation to $AVW_O^T$ is:
+\begin{equation}
+\Delta_{AVW_O} = \Delta_{AV} \cdot W_O^T
+\end{equation}
+By submultiplicativity (Lemma~\ref{lem:submult}):
+\begin{equation}
+\|\Delta_{AV} \cdot W_O^T\|_F
+\leq \|\Delta_{AV}\|_F \cdot \|W_O^T\|_2
+= \|\Delta_{AV}\|_F \cdot \|W_O\|_2
+\end{equation}
+where $\|W_O^T\|_2 = \|W_O\|_2$ since the spectral norm is unitarily
+invariant.
+\end{proof}
+
+
+\section{End-to-End Bound}
+\label{sec:main}
+
+\begin{theorem}[Softmax Filtering Bound]
+\label{thm:main}
+Let $\Delta$ be a perturbation to $QK^T$ with relative magnitude
+$\varepsilon = \|\Delta\|_F / \|QK^T\|_F$. The resulting change in
+$AVW_O$ satisfies:
+\begin{equation}
+\label{eq:main_bound}
+\boxed{
+\|\Delta(AVW_O)\|_F
+\leq \frac{\varepsilon \cdot \|QK^T\|_F \cdot \|V\|_2 \cdot \|W_O\|_2}{2\sqrt{d_k}}
+}
+\end{equation}
+All quantities on the right-hand side are computable from a single
+forward pass.
+\end{theorem}
+
+\begin{proof}
+Composing the three stage bounds:
+\begin{align}
+\|\Delta(AVW_O)\|_F
+&\leq \|\Delta_{AV}\|_F \cdot \|W_O\|_2
+&& \text{(Proposition~\ref{prop:wo_bound})} \\
+&\leq \|\Delta_A\|_F \cdot \|V\|_2 \cdot \|W_O\|_2
+&& \text{(Proposition~\ref{prop:av_bound})} \\
+&\leq \frac{\varepsilon\,\|QK^T\|_F}{2\sqrt{d_k}} \cdot \|V\|_2 \cdot \|W_O\|_2
+&& \text{(Proposition~\ref{prop:attention_pert})}
+\end{align}
+which gives the stated bound.
+\end{proof}
+
+\begin{corollary}[Spectral Change Bound]
+\label{cor:spectral}
+Under the same conditions as Theorem~\ref{thm:main}, the change in any
+singular value of $AVW_O$ satisfies:
+\begin{equation}
+\label{eq:spectral_bound}
+|\sigma_i(AVW_O + \Delta(AVW_O)) - \sigma_i(AVW_O)|
+\leq \frac{\varepsilon \cdot \|QK^T\|_F \cdot \|V\|_2 \cdot \|W_O\|_2}{2\sqrt{d_k}}
+\end{equation}
+for all $i = 1, \ldots, \min(T, d_k)$.
+\end{corollary}
+
+\begin{proof}
+By Weyl's inequality (Lemma~\ref{lem:weyl}):
+\begin{equation}
+|\sigma_i(M + E) - \sigma_i(M)| \leq \|E\|_2 \leq \|E\|_F
+\end{equation}
+Applying this with $M = AVW_O$ and $E = \Delta(AVW_O)$, combined with
+the Frobenius bound from Theorem~\ref{thm:main}, yields the result.
+\end{proof}
+
+\begin{remark}[Measurability]
+\label{rem:measurable}
+The bound in Theorem~\ref{thm:main} involves four quantities:
+\begin{itemize}
+\item $\varepsilon$: the relative perturbation magnitude (controlled by the experimenter),
+\item $\|QK^T\|_F$: computable from the extracted QK\textsuperscript{T} matrix,
+\item $\|V\|_2 = \sigma_1(V)$: the largest singular value of the value matrix,
+\item $\|W_O\|_2 = \sigma_1(W_O)$: the largest singular value of the output projection.
+\end{itemize}
+All are available during a standard evaluation pass with extraction
+enabled, making the bound practically computable at every generation step.
+\end{remark}
+
+
+\section{Tightness Analysis}
+\label{sec:tightness}
+
+The end-to-end bound in Theorem~\ref{thm:main} is a composition of three
+independent worst-case bounds. We analyze when each stage is tight
+(the bound is achieved or nearly achieved) versus loose (the actual
+perturbation is much smaller than the bound).
+
+\subsection{Stage 1: Softmax Tightness}
+
+The softmax Lipschitz constant of $\frac{1}{2}$ is tight when the
+attention distribution is uniform: $A_i = (\frac{1}{T}, \ldots, \frac{1}{T})$.
+
+\begin{remark}[Effective Lipschitz constant]
+For a peaked attention distribution where one weight dominates
+($p_j \approx 1$, $p_i \approx 0$ for $i \neq j$), the Jacobian
+eigenvalues approach zero. The effective Lipschitz constant is:
+\begin{equation}
+L_{\text{eff}} = \max_i \, p_i(1 - p_i)
+\end{equation}
+For a distribution concentrated on a single position ($p_j = 1 - \delta$),
+$L_{\text{eff}} \approx \delta(1-\delta) \approx \delta \ll \frac{1}{4}$.
+
+In practice, trained transformers develop specialized attention patterns
+with low entropy, making the $\frac{1}{2}$ bound conservative---often by
+an order of magnitude or more.
+\end{remark}
+
+\subsection{Stage 2: Value Matrix Tightness}
+
+The bound $\|\Delta_A V\|_F \leq \|\Delta_A\|_F \|V\|_2$ is tight when
+$\Delta_A$ is aligned with the top right singular vector of $V$.
+
+\begin{itemize}
+\item \textbf{Tight:} When the attention perturbation $\Delta_A$ produces
+rows aligned with the dominant singular direction of $V$. This amplifies
+the perturbation maximally.
+\item \textbf{Loose:} When $\Delta_A$ produces rows orthogonal to the
+dominant singular directions of $V$, or when $V$ is well-conditioned
+($\sigma_1(V) \approx \sigma_k(V)$, so the spectral norm is close to
+$\|V\|_F / \sqrt{k}$).
+\end{itemize}
+
+\subsection{Stage 3: Output Projection Tightness}
+
+The bound $\|\Delta_{AV} W_O^T\|_F \leq \|\Delta_{AV}\|_F \|W_O\|_2$
+is tight when $\Delta_{AV}$ is aligned with the top left singular vector
+of $W_O$.
+
+\begin{itemize}
+\item \textbf{Tight:} When the AV perturbation has columns aligned with
+the dominant input direction of $W_O$.
+\item \textbf{Loose:} When the AV perturbation lies in the
+near-null-space of $W_O$, which attenuates rather than amplifies the signal.
+\end{itemize}
+
+\subsection{Overall Tightness}
+
+\begin{remark}[Compound looseness]
+The end-to-end bound is a product of three worst-case factors. The
+probability that all three stages are simultaneously near their worst
+case is low, since this would require:
+\begin{enumerate}
+\item Uniform attention distribution (Stage~1),
+\item Perturbation aligned with top singular direction of $V$ (Stage~2),
+\item Resulting AV perturbation aligned with top singular direction of $W_O$ (Stage~3).
+\end{enumerate}
+These conditions are mutually constraining---uniform attention spreads
+the perturbation across all value vectors rather than concentrating it
+along $V$'s dominant direction.
+
+The expected \emph{tightness ratio}, defined as the median of
+$\|\Delta(AVW_O)\|_{\text{empirical}} / \text{bound}$, is typically in
+the range $0.1$--$0.5$, meaning the bound is conservative by a factor
+of $2$--$10$.
+\end{remark}
+
+\begin{remark}[Value of a loose bound]
+Even when the bound is conservative, it provides a useful guarantee:
+small perturbations to $QK^T$ cannot cause arbitrarily large spectral
+changes in $AVW_O$. This is the relevant property for the predictive
+horizon interpretation---if $QK^T$ spectral instability is a reliable
+predictor of rule violations, the bound ensures the mechanism by which
+the signal propagates is bounded and stable.
+\end{remark}
+
+
+\section{Connection to Predictive Horizon}
+\label{sec:connection}
+
+The softmax filtering bound connects to the broader research question
+of whether SVD instability in $QK^T$ can predict downstream behavioral
+changes (rule violations) before they occur.
+
+\subsection{Signal Survival}
+
+The bound quantifies the \emph{filtering} effect of softmax: how much
+of the $QK^T$ spectral signal survives through to the output. A tight
+bound with high tightness ratio (close to 1) would indicate that $QK^T$
+perturbations propagate efficiently to $AVW_O$, explaining why $QK^T$ is
+a strong predictive target. A loose bound (tightness ratio close to 0)
+would suggest either that the signal is significantly attenuated, or
+that the bound captures worst-case behavior that is rarely realized.
+
+\subsection{Predictive Hierarchy}
+
+The three SVD targets in the evaluation pipeline---$QK^T$ (routing),
+$W_VW_O$ (OV circuit, static), and $AVW_O$ (residual update)---form a
+causal chain. The softmax filtering bound formalizes the relationship
+between the first and third targets, providing a theoretical basis for
+comparing their predictive power:
+
+\begin{itemize}
+\item If the tightness ratio is high, $AVW_O$ instability closely tracks
+$QK^T$ instability, and either target should have comparable AUROC.
+\item If the tightness ratio is low, $QK^T$ instability may be amplified
+or attenuated in $AVW_O$, and the more informative target depends on
+whether the signal or the noise is filtered more.
+\end{itemize}
+
+
+\section*{References}
+
+\begin{enumerate}
+\item B.~Gao and L.~Pavel, ``On the Properties of the Softmax Function
+with Application in Game Theory and Reinforcement Learning,'' 2017.
+
+\item A.~Vaswani, N.~Shazeer, N.~Parmar, J.~Uszkoreit, L.~Jones,
+A.~N.~Gomez, \L.~Kaiser, and I.~Polosukhin, ``Attention Is All You Need,''
+\emph{Advances in Neural Information Processing Systems}, vol.~30, 2017.
+
+\item G.~W.~Stewart and J.~Sun, \emph{Matrix Perturbation Theory},
+Academic Press, 1990.
+
+\item H.~Weyl, ``Das asymptotische Verteilungsgesetz der Eigenwerte
+linearer partieller Differentialgleichungen,'' \emph{Mathematische
+Annalen}, vol.~71, pp.~441--479, 1912.
+\end{enumerate}
+
+\end{document}

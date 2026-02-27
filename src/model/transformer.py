@@ -1,8 +1,9 @@
-"""TransformerLM: NanoGPT-scale single-head causal language model.
+"""TransformerLM: NanoGPT-scale causal language model with multi-head attention.
 
 Full model with learned token/positional embeddings, transformer blocks,
 output projection head, and configurable extraction modes for SVD analysis.
-No weight tying, no Flash Attention, no multi-head reshaping.
+Supports n_heads = 1 (backward compatible with v1.0), 2, or 4.
+No weight tying, no Flash Attention.
 """
 
 import math
@@ -15,15 +16,17 @@ from src.model.types import ExtractionMode, ForwardOutput
 
 
 class TransformerLM(nn.Module):
-    """NanoGPT-scale single-head causal transformer language model.
+    """NanoGPT-scale causal transformer language model with multi-head attention.
 
     Processes vertex-ID token sequences and exposes internal attention
-    components for three-target SVD stability analysis.
+    components for three-target SVD stability analysis. Supports configurable
+    n_heads for multi-head ablation studies.
 
     Args:
         vocab_size: Number of tokens (= number of graph vertices, no special tokens).
-        d_model: Model dimension.
+        d_model: Model dimension (must be divisible by n_heads).
         n_layers: Number of transformer blocks.
+        n_heads: Number of attention heads (1, 2, or 4).
         max_seq_len: Maximum sequence length (context window w).
         dropout: Dropout rate applied to embeddings, attention, and MLP.
     """
@@ -33,7 +36,8 @@ class TransformerLM(nn.Module):
         vocab_size: int,
         d_model: int,
         n_layers: int,
-        max_seq_len: int,
+        n_heads: int = 1,
+        max_seq_len: int = 64,
         dropout: float = 0.0,
     ):
         super().__init__()
@@ -42,6 +46,8 @@ class TransformerLM(nn.Module):
         self.vocab_size = vocab_size
         self.d_model = d_model
         self.n_layers = n_layers
+        self.n_heads = n_heads
+        self.d_head = d_model // n_heads
         self.max_seq_len = max_seq_len
 
         # Token and position embeddings (GPT-2 style learned positional)
@@ -51,7 +57,7 @@ class TransformerLM(nn.Module):
 
         # Transformer blocks
         self.blocks = nn.ModuleList(
-            [TransformerBlock(d_model, max_seq_len, dropout) for _ in range(n_layers)]
+            [TransformerBlock(d_model, n_heads, max_seq_len, dropout) for _ in range(n_layers)]
         )
 
         # Final layer norm (pre-norm convention: LN before output head)
@@ -99,6 +105,10 @@ class TransformerLM(nn.Module):
 
         Returns:
             ForwardOutput with logits always populated, other fields based on mode.
+            When extracting:
+                qkt: [B, n_layers, n_heads, T, T]
+                attention_weights: [B, n_layers, n_heads, T, T]
+                values: [B, n_layers, n_heads, T, d_head]
         """
         B, T = idx.shape
         assert T <= self.max_seq_len, (
@@ -129,9 +139,9 @@ class TransformerLM(nn.Module):
         for block in self.blocks:
             x, internals = block(x, extract=extract)
             if extract and internals is not None:
-                all_qkt.append(internals.qkt)
-                all_attn.append(internals.attention_weights)
-                all_values.append(internals.values)
+                all_qkt.append(internals.qkt)        # [B, n_heads, T, T]
+                all_attn.append(internals.attention_weights)  # [B, n_heads, T, T]
+                all_values.append(internals.values)   # [B, n_heads, T, d_head]
             if collect_residual:
                 residual_states.append(x.detach())
 
@@ -147,9 +157,10 @@ class TransformerLM(nn.Module):
         residual_norms = None
 
         if extract and all_qkt:
-            qkt = torch.stack(all_qkt, dim=1)  # [B, n_layers, T, T]
-            attention_weights = torch.stack(all_attn, dim=1)  # [B, n_layers, T, T]
-            values = torch.stack(all_values, dim=1)  # [B, n_layers, T, D]
+            # Each entry is [B, n_heads, T, T]; stack on dim=1 gives [B, n_layers, n_heads, T, T]
+            qkt = torch.stack(all_qkt, dim=1)
+            attention_weights = torch.stack(all_attn, dim=1)
+            values = torch.stack(all_values, dim=1)
 
         if collect_residual and residual_states:
             # Stack: [B, T, n_layers+1, D]
@@ -168,25 +179,41 @@ class TransformerLM(nn.Module):
         )
 
     def get_wvwo(self) -> torch.Tensor:
-        """Return stacked WvWo weight product for all layers.
+        """Return stacked per-head WvWo weight product for all layers.
 
         WvWo represents the OV circuit: the composition of value and output
         projections. This is input-agnostic (depends only on model weights).
 
-        nn.Linear stores weights as [out_features, in_features].
-        W_v.weight is [d_model, d_model], so W_v.weight.T is the actual
-        value projection matrix. The product W_v.weight.T @ W_o.weight
-        gives [d_model, d_model] mapping input space through value to output.
+        For each layer and each head, computes the per-head OV circuit:
+            Wv_h = W_v.weight[h*d_head:(h+1)*d_head, :]  -- [d_head, d_model]
+            Wo_h = W_o.weight[:, h*d_head:(h+1)*d_head]  -- [d_model, d_head]
+            WvWo_h = Wv_h.T @ Wo_h.T = [d_model, d_head] @ [d_head, d_model] = [d_model, d_model]
+
+        This maps input -> value head h -> output projection head h -> residual stream.
 
         Returns:
-            Tensor of shape [n_layers, d_model, d_model], detached.
+            Tensor of shape [n_layers, n_heads, d_model, d_model], detached.
         """
-        return torch.stack(
-            [
-                block.attention.W_v.weight.T @ block.attention.W_o.weight
-                for block in self.blocks
-            ]
-        ).detach()
+        layers = []
+        for block in self.blocks:
+            heads = []
+            Wv = block.attention.W_v.weight  # [d_model, d_model]
+            Wo = block.attention.W_o.weight  # [d_model, d_model]
+            for h in range(self.n_heads):
+                start = h * self.d_head
+                end = (h + 1) * self.d_head
+                # Per-head value projection: Wv[start:end, :] is [d_head, d_model]
+                # nn.Linear: output = input @ weight.T, so V_full = x @ Wv.T
+                # Head h gets V_full[:, :, start:end] = x @ Wv[start:end, :].T
+                Wv_h = Wv[start:end, :]  # [d_head, d_model]
+                # Per-head output projection: Wo[:, start:end] is [d_model, d_head]
+                # After concat, output = concat @ Wo.T, head h contributes at [start:end]
+                Wo_h = Wo[:, start:end]  # [d_model, d_head]
+                # OV circuit: Wv_h.T @ Wo_h.T = [d_model, d_head] @ [d_head, d_model] = [d_model, d_model]
+                wvwo_h = Wv_h.T @ Wo_h.T
+                heads.append(wvwo_h)
+            layers.append(torch.stack(heads))  # [n_heads, d_model, d_model]
+        return torch.stack(layers).detach()  # [n_layers, n_heads, d_model, d_model]
 
 
 def create_model(config: "ExperimentConfig") -> TransformerLM:
@@ -196,6 +223,7 @@ def create_model(config: "ExperimentConfig") -> TransformerLM:
         - vocab_size from config.graph.n (MODL-03: tokens are vertex IDs)
         - d_model from config.model.d_model (MODL-01: configurable)
         - n_layers from config.model.n_layers (MODL-01: configurable)
+        - n_heads from config.model.n_heads (MHAD-01: 1, 2, or 4)
         - max_seq_len from config.training.w (context window)
         - dropout from config.model.dropout
 
@@ -211,6 +239,7 @@ def create_model(config: "ExperimentConfig") -> TransformerLM:
         vocab_size=config.graph.n,
         d_model=config.model.d_model,
         n_layers=config.model.n_layers,
+        n_heads=config.model.n_heads,
         max_seq_len=config.training.w,
         dropout=config.model.dropout,
     )

@@ -446,6 +446,81 @@ def render_all(result_dir: str | Path) -> list[Path]:
         except Exception as e:
             log.warning("Failed to generate SVD benchmark plots: %s", e)
 
+    # ── SFTX-02/03: Perturbation Bound ──────────────────────────────
+    perturbation_bound = result.get("metrics", {}).get("perturbation_bound", {})
+    if perturbation_bound and perturbation_bound.get("by_magnitude"):
+        try:
+            from src.visualization.perturbation_bound import (
+                plot_bound_by_magnitude,
+                plot_bound_tightness,
+            )
+
+            fig = plot_bound_tightness(perturbation_bound)
+            paths = save_figure(fig, figures_dir, "perturbation_bound_tightness")
+            generated_files.extend(paths)
+            log.info("Generated: perturbation_bound_tightness")
+
+            fig = plot_bound_by_magnitude(perturbation_bound)
+            paths = save_figure(fig, figures_dir, "perturbation_bound_detail")
+            generated_files.extend(paths)
+            log.info("Generated: perturbation_bound_detail")
+
+        except Exception as e:
+            log.warning("Failed to generate perturbation bound plots: %s", e)
+
+    # ── SPEC-03: Spectrum Analysis ──────────────────────────────────
+    spectrum_analysis = result.get("metrics", {}).get("spectrum_analysis", {})
+    spectrum_npz_path = result_dir / "spectrum_trajectories.npz"
+    if spectrum_analysis or spectrum_npz_path.exists():
+        try:
+            from src.visualization.spectrum import (
+                plot_spectrum_auroc,
+                plot_spectrum_trajectory_sample,
+            )
+
+            # AUROC plots per r-value
+            by_r = spectrum_analysis.get("by_r_value", {})
+            for r_val_str, r_data in by_r.items():
+                by_metric = r_data.get("by_metric", {})
+                if by_metric:
+                    r_value = int(r_val_str)
+                    fig = plot_spectrum_auroc(by_metric, r_value=r_value)
+                    paths = save_figure(fig, figures_dir, f"spectrum_auroc_r{r_value}")
+                    generated_files.extend(paths)
+                    log.info("Generated: spectrum_auroc_r%d", r_value)
+
+            # Sample trajectory plot (first sequence, first layer)
+            if spectrum_npz_path.exists():
+                spectrum_data = np.load(str(spectrum_npz_path), allow_pickle=False)
+                for key in spectrum_data.files:
+                    if key.endswith(".spectrum"):
+                        spectra = spectrum_data[key]
+                        fig = plot_spectrum_trajectory_sample(spectra, sequence_idx=0)
+                        layer_tag = key.replace(".spectrum", "").replace(".", "_")
+                        paths = save_figure(fig, figures_dir, f"spectrum_traj_{layer_tag}")
+                        generated_files.extend(paths)
+                        log.info("Generated: spectrum_traj_%s", layer_tag)
+                        break  # Only plot first layer for brevity
+
+        except Exception as e:
+            log.warning("Failed to generate spectrum analysis plots: %s", e)
+
+    # ── COMP-01/02: Compliance Curve ─────────────────────────────────
+    compliance_curve = result.get("metrics", {}).get("compliance_curve", {})
+    if compliance_curve:
+        try:
+            from src.visualization.compliance import plot_compliance_curve
+
+            curve_data = compliance_curve.get("curve", {})
+            if curve_data and curve_data.get("r_over_w_values"):
+                fig = plot_compliance_curve(curve_data)
+                paths = save_figure(fig, figures_dir, "compliance_curve")
+                generated_files.extend(paths)
+                log.info("Generated: compliance_curve")
+
+        except Exception as e:
+            log.warning("Failed to generate compliance curve: %s", e)
+
     # ── PLOT-06: Heatmap (skip for single experiment) ─────────────────
     # Heatmap requires multiple (r, w) configs. For single experiment,
     # log a message and skip. Use render_horizon_heatmap() for sweep data.

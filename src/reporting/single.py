@@ -96,6 +96,9 @@ def _collect_figures(figures_dir: Path) -> dict[str, Any]:
         "pr_curve_figures": [],
         "calibration_figures": [],
         "svd_benchmark_figures": [],
+        "perturbation_bound_figures": [],
+        "spectrum_figures": [],
+        "compliance_figures": [],
     }
 
     if not figures_dir.exists():
@@ -128,6 +131,12 @@ def _collect_figures(figures_dir: Path) -> dict[str, Any]:
             result["calibration_figures"].append({"title": title, "data_uri": data_uri})
         elif name.startswith("svd_benchmark"):
             result["svd_benchmark_figures"].append({"title": title, "data_uri": data_uri})
+        elif name.startswith("perturbation_bound"):
+            result["perturbation_bound_figures"].append({"title": title, "data_uri": data_uri})
+        elif name.startswith("spectrum_"):
+            result["spectrum_figures"].append({"title": title, "data_uri": data_uri})
+        elif name.startswith("compliance_"):
+            result["compliance_figures"].append({"title": title, "data_uri": data_uri})
         elif name.startswith("distribution"):
             result["distribution_figures"].append({"title": title, "data_uri": data_uri})
         else:
@@ -262,6 +271,13 @@ def generate_single_report(
     calibration = metrics.get("calibration")
     svd_benchmark = metrics.get("svd_benchmark")
 
+    # Phase 14: Softmax Filtering Bound data
+    perturbation_bound = metrics.get("perturbation_bound")
+
+    # Phase 15: Advanced Analysis data
+    spectrum_analysis = metrics.get("spectrum_analysis")
+    compliance_curve = metrics.get("compliance_curve")
+
     # Render
     html = template.render(
         experiment_id=result.get("experiment_id", "Unknown"),
@@ -287,6 +303,12 @@ def generate_single_report(
         calibration_figures=figures.get("calibration_figures", []),
         svd_benchmark=svd_benchmark,
         svd_benchmark_figures=figures.get("svd_benchmark_figures", []),
+        perturbation_bound=perturbation_bound,
+        perturbation_bound_figures=figures.get("perturbation_bound_figures", []),
+        spectrum_analysis=spectrum_analysis,
+        spectrum_figures=figures.get("spectrum_figures", []),
+        compliance_curve=compliance_curve,
+        compliance_figures=figures.get("compliance_figures", []),
     )
 
     # Write output
