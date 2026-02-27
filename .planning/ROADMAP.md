@@ -17,8 +17,9 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 12: Null Model Baseline** - Validate the core SVD signal claim with jumper-free null distribution and statistical comparison (completed 2026-02-26)
 - [x] **Phase 13: Evaluation Enrichment** - Add precision-recall curves, calibration diagnostics, and SVD computational overhead benchmarks (completed 2026-02-26)
 - [x] **Phase 14: Softmax Filtering Bound** - Derive and empirically verify the epsilon-bound from QK^T perturbation through softmax to AVWo spectral change (completed 2026-02-26)
-- [ ] **Phase 15: Advanced Analysis** - Full spectrum trajectory with curvature/torsion and sharp compliance curve across r/w ratio sweep
-- [ ] **Phase 16: Multi-Head Ablation** - Extend transformer to 2h/4h with per-head SVD extraction and signal concentration analysis
+- [x] **Phase 15: Advanced Analysis** - Full spectrum trajectory with curvature/torsion and sharp compliance curve across r/w ratio sweep (completed 2026-02-27)
+- [x] **Phase 16: Multi-Head Ablation** - Extend transformer to 2h/4h with per-head SVD extraction and signal concentration analysis (completed 2026-02-27)
+- [ ] **Phase 17: E2E Pipeline Wiring** - Wire run_experiment.py to chain all phases into a single runnable pipeline (gap closure)
 
 ## Phase Details
 
@@ -113,10 +114,25 @@ Plans:
 - [ ] 16-02: Per-head SVD metric computation with dual key emission
 - [ ] 16-03: Per-head AUROC, signal concentration analysis, and ablation comparison
 
+### Phase 17: E2E Pipeline Wiring
+**Goal**: The run_experiment.py entry point chains all phases (graph generation → walks → training → evaluation → analysis → visualization → reporting) into a single executable pipeline, with reproducibility seeding and result persistence
+**Depends on**: Phase 16
+**Requirements**: Gap closure for v1.0 audit integration breaks
+**Gap Closure:** Closes P0/P1 integration gaps from v1.0-MILESTONE-AUDIT.md
+**Success Criteria** (what must be TRUE):
+  1. `python run_experiment.py --config config.json` runs the full pipeline from config to HTML report without manual intervention
+  2. `set_seed(config.seed)` is called at pipeline start before any stochastic operations
+  3. Predictive horizon analysis results are written to result.json `predictive_horizon` block after evaluation
+  4. NPZ key formats are consistent between write_result and save_evaluation_results (verify dual-key emission from Phase 16 resolves this)
+**Plans**: TBD
+
+Plans:
+- [ ] 17-01: Wire run_experiment.py end-to-end pipeline
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 11 -> 12 -> 13 -> 14 -> 15 -> 16
+Phases execute in numeric order: 11 -> 12 -> 13 -> 14 -> 15 -> 16 -> 17
 Note: Phase 14 depends on Phase 12 (not 13), so Phases 13 and 14 could theoretically be parallelized after Phase 12 completes.
 
 | Phase | Plans Complete | Status | Completed |
@@ -125,5 +141,6 @@ Note: Phase 14 depends on Phase 12 (not 13), so Phases 13 and 14 could theoretic
 | 12. Null Model Baseline | 2/2 | Complete    | 2026-02-26 |
 | 13. Evaluation Enrichment | 3/3 | Complete    | 2026-02-26 |
 | 14. Softmax Filtering Bound | 2/2 | Complete    | 2026-02-26 |
-| 15. Advanced Analysis | 0/3 | Not started | - |
-| 16. Multi-Head Ablation | 0/3 | Not started | - |
+| 15. Advanced Analysis | 3/3 | Complete    | 2026-02-27 |
+| 16. Multi-Head Ablation | 3/3 | Complete    | 2026-02-27 |
+| 17. E2E Pipeline Wiring | 0/1 | Not started | - |
