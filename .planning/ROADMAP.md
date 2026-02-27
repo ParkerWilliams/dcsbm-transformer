@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 14: Softmax Filtering Bound** - Derive and empirically verify the epsilon-bound from QK^T perturbation through softmax to AVWo spectral change (completed 2026-02-26)
 - [x] **Phase 15: Advanced Analysis** - Full spectrum trajectory with curvature/torsion and sharp compliance curve across r/w ratio sweep (completed 2026-02-27)
 - [x] **Phase 16: Multi-Head Ablation** - Extend transformer to 2h/4h with per-head SVD extraction and signal concentration analysis (completed 2026-02-27)
-- [ ] **Phase 17: E2E Pipeline Wiring** - Wire run_experiment.py to chain all phases into a single runnable pipeline (gap closure)
+- [x] **Phase 17: E2E Pipeline Wiring** - Wire run_experiment.py to chain all phases into a single runnable pipeline (gap closure) (completed 2026-02-27)
 
 ## Phase Details
 
@@ -143,4 +143,4 @@ Note: Phase 14 depends on Phase 12 (not 13), so Phases 13 and 14 could theoretic
 | 14. Softmax Filtering Bound | 2/2 | Complete    | 2026-02-26 |
 | 15. Advanced Analysis | 3/3 | Complete    | 2026-02-27 |
 | 16. Multi-Head Ablation | 3/3 | Complete    | 2026-02-27 |
-| 17. E2E Pipeline Wiring | 0/1 | Not started | - |
+| 17. E2E Pipeline Wiring | 1/1 | Complete    | 2026-02-27 |
