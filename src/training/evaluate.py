@@ -102,7 +102,6 @@ def evaluate_compliance(
     n_available = eval_walks.shape[0]
     n_eval = min(n_sequences, n_available)
     walk_length = config.training.walk_length
-    r = config.training.r
 
     # Extract seed tokens (first token of each eval walk)
     seed_tokens = torch.tensor(
@@ -140,14 +139,16 @@ def evaluate_compliance(
             if v in neighbors:
                 valid_edges += 1
 
-            # Rule compliance check: if u is a jumper, check step t+r
-            if u in jumper_map and t + r < seq_len:
-                total_rule_checks += 1
-                target_block = jumper_map[u].target_block
-                arrival_vertex = int(seq[t + r])
-                actual_block = int(block_assignments[arrival_vertex])
-                if actual_block == target_block:
-                    rule_compliant += 1
+            # Rule compliance check: if u is a jumper, check step t+jumper.r
+            if u in jumper_map:
+                jumper = jumper_map[u]
+                if t + jumper.r < seq_len:
+                    total_rule_checks += 1
+                    target_block = jumper.target_block
+                    arrival_vertex = int(seq[t + jumper.r])
+                    actual_block = int(block_assignments[arrival_vertex])
+                    if actual_block == target_block:
+                        rule_compliant += 1
 
     edge_compliance = valid_edges / max(1, total_edge_checks)
     rule_compliance = (
