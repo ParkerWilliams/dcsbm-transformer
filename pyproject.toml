@@ -1,15 +1,15 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "dcsbm-transformer"
 version = "0.1.0"
 description = "SVD instability prediction in transformer attention on DCSBM-generated sequences"
-requires-python = ">=3.12"
+requires-python = ">=3.11"
 dependencies = [
     "torch>=2.0",
-    "numpy>=2.0",
+    "numpy>=1.24",
     "dacite>=1.8",
     "scipy>=1.14",
     "matplotlib>=3.8",
