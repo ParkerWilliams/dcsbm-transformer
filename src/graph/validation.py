@@ -24,7 +24,8 @@ def reachable_blocks_at_distance(
     """Compute which blocks are reachable from vertex in exactly r steps.
 
     Uses iterative sparse vector-matrix multiplication with binary clipping
-    to prevent integer overflow from path counting.
+    to prevent integer overflow from path counting. Early-exits once all K
+    blocks are reachable (guaranteed non-trivial).
 
     Args:
         adj: Sparse directed adjacency matrix (n x n).
@@ -43,11 +44,24 @@ def reachable_blocks_at_distance(
         ([1.0], ([0], [vertex])), shape=(1, n)
     )
 
-    for _ in range(r):
+    for step in range(r):
         vec = vec @ adj
         # Clip to binary reachability to prevent exponential overflow
         if vec.nnz > 0:
             vec.data[:] = np.minimum(vec.data, 1.0)
+
+        # Early exit: if all vertices are reachable, all blocks are reachable
+        # for this step and all future steps (on a connected graph, once
+        # saturated it stays saturated)
+        if vec.nnz >= n:
+            return set(range(K))
+
+        # Check block coverage periodically (every 5 steps after step 10)
+        if step >= 10 and step % 5 == 0:
+            reachable_vertices = vec.nonzero()[1]
+            blocks_so_far = set(block_assignments[reachable_vertices].tolist())
+            if len(blocks_so_far) == K:
+                return blocks_so_far
 
     # Extract reachable vertices
     reachable_vertices = vec.nonzero()[1]
