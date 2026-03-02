@@ -56,9 +56,15 @@ All decisions logged in PROJECT.md Key Decisions table.
 
 None — milestone complete.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Guarantee walk generation by pre-computing viable jumper paths | 2026-03-02 | 15606a5 | [1-guarantee-walk-generation-by-pre-computi](./quick/1-guarantee-walk-generation-by-pre-computi/) |
+
 ## Session Continuity
 
-Last session: 2026-02-28
-Stopped at: Milestone v1.1 completion
+Last activity: 2026-03-02 - Completed quick task 1: Guarantee walk generation by pre-computing viable jumper paths
+Stopped at: Quick task 1 complete
 Resume file: None
 Next action: /gsd:new-milestone (start v2.0 or v1.2 planning)
