@@ -1,7 +1,8 @@
-"""Core walk generation with guided and batch modes.
+"""Core walk generation with path-splicing and batch modes.
 
 Implements two walk generation strategies:
-1. Per-walk guided generation using path-count weights for jumper compliance
+1. Per-walk guided generation using pre-computed viable paths for guaranteed
+   jumper compliance (path splicing replaces probabilistic guided stepping)
 2. Vectorized batch generation for unguided walks (no active constraints)
 
 The top-level generate_walks() function orchestrates both strategies to
@@ -16,7 +17,7 @@ import numpy as np
 from src.config.experiment import ExperimentConfig
 from src.graph.jumpers import JumperInfo
 from src.graph.types import GraphData
-from src.walk.compliance import guided_step, precompute_path_counts
+from src.walk.compliance import precompute_viable_paths
 from src.walk.types import JumperEvent, WalkResult
 
 log = logging.getLogger(__name__)
@@ -28,15 +29,17 @@ def generate_single_guided_walk(
     rng: np.random.Generator,
     graph_data: GraphData,
     jumper_map: dict[int, JumperInfo],
-    path_counts: dict[int, list[np.ndarray]],
+    viable_paths: dict[int, list[np.ndarray]],
     indptr: np.ndarray,
     indices: np.ndarray,
 ) -> tuple[np.ndarray, list[JumperEvent]] | None:
-    """Generate a single walk with guided segments at jumper encounters.
+    """Generate a single walk with path splicing at jumper encounters.
 
-    When the walk visits a jumper vertex, enters a guided segment where
-    neighbor selection is weighted by path-count vectors to ensure the
-    walk reaches the target block at exactly the right step.
+    When the walk visits a jumper vertex that has pre-computed viable paths,
+    a random path from the pool is spliced into the walk, guaranteeing
+    compliance by construction. Only the primary jumper that triggers a
+    splice gets an event recorded; intermediate jumper vertices within a
+    splice segment are overridden by the splice.
 
     Args:
         start_vertex: Starting vertex for the walk.
@@ -44,25 +47,32 @@ def generate_single_guided_walk(
         rng: Per-walk random Generator for reproducibility.
         graph_data: Graph data with adjacency matrix and block assignments.
         jumper_map: Dict mapping vertex_id -> JumperInfo.
-        path_counts: Precomputed path-count vectors.
+        viable_paths: Pre-computed viable path pools from
+            precompute_viable_paths().
         indptr: CSR row pointer array.
         indices: CSR column indices array.
 
     Returns:
-        Tuple of (walk array, event list) or None if walk is infeasible
-        due to joint constraint conflicts.
+        Tuple of (walk array, event list) or None only if a dead-end
+        vertex is encountered (should not happen on connected graphs).
     """
     walk = np.zeros(walk_length, dtype=np.int32)
     walk[0] = start_vertex
     events: list[JumperEvent] = []
-    active_constraints: list[tuple[int, int]] = []  # (deadline_step, target_block)
+    step = 1
 
-    for step in range(1, walk_length):
+    while step < walk_length:
         prev = int(walk[step - 1])
 
-        # Check if previous vertex is a jumper
-        if prev in jumper_map:
+        if prev in jumper_map and prev in viable_paths:
             jumper = jumper_map[prev]
+            # Pick a random viable path for this jumper
+            paths = viable_paths[prev]
+            path = paths[int(rng.integers(0, len(paths)))]
+            # path[0] == prev (the jumper vertex itself)
+            # path has length r+1, path[-1] is in target block
+
+            # Record the event
             event = JumperEvent(
                 vertex_id=int(prev),
                 step=int(step - 1),
@@ -70,56 +80,22 @@ def generate_single_guided_walk(
                 expected_arrival_step=int(step - 1 + jumper.r),
             )
             events.append(event)
-            active_constraints.append(
-                (step - 1 + jumper.r, jumper.target_block)
-            )
 
-        # Remove expired constraints (deadline <= step means we're past it)
-        active_constraints = [
-            (d, tb) for d, tb in active_constraints if d > step
-        ]
-
-        if active_constraints:
-            # Guided step: weight neighbors by path-count constraints
-            next_v = guided_step(
-                prev,
-                active_constraints,
-                step,
-                path_counts,
-                indptr,
-                indices,
-                rng,
-            )
-            if next_v is None:
-                return None  # infeasible, caller discards
-            walk[step] = next_v
+            # Splice the path into the walk (skip path[0] since prev
+            # is already placed at walk[step-1])
+            splice_len = min(jumper.r, walk_length - step)
+            walk[step:step + splice_len] = path[1:1 + splice_len]
+            step += splice_len
         else:
             # Unguided step: uniform random neighbor
             start_idx = indptr[prev]
             end_idx = indptr[prev + 1]
             degree = end_idx - start_idx
             if degree == 0:
-                return None  # dead-end (shouldn't happen with connected graph)
+                return None  # dead-end (shouldn't happen)
             offset = int(rng.integers(0, degree))
             walk[step] = indices[start_idx + offset]
-
-    # Validate compliance: for each event, check block at arrival step
-    for event in events:
-        if event.expected_arrival_step < walk_length:
-            actual_block = graph_data.block_assignments[
-                walk[event.expected_arrival_step]
-            ]
-            if actual_block != event.target_block:
-                log.warning(
-                    "Compliance violation: vertex %d at step %d expected "
-                    "block %d at step %d, got block %d",
-                    event.vertex_id,
-                    event.step,
-                    event.target_block,
-                    event.expected_arrival_step,
-                    actual_block,
-                )
-                return None  # treat as infeasible
+            step += 1
 
     return walk, events
 
@@ -179,11 +155,11 @@ def generate_walks(
     target_n_walks: int,
     min_jumper_fraction: float = 0.5,
 ) -> WalkResult:
-    """Generate a walk corpus with guided jumper compliance.
+    """Generate a walk corpus with guaranteed jumper compliance via path splicing.
 
     Two-phase strategy:
     1. Jumper-seeded walks (guided): Start from jumper vertices, cycle
-       through jumpers, use path-count guided walking for compliance.
+       through jumpers, use pre-computed viable path splicing for compliance.
     2. Random-start walks (batch): Start from random vertices, generate
        batch unguided. Re-run individual walks as guided if they
        encounter a jumper vertex.
@@ -213,17 +189,17 @@ def generate_walks(
     indptr = graph_data.adjacency.indptr
     indices = graph_data.adjacency.indices
 
-    # Precompute path counts
-    max_r = max((j.r for j in jumpers), default=0)
-    if max_r > 0:
-        path_counts = precompute_path_counts(
+    # Precompute viable paths for all jumpers
+    if jumpers:
+        path_rng = np.random.default_rng(seed + 4000)
+        viable_paths = precompute_viable_paths(
             graph_data.adjacency,
             graph_data.block_assignments,
-            graph_data.K,
-            max_r,
+            jumpers,
+            path_rng,
         )
     else:
-        path_counts = {}
+        viable_paths = {}
 
     # Determine walk counts
     n_jumper_walks = math.ceil(target_n_walks * min_jumper_fraction)
@@ -233,7 +209,7 @@ def generate_walks(
     master_rng = np.random.default_rng(seed)
 
     # Generate per-walk seeds for ALL walks (jumper + random)
-    # Over-generate by ~5% to account for discards
+    # Over-generate by ~5% to account for rare dead-end discards
     overgen_factor = 1.05
     total_seeds_needed = math.ceil(
         (n_jumper_walks + n_random_walks) * overgen_factor
@@ -275,13 +251,18 @@ def generate_walks(
             walk_rng,
             graph_data,
             jumper_map,
-            path_counts,
+            viable_paths,
             indptr,
             indices,
         )
 
         if result is None:
             discarded_count += 1
+            log.error(
+                "Walk from vertex %d returned None (dead-end vertex), "
+                "retrying with next seed",
+                start_vertex,
+            )
             continue
 
         walk, events = result
@@ -348,13 +329,18 @@ def generate_walks(
                     walk_rng,
                     graph_data,
                     jumper_map,
-                    path_counts,
+                    viable_paths,
                     indptr,
                     indices,
                 )
 
                 if result is None:
                     random_discard_count += 1
+                    log.error(
+                        "Guided re-run from vertex %d returned None "
+                        "(dead-end), generating replacement",
+                        start_v,
+                    )
                     # Generate a replacement walk
                     while True:
                         if seed_idx >= len(all_walk_seeds):
@@ -372,7 +358,7 @@ def generate_walks(
                             retry_rng,
                             graph_data,
                             jumper_map,
-                            path_counts,
+                            viable_paths,
                             indptr,
                             indices,
                         )
@@ -406,7 +392,7 @@ def generate_walks(
     walks_array = np.stack(collected_walks, axis=0)
     seeds_array = np.array(collected_seeds, dtype=np.int64)
 
-    # Validation
+    # Validation (belt-and-suspenders: walks should always pass now)
     _validate_walks(
         walks_array,
         collected_events,
@@ -439,6 +425,9 @@ def _validate_walks(
     min_jumper_fraction: float,
 ) -> None:
     """Validate walks for edge validity, compliance, and jumper fraction.
+
+    Belt-and-suspenders check: with path splicing, all walks should be
+    compliant by construction. This validation confirms it.
 
     Args:
         walks: Walk array of shape (n_walks, walk_length).

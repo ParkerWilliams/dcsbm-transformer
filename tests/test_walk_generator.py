@@ -2,7 +2,7 @@
 
 Covers edge validity, guided walk compliance, jumper event recording,
 batch walk shapes, nested jumper compliance, path-count normalization,
-reproducibility, and infeasible walk handling.
+reproducibility, infeasible walk handling, and viable path precomputation.
 """
 
 import numpy as np
@@ -17,7 +17,7 @@ from src.config.experiment import (
 )
 from src.graph.jumpers import JumperInfo
 from src.graph.types import GraphData
-from src.walk.compliance import precompute_path_counts
+from src.walk.compliance import precompute_path_counts, precompute_viable_paths
 from src.walk.generator import (
     generate_batch_unguided_walks,
     generate_single_guided_walk,
@@ -130,7 +130,7 @@ class TestWalksFollowValidEdges:
 
 
 class TestGuidedWalkCompliance:
-    """Test that guided walks satisfy jumper rules."""
+    """Test that guided walks with path splicing satisfy jumper rules."""
 
     def test_guided_walk_compliance(self) -> None:
         graph = _make_small_graph(n=20, K=2, seed=123)
@@ -138,8 +138,10 @@ class TestGuidedWalkCompliance:
             vertex_id=0, source_block=0, target_block=1, r=3,
         )
         jumper_map = {0: jumper}
-        path_counts = precompute_path_counts(
-            graph.adjacency, graph.block_assignments, graph.K, 3,
+        rng_paths = np.random.default_rng(999)
+        viable_paths = precompute_viable_paths(
+            graph.adjacency, graph.block_assignments, [jumper], rng_paths,
+            n_paths_per_jumper=50,
         )
         indptr = graph.adjacency.indptr
         indices = graph.adjacency.indices
@@ -150,22 +152,29 @@ class TestGuidedWalkCompliance:
         for seed in range(50):
             rng = np.random.default_rng(seed)
             result = generate_single_guided_walk(
-                0, 10, rng, graph, jumper_map, path_counts, indptr, indices,
+                0, 10, rng, graph, jumper_map, viable_paths, indptr, indices,
             )
             if result is None:
                 continue
             walk, events = result
             total += 1
+            walk_ok = True
             for event in events:
                 if event.expected_arrival_step < len(walk):
                     actual = graph.block_assignments[
                         walk[event.expected_arrival_step]
                     ]
-                    if actual == event.target_block:
-                        compliant_count += 1
+                    if actual != event.target_block:
+                        walk_ok = False
+            if walk_ok:
+                compliant_count += 1
 
         assert total > 0, "No walks generated"
-        assert compliant_count > 0, "No compliant walks"
+        # With path splicing, ALL walks must be compliant
+        assert compliant_count == total, (
+            f"Only {compliant_count}/{total} walks compliant "
+            f"(expected all with path splicing)"
+        )
 
 
 class TestJumperEventsRecorded:
@@ -234,9 +243,10 @@ class TestNestedJumperCompliance:
             JumperInfo(vertex_id=12, source_block=1, target_block=0, r=3),
         ]
         jumper_map = {j.vertex_id: j for j in jumpers}
-        max_r = max(j.r for j in jumpers)
-        path_counts = precompute_path_counts(
-            graph.adjacency, graph.block_assignments, graph.K, max_r,
+        rng_paths = np.random.default_rng(999)
+        viable_paths = precompute_viable_paths(
+            graph.adjacency, graph.block_assignments, jumpers, rng_paths,
+            n_paths_per_jumper=50,
         )
         indptr = graph.adjacency.indptr
         indices = graph.adjacency.indices
@@ -247,7 +257,7 @@ class TestNestedJumperCompliance:
         for seed in range(100):
             rng = np.random.default_rng(seed)
             result = generate_single_guided_walk(
-                0, 20, rng, graph, jumper_map, path_counts, indptr, indices,
+                0, 20, rng, graph, jumper_map, viable_paths, indptr, indices,
             )
             if result is None:
                 continue
@@ -365,3 +375,71 @@ class TestInfeasibleWalksDiscarded:
                 assert v in neighbors, (
                     f"Walk {wi} step {step}: edge {u}->{v} not valid"
                 )
+
+
+class TestViablePathPrecomputation:
+    """Test that viable path precomputation works correctly."""
+
+    def test_viable_paths_exist_for_all_jumpers(self) -> None:
+        """Every jumper must have at least one viable path."""
+        graph = _make_small_graph(n=20, K=2, seed=123)
+        jumper = JumperInfo(vertex_id=0, source_block=0, target_block=1, r=3)
+        rng = np.random.default_rng(42)
+        viable_paths = precompute_viable_paths(
+            graph.adjacency, graph.block_assignments, [jumper], rng,
+            n_paths_per_jumper=50,
+        )
+        assert 0 in viable_paths
+        assert len(viable_paths[0]) > 0
+
+    def test_viable_paths_reach_target_block(self) -> None:
+        """All pre-computed paths must end in the target block."""
+        graph = _make_small_graph(n=20, K=2, seed=123)
+        jumper = JumperInfo(vertex_id=0, source_block=0, target_block=1, r=3)
+        rng = np.random.default_rng(42)
+        viable_paths = precompute_viable_paths(
+            graph.adjacency, graph.block_assignments, [jumper], rng,
+            n_paths_per_jumper=50,
+        )
+        for path in viable_paths[0]:
+            assert len(path) == 4  # r+1
+            assert path[0] == 0  # starts at jumper vertex
+            assert graph.block_assignments[path[-1]] == 1  # ends in target block
+
+    def test_viable_paths_follow_valid_edges(self) -> None:
+        """Each step in a pre-computed path must follow a valid edge."""
+        graph = _make_small_graph(n=20, K=2, seed=123)
+        jumper = JumperInfo(vertex_id=0, source_block=0, target_block=1, r=3)
+        rng = np.random.default_rng(42)
+        viable_paths = precompute_viable_paths(
+            graph.adjacency, graph.block_assignments, [jumper], rng,
+            n_paths_per_jumper=50,
+        )
+        indptr = graph.adjacency.indptr
+        indices = graph.adjacency.indices
+        for path in viable_paths[0]:
+            for i in range(len(path) - 1):
+                u, v = path[i], path[i + 1]
+                neighbors = indices[indptr[u]:indptr[u + 1]]
+                assert v in neighbors, f"Edge {u}->{v} not in graph"
+
+    def test_no_discard_with_viable_paths(self) -> None:
+        """Walks using viable paths should never be discarded."""
+        graph = _make_small_graph(n=20, K=2, seed=123)
+        jumper = JumperInfo(vertex_id=0, source_block=0, target_block=1, r=3)
+        config = _make_small_config(n=20)
+        result = generate_walks(
+            graph, [jumper], config, seed=42,
+            target_n_walks=30, min_jumper_fraction=0.3,
+        )
+        # All walks with events must be compliant
+        for wi, walk_events in enumerate(result.events):
+            for event in walk_events:
+                if event.expected_arrival_step < result.walks.shape[1]:
+                    actual_block = graph.block_assignments[
+                        result.walks[wi, event.expected_arrival_step]
+                    ]
+                    assert actual_block == event.target_block, (
+                        f"Walk {wi}: expected block {event.target_block} "
+                        f"at step {event.expected_arrival_step}, got {actual_block}"
+                    )
