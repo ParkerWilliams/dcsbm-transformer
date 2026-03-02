@@ -1,15 +1,21 @@
-"""Path-count precomputation and guided step logic for jumper compliance.
+"""Path-count precomputation, viable-path precomputation, and guided step logic.
 
-Implements the path-count guided walking algorithm: precompute vectors
-counting (normalized) paths from each vertex to each target block at
-each step distance, then use these to weight neighbor selection during
-guided walk segments.
+Provides two precomputation strategies for jumper compliance:
+1. Path-count vectors (precompute_path_counts) for weighted neighbor selection
+2. Viable-path pools (precompute_viable_paths) for guaranteed path splicing
+
+The viable-path approach pre-computes actual r-step walks from each jumper
+vertex to its target block, guaranteeing compliance by construction and
+eliminating discard/retry logic.
 """
 
 import logging
+import statistics
 
 import numpy as np
 from scipy.sparse import csr_matrix
+
+from src.graph.jumpers import JumperInfo
 
 log = logging.getLogger(__name__)
 
@@ -68,6 +74,111 @@ def precompute_path_counts(
         max_r,
     )
     return path_counts
+
+
+def precompute_viable_paths(
+    adj: csr_matrix,
+    block_assignments: np.ndarray,
+    jumpers: list[JumperInfo],
+    rng: np.random.Generator,
+    n_paths_per_jumper: int = 200,
+    max_attempts_factor: int = 20,
+) -> dict[int, list[np.ndarray]]:
+    """Pre-compute pools of viable r-step walks from each jumper to its target block.
+
+    For each jumper, generates random walks of length r from the jumper vertex
+    and keeps those that end in the target block. This guarantees that walk
+    generation can splice in a compliant path whenever a jumper is encountered,
+    eliminating probabilistic failures and discard/retry logic.
+
+    Args:
+        adj: Directed adjacency CSR matrix (n x n).
+        block_assignments: Integer array of length n, vertex -> block mapping.
+        jumpers: List of JumperInfo descriptors.
+        rng: NumPy random Generator for reproducible path sampling.
+        n_paths_per_jumper: Target number of viable paths per jumper.
+        max_attempts_factor: Multiplier on n_paths_per_jumper for max attempts.
+
+    Returns:
+        Dict mapping vertex_id -> list of np.ndarray, where each array has
+        shape (r+1,) dtype int32, starting at the jumper vertex and ending
+        at a vertex in the target block.
+
+    Raises:
+        ValueError: If zero viable paths are found for any jumper (indicates
+            incorrect jumper designation).
+    """
+    indptr = adj.indptr
+    indices = adj.indices
+
+    viable_paths: dict[int, list[np.ndarray]] = {}
+    path_counts_per_jumper: list[int] = []
+
+    for jumper in jumpers:
+        v = jumper.vertex_id
+        r = jumper.r
+        tb = jumper.target_block
+        max_attempts = n_paths_per_jumper * max_attempts_factor
+        paths: list[np.ndarray] = []
+
+        for _ in range(max_attempts):
+            # Generate a random walk of length r from v
+            walk = np.zeros(r + 1, dtype=np.int32)
+            walk[0] = v
+            valid = True
+
+            for step in range(1, r + 1):
+                current = walk[step - 1]
+                start_idx = indptr[current]
+                end_idx = indptr[current + 1]
+                degree = end_idx - start_idx
+                if degree == 0:
+                    valid = False
+                    break
+                offset = int(rng.integers(0, degree))
+                walk[step] = indices[start_idx + offset]
+
+            if not valid:
+                continue
+
+            # Check if walk ends in target block
+            if block_assignments[walk[-1]] == tb:
+                paths.append(walk)
+                if len(paths) >= n_paths_per_jumper:
+                    break
+
+        if len(paths) == 0:
+            raise ValueError(
+                f"Zero viable paths found for jumper vertex {v} "
+                f"(target_block={tb}, r={r}) after {max_attempts} attempts. "
+                f"Jumper designation may be incorrect."
+            )
+
+        if len(paths) < n_paths_per_jumper:
+            log.warning(
+                "Jumper vertex %d: found only %d/%d viable paths "
+                "(target_block=%d, r=%d)",
+                v,
+                len(paths),
+                n_paths_per_jumper,
+                tb,
+                r,
+            )
+
+        viable_paths[v] = paths
+        path_counts_per_jumper.append(len(paths))
+
+    if path_counts_per_jumper:
+        log.info(
+            "Precomputed viable paths for %d jumpers: "
+            "min=%d, max=%d, median=%d paths per jumper",
+            len(jumpers),
+            min(path_counts_per_jumper),
+            max(path_counts_per_jumper),
+            int(statistics.median(path_counts_per_jumper)),
+        )
+
+    return viable_paths
 
 
 def guided_step(
