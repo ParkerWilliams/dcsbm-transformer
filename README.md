@@ -22,7 +22,7 @@ where $\omega_{ab} = p_\text{in}$ if $a = b$, $\omega_{ab} = p_\text{out}$ other
 
 Each block contains designated **jumper** vertices. A jumper $v$ in block $b_s$ carries a rule: *"if visited at step $t$, the walk must be in target block $b_t$ at step $t + r_v$."* The jump length $r_v$ is drawn from a fixed set of scale factors applied to the context window:
 
-$$r \in \left\{ \lfloor s \cdot w \rceil \;\middle|\; s \in \{0.5,\; 0.7,\; 0.9,\; 1.0,\; 1.1,\; 1.3,\; 1.5,\; 2.0\} \right\}$$
+$$r \in \left\lbrace \lfloor s \cdot w \rceil \ \middle|\ s \in \lbrace 0.5, 0.7, 0.9, 1.0, 1.1, 1.3, 1.5, 2.0 \rbrace \right\rbrace$$
 
 Jumper assignments are validated for **non-triviality**: the target block must be reachable in $r$ steps, and at least one non-target block must also be reachable (so compliance is not guaranteed by graph structure alone).
 
