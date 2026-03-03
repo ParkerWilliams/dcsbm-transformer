@@ -72,6 +72,8 @@ def compute_auroc_curve(
       - control_values = same for control events
       - AUROC via rank-based method
 
+    Uses numpy advanced indexing for vectorized value extraction.
+
     Args:
         violation_events: Events with VIOLATED outcome.
         control_events: Events with FOLLOWED outcome.
@@ -86,28 +88,33 @@ def compute_auroc_curve(
     aurocs = np.full(r_value, np.nan)
     n_steps = metric_array.shape[1]
 
+    # Pre-extract walk indices and resolution steps into arrays
+    viol_walks = np.array([ev.walk_idx for ev in violation_events], dtype=np.intp)
+    viol_res = np.array([ev.resolution_step for ev in violation_events], dtype=np.intp)
+    ctrl_walks = np.array([ev.walk_idx for ev in control_events], dtype=np.intp)
+    ctrl_res = np.array([ev.resolution_step for ev in control_events], dtype=np.intp)
+
     for j in range(1, r_value + 1):
-        viol_vals = []
-        ctrl_vals = []
+        # Violation values via vectorized indexing
+        if len(viol_walks) > 0:
+            viol_idx = viol_res - j
+            viol_valid = (viol_idx >= 0) & (viol_idx < n_steps)
+            viol_vals_all = metric_array[viol_walks[viol_valid], viol_idx[viol_valid]]
+            viol_finite = viol_vals_all[np.isfinite(viol_vals_all)]
+        else:
+            viol_finite = np.array([])
 
-        for ev in violation_events:
-            idx = ev.resolution_step - j
-            if 0 <= idx < n_steps:
-                val = metric_array[ev.walk_idx, idx]
-                if np.isfinite(val):
-                    viol_vals.append(val)
+        # Control values via vectorized indexing
+        if len(ctrl_walks) > 0:
+            ctrl_idx = ctrl_res - j
+            ctrl_valid = (ctrl_idx >= 0) & (ctrl_idx < n_steps)
+            ctrl_vals_all = metric_array[ctrl_walks[ctrl_valid], ctrl_idx[ctrl_valid]]
+            ctrl_finite = ctrl_vals_all[np.isfinite(ctrl_vals_all)]
+        else:
+            ctrl_finite = np.array([])
 
-        for ev in control_events:
-            idx = ev.resolution_step - j
-            if 0 <= idx < n_steps:
-                val = metric_array[ev.walk_idx, idx]
-                if np.isfinite(val):
-                    ctrl_vals.append(val)
-
-        if len(viol_vals) >= min_per_class and len(ctrl_vals) >= min_per_class:
-            aurocs[j - 1] = auroc_from_groups(
-                np.array(viol_vals), np.array(ctrl_vals)
-            )
+        if len(viol_finite) >= min_per_class and len(ctrl_finite) >= min_per_class:
+            aurocs[j - 1] = auroc_from_groups(viol_finite, ctrl_finite)
 
     return aurocs
 
@@ -147,7 +154,8 @@ def run_shuffle_control(
     """Shuffle violation/control labels and recompute max AUROC.
 
     Tests whether the observed AUROC signal is a positional artifact
-    rather than a genuine class-label signal.
+    rather than a genuine class-label signal. Pre-extracts all metric
+    values once and permutes index masks for efficiency.
 
     Args:
         violation_events: Events with VIOLATED outcome.
@@ -165,30 +173,49 @@ def run_shuffle_control(
     if isinstance(rng, int):
         rng = np.random.default_rng(rng)
 
-    # Compute observed max AUROC
+    # Compute observed max AUROC (uses vectorized compute_auroc_curve)
     observed_curve = compute_auroc_curve(
         violation_events, control_events, metric_array, r_value
     )
     observed_max = np.nanmax(observed_curve) if np.any(np.isfinite(observed_curve)) else np.nan
 
-    # Combine all events for shuffling
+    # Combine all events and pre-extract walk indices and resolution steps
     all_events = list(violation_events) + list(control_events)
     n_viol = len(violation_events)
     n_total = len(all_events)
+    n_steps = metric_array.shape[1]
+
+    all_walks = np.array([ev.walk_idx for ev in all_events], dtype=np.intp)
+    all_res = np.array([ev.resolution_step for ev in all_events], dtype=np.intp)
+
+    # Pre-extract metric values for ALL events at ALL lookback distances
+    # values_by_j[j_idx, event_idx] = metric value at lookback j for that event (NaN if invalid)
+    values_by_j = np.full((r_value, n_total), np.nan)
+    for j in range(1, r_value + 1):
+        idx = all_res - j
+        valid = (idx >= 0) & (idx < n_steps)
+        raw = np.full(n_total, np.nan)
+        raw[valid] = metric_array[all_walks[valid], idx[valid]]
+        values_by_j[j - 1] = raw
 
     shuffle_max_aurocs = np.zeros(n_permutations)
 
     for perm in range(n_permutations):
-        # Shuffle indices
         perm_indices = rng.permutation(n_total)
-        shuffled_viol = [all_events[i] for i in perm_indices[:n_viol]]
-        shuffled_ctrl = [all_events[i] for i in perm_indices[n_viol:]]
+        perm_viol_mask = np.zeros(n_total, dtype=bool)
+        perm_viol_mask[perm_indices[:n_viol]] = True
 
-        shuffled_curve = compute_auroc_curve(
-            shuffled_viol, shuffled_ctrl, metric_array, r_value
-        )
-        max_val = np.nanmax(shuffled_curve) if np.any(np.isfinite(shuffled_curve)) else np.nan
-        shuffle_max_aurocs[perm] = max_val
+        max_auroc_perm = np.nan
+        for j_idx in range(r_value):
+            row = values_by_j[j_idx]
+            finite_mask = np.isfinite(row)
+            viol_vals = row[finite_mask & perm_viol_mask]
+            ctrl_vals = row[finite_mask & ~perm_viol_mask]
+            if len(viol_vals) >= 2 and len(ctrl_vals) >= 2:
+                auc = auroc_from_groups(viol_vals, ctrl_vals)
+                if np.isfinite(auc):
+                    max_auroc_perm = max(max_auroc_perm, auc) if np.isfinite(max_auroc_perm) else auc
+        shuffle_max_aurocs[perm] = max_auroc_perm
 
         if (perm + 1) % 2500 == 0:
             log.debug("  Shuffle control: %d/%d permutations", perm + 1, n_permutations)
@@ -401,18 +428,17 @@ def run_auroc_analysis(
                 max_auroc = float("nan")
                 max_auroc_lookback = 0
 
-            # Count valid events per lookback
-            n_valid_by_lookback = []
+            # Count valid events per lookback (vectorized)
             n_steps = metric_array.shape[1]
+            all_ev = violations + controls
+            ev_walks = np.array([ev.walk_idx for ev in all_ev], dtype=np.intp)
+            ev_res = np.array([ev.resolution_step for ev in all_ev], dtype=np.intp)
+            n_valid_by_lookback = []
             for j in range(1, r_val + 1):
-                n_valid = 0
-                for ev in violations + controls:
-                    idx = ev.resolution_step - j
-                    if 0 <= idx < n_steps:
-                        val = metric_array[ev.walk_idx, idx]
-                        if np.isfinite(val):
-                            n_valid += 1
-                n_valid_by_lookback.append(n_valid)
+                idx = ev_res - j
+                valid = (idx >= 0) & (idx < n_steps)
+                vals = metric_array[ev_walks[valid], idx[valid]]
+                n_valid_by_lookback.append(int(np.sum(np.isfinite(vals))))
 
             metric_result: dict = {
                 "auroc_by_lookback": auroc_curve.tolist(),
