@@ -4,31 +4,31 @@ Predicting transformer rule violations from SVD instability in attention matrice
 
 ## Research Question
 
-Can SVD instability metrics extracted from the $QK^\top$ attention matrix predict when a transformer will violate a learned structural rule — before the violation occurs?
+Can SVD instability metrics extracted from the QK<sup>T</sup> attention matrix predict when a transformer will violate a learned structural rule — before the violation occurs?
 
-We train a transformer on next-token prediction over random walks on a DCSBM graph, where designated "jumper" vertices impose reachability rules. During evaluation, we track singular value decomposition metrics at every generation step and measure whether these metrics diverge before rule violations, quantified as a **predictive horizon** (AUROC > 0.75 at lookback distance $j$).
+We train a transformer on next-token prediction over random walks on a DCSBM graph, where designated "jumper" vertices impose reachability rules. During evaluation, we track singular value decomposition metrics at every generation step and measure whether these metrics diverge before rule violations, quantified as a **predictive horizon** (AUROC > 0.75 at lookback distance *j*).
 
 ## Background
 
 ### Degree-Corrected Stochastic Block Model
 
-The graph is a directed DCSBM (Karrer & Newman, 2011) with $K$ blocks of equal size. Edge probabilities are:
+The graph is a directed DCSBM (Karrer & Newman, 2011) with *K* blocks of equal size. Edge probabilities are:
 
 $$P_{ij} = \theta_i \, \theta_j \, \omega_{b_i, b_j}$$
 
-where $\omega_{ab} = p_\text{in}$ if $a = b$, $\omega_{ab} = p_\text{out}$ otherwise, and $\theta_i$ are degree-correction parameters sampled from a Zipf distribution ($\alpha = 1.0$), normalized per block.
+where *&omega;<sub>ab</sub>* = *p*<sub>in</sub> if *a* = *b*, *&omega;<sub>ab</sub>* = *p*<sub>out</sub> otherwise, and *&theta;<sub>i</sub>* are degree-correction parameters sampled from a Zipf distribution (*&alpha;* = 1.0), normalized per block.
 
 ### Jumper Rules
 
-Each block contains designated **jumper** vertices. A jumper $v$ in block $b_s$ carries a rule: *"if visited at step $t$, the walk must be in target block $b_t$ at step $t + r_v$."* The jump length $r_v$ is drawn from a fixed set of scale factors applied to the context window:
+Each block contains designated **jumper** vertices. A jumper *v* in block *b<sub>s</sub>* carries a rule: *"if visited at step t, the walk must be in target block b<sub>t</sub> at step t + r<sub>v</sub>."* The jump length *r<sub>v</sub>* is drawn from a fixed set of scale factors applied to the context window:
 
 $$r \in \left\lbrace \lfloor s \cdot w \rceil \ \middle|\ s \in \lbrace 0.5, 0.7, 0.9, 1.0, 1.1, 1.3, 1.5, 2.0 \rbrace \right\rbrace$$
 
-Jumper assignments are validated for **non-triviality**: the target block must be reachable in $r$ steps, and at least one non-target block must also be reachable (so compliance is not guaranteed by graph structure alone).
+Jumper assignments are validated for **non-triviality**: the target block must be reachable in *r* steps, and at least one non-target block must also be reachable (so compliance is not guaranteed by graph structure alone).
 
 ### Walk Generation with Path Splicing
 
-Training walks are generated with **guaranteed compliance** via pre-computed viable paths. For each jumper $v$ with rule length $r_v$ and target block $b_t$, we pre-compute a pool of 200 random $r_v$-step walks from $v$ that end in $b_t$. During walk generation, encountering $v$ triggers a random splice from this pool, replacing probabilistic guided stepping with deterministic insertion.
+Training walks are generated with **guaranteed compliance** via pre-computed viable paths. For each jumper *v* with rule length *r<sub>v</sub>* and target block *b<sub>t</sub>*, we pre-compute a pool of 200 random *r<sub>v</sub>*-step walks from *v* that end in *b<sub>t</sub>*. During walk generation, encountering *v* triggers a random splice from this pool, replacing probabilistic guided stepping with deterministic insertion.
 
 ## Pipeline
 
@@ -41,7 +41,7 @@ run_experiment.py --config config.json
 | 1. Seed | Deterministic seeding (torch + numpy + python) |
 | 2. Graph | DCSBM generation with connectivity validation and retry |
 | 3. Walks | Two-phase corpus: jumper-seeded guided + random-start batch |
-| 4. Model | NanoGPT-scale transformer ($d_\text{model}$=128, 4 layers) |
+| 4. Model | NanoGPT-scale transformer (d\_model=128, 4 layers) |
 | 5. Training | Next-token prediction with sufficiency gate (edge >= 0.95, rule >= 0.80) |
 | 6. Evaluation | Autoregressive generation with fused SVD extraction + behavioral labeling |
 | 7. Analysis | AUROC predictive horizon, bootstrap CIs, Holm-Bonferroni correction |
@@ -50,25 +50,25 @@ run_experiment.py --config config.json
 
 ## SVD Metrics
 
-Three matrix targets are decomposed at every generation step $t \geq w$:
+Three matrix targets are decomposed at every generation step *t* >= *w*:
 
 | Target | Matrix | Description |
 |--------|--------|-------------|
-| `qkt` | $QK^\top / \sqrt{d_k}$ | Attention scores (zero-filled causal mask) |
-| `avwo` | $A \cdot V \cdot W_o$ | Net attention output (per-head OV circuit applied) |
-| `wvwo` | $W_v \cdot W_o$ | Static OV circuit weights (computed once) |
+| `qkt` | QK<sup>T</sup> / sqrt(d<sub>k</sub>) | Attention scores (zero-filled causal mask) |
+| `avwo` | A &middot; V &middot; W<sub>o</sub> | Net attention output (per-head OV circuit applied) |
+| `wvwo` | W<sub>v</sub> &middot; W<sub>o</sub> | Static OV circuit weights (computed once) |
 
 ### Computed Metrics
 
 | Metric | Formula | Interpretation |
 |--------|---------|----------------|
-| Stable rank | $\lVert M \rVert_F^2 / \lVert M \rVert_2^2 = \sum s_i^2 / s_1^2$ | Effective dimensionality |
-| Spectral entropy | $-\sum p_i \log p_i$ where $p_i = s_i / \sum s_j$ | Singular value concentration |
-| Spectral gap | $s_k - s_{k+1}$ for $k \in \{1, 2, 4\}$ | Separation between components |
-| Condition number | $s_1 / s_n$ | Matrix sensitivity |
-| Grassmannian distance | Geodesic on $\mathrm{Gr}(k, n)$ between consecutive top-$k$ subspaces | Subspace rotation rate |
-| Rank-1 residual | $\lVert M - s_1 u_1 v_1^\top \rVert_F / \lVert M \rVert_F$ | Energy beyond top component |
-| Read-write alignment | $\lvert \cos \angle(u_1, v_1) \rvert$ | OV circuit directional coupling |
+| Stable rank | ‖M‖²<sub>F</sub> / ‖M‖²<sub>2</sub> | Effective dimensionality |
+| Spectral entropy | −Σ p<sub>i</sub> log p<sub>i</sub> where p<sub>i</sub> = s<sub>i</sub> / Σs<sub>j</sub> | Singular value concentration |
+| Spectral gap | s<sub>k</sub> − s<sub>k+1</sub> for k ∈ {1, 2, 4} | Separation between components |
+| Condition number | s<sub>1</sub> / s<sub>n</sub> | Matrix sensitivity |
+| Grassmannian distance | Geodesic on Gr(k, n) between consecutive top-k subspaces | Subspace rotation rate |
+| Rank-1 residual | ‖M − s₁u₁v₁ᵀ‖<sub>F</sub> / ‖M‖<sub>F</sub> | Energy beyond top component |
+| Read-write alignment | \|cos ∠(u₁, v₁)\| | OV circuit directional coupling |
 
 ### Primary Metrics (Pre-registered, Holm-Bonferroni Corrected)
 
@@ -80,13 +80,13 @@ Three matrix targets are decomposed at every generation step $t \geq w$:
 
 ## Predictive Horizon
 
-For each jump length $r$ and lookback distance $j \in \{1, \ldots, r\}$:
+For each jump length *r* and lookback distance *j* ∈ {1, …, *r*}:
 
 $$\mathrm{AUROC}(j) = P\!\left(X_\text{violated}^{(t-j)} > X_\text{followed}^{(t-j)}\right)$$
 
-The **predictive horizon** is the maximum $j$ where $\mathrm{AUROC}(j) > 0.75$, measuring how many tokens in advance SVD instability distinguishes violations from compliant walks.
+The **predictive horizon** is the maximum *j* where AUROC(*j*) > 0.75, measuring how many tokens in advance SVD instability distinguishes violations from compliant walks.
 
-Statistical controls include BCa bootstrap confidence intervals ($n = 10{,}000$ resamples), Cohen's $d$ effect sizes, Spearman correlation redundancy analysis, and exploratory/confirmatory split assignment.
+Statistical controls include BCa bootstrap confidence intervals (*n* = 10,000 resamples), Cohen's *d* effect sizes, Spearman correlation redundancy analysis, and exploratory/confirmatory split assignment.
 
 ## Configuration
 
@@ -101,7 +101,7 @@ Default anchor configuration (`config.json`):
 }
 ```
 
-Multi-head ablation: set `n_heads` to 1, 2, or 4 (with `d_model` scaled to keep $d_k = 128$).
+Multi-head ablation: set `n_heads` to 1, 2, or 4 (with `d_model` scaled to keep d<sub>k</sub> = 128).
 
 ## Installation
 
