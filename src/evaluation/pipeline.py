@@ -198,9 +198,11 @@ def fused_evaluate(
     # Build SVD metric key list
     all_metric_names = SV_METRIC_NAMES + FULL_SVD_METRIC_NAMES + ["grassmannian_distance"]
 
-    # Pre-allocate output arrays (NaN-filled)
+    # Pre-allocate output arrays as GPU tensors (NaN-filled) for deferred CPU transfer
     max_steps = max_possible_length
-    svd_metric_arrays: dict[str, np.ndarray] = {}
+    svd_metric_tensors: dict[str, torch.Tensor] = {}
+    # Track legacy aliases so we can replicate them after CPU transfer
+    legacy_aliases: dict[str, str] = {}  # legacy_key -> canonical_key
 
     for target in SVD_TARGETS:
         for layer_idx in range(n_layers):
@@ -208,32 +210,34 @@ def fused_evaluate(
                 for metric_name in all_metric_names:
                     # v1.1 per-head key (always emitted)
                     key = f"{target}.layer_{layer_idx}.head_{head_idx}.{metric_name}"
-                    svd_metric_arrays[key] = np.full(
-                        (n_sequences, max_steps - 1), np.nan, dtype=np.float32
+                    svd_metric_tensors[key] = torch.full(
+                        (n_sequences, max_steps - 1), float('nan'),
+                        device=device, dtype=torch.float32,
                     )
                     # Legacy v1.0 key (only for single-head backward compat)
                     if n_heads == 1:
                         legacy_key = f"{target}.layer_{layer_idx}.{metric_name}"
-                        svd_metric_arrays[legacy_key] = np.full(
-                            (n_sequences, max_steps - 1), np.nan, dtype=np.float32
-                        )
+                        # Alias: share the same tensor during generation
+                        svd_metric_tensors[legacy_key] = svd_metric_tensors[key]
+                        legacy_aliases[legacy_key] = key
 
-    # Pre-allocate spectrum trajectory storage (Phase 15: SPEC-01)
-    spectrum_data: dict[str, np.ndarray] = {}
+    # Pre-allocate spectrum trajectory storage as GPU tensors (Phase 15: SPEC-01)
+    spectrum_tensors: dict[str, torch.Tensor] = {}
+    spectrum_legacy_aliases: dict[str, str] = {}
     spectrum_k = min(SPECTRUM_TOP_K, config.model.d_model, config.training.w)
     for target in SPECTRUM_TARGETS:
         for layer_idx in range(n_layers):
             for head_idx in range(n_heads):
                 key = f"{target}.layer_{layer_idx}.head_{head_idx}.spectrum"
-                spectrum_data[key] = np.full(
+                spectrum_tensors[key] = torch.full(
                     (n_sequences, max_steps - 1, spectrum_k),
-                    np.nan,
-                    dtype=np.float16,
+                    float('nan'), device=device, dtype=torch.float16,
                 )
                 # Legacy spectrum key for single-head
                 if n_heads == 1:
                     legacy_key = f"{target}.layer_{layer_idx}.spectrum"
-                    spectrum_data[legacy_key] = spectrum_data[key]  # alias (shared array)
+                    spectrum_tensors[legacy_key] = spectrum_tensors[key]  # alias
+                    spectrum_legacy_aliases[legacy_key] = key
 
     all_generated = np.zeros((n_sequences, max_steps), dtype=np.int64)
     all_edge_valid = np.zeros((n_sequences, max_steps - 1), dtype=bool)
@@ -331,35 +335,18 @@ def fused_evaluate(
                         # Store top-k singular values for spectrum trajectory (Phase 15: SPEC-01)
                         if "qkt" in SPECTRUM_TARGETS:
                             spec_key = f"qkt.layer_{layer_idx}.head_{head_idx}.spectrum"
-                            if spec_key in spectrum_data:
-                                s_top = S_qkt[:, :spectrum_k].cpu().to(torch.float16).numpy()
-                                for b_idx in range(B_actual):
-                                    spectrum_data[spec_key][
-                                        batch_start + b_idx, step, :
-                                    ] = s_top[b_idx] if s_top.ndim > 1 else s_top
+                            if spec_key in spectrum_tensors:
+                                s_top = S_qkt[:, :spectrum_k].to(torch.float16)
+                                spectrum_tensors[spec_key][batch_start:batch_end, step, :] = s_top
 
                         qkt_metrics = compute_all_metrics(S_qkt, U=U_qkt, Vh=Vh_qkt)
 
-                        # Store per-head QK^T metrics
+                        # Store per-head QK^T metrics (vectorized slice assignment)
                         for metric_name, metric_val in qkt_metrics.items():
                             key = f"qkt.layer_{layer_idx}.head_{head_idx}.{metric_name}"
-                            if key in svd_metric_arrays:
-                                val = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
-                                vals_np = val.cpu().numpy()
-                                for b_idx in range(B_actual):
-                                    svd_metric_arrays[key][
-                                        batch_start + b_idx, step
-                                    ] = vals_np[b_idx] if vals_np.ndim > 0 else vals_np.item()
-                            # Dual key emission for single-head backward compat
-                            if n_heads == 1:
-                                legacy_key = f"qkt.layer_{layer_idx}.{metric_name}"
-                                if legacy_key in svd_metric_arrays:
-                                    val = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
-                                    vals_np = val.cpu().numpy()
-                                    for b_idx in range(B_actual):
-                                        svd_metric_arrays[legacy_key][
-                                            batch_start + b_idx, step
-                                        ] = vals_np[b_idx] if vals_np.ndim > 0 else vals_np.item()
+                            if key in svd_metric_tensors:
+                                val_1d = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
+                                svd_metric_tensors[key][batch_start:batch_end, step] = val_1d
 
                         # QK^T Grassmannian distance (per-head)
                         u_key = ("qkt", layer_idx, head_idx)
@@ -369,19 +356,8 @@ def fused_evaluate(
                                 u_prev[u_key], U_curr_k, k=grassmannian_k
                             )
                             gdist_vals = gdist.mean(dim=-1) if gdist.dim() > 1 else gdist
-                            gdist_np = gdist_vals.cpu().numpy()
                             gkey = f"qkt.layer_{layer_idx}.head_{head_idx}.grassmannian_distance"
-                            for b_idx in range(B_actual):
-                                svd_metric_arrays[gkey][
-                                    batch_start + b_idx, step
-                                ] = gdist_np[b_idx] if gdist_np.ndim > 0 else gdist_np.item()
-                            if n_heads == 1:
-                                gkey_legacy = f"qkt.layer_{layer_idx}.grassmannian_distance"
-                                if gkey_legacy in svd_metric_arrays:
-                                    for b_idx in range(B_actual):
-                                        svd_metric_arrays[gkey_legacy][
-                                            batch_start + b_idx, step
-                                        ] = gdist_np[b_idx] if gdist_np.ndim > 0 else gdist_np.item()
+                            svd_metric_tensors[gkey][batch_start:batch_end, step] = gdist_vals
                         u_prev[u_key] = U_curr_k.clone()
 
                         # --- AVWo SVD (per-head) ---
@@ -410,24 +386,12 @@ def fused_evaluate(
                             S_avwo, U=U_avwo, Vh=Vh_avwo
                         )
 
+                        # Store per-head AVWo metrics (vectorized slice assignment)
                         for metric_name, metric_val in avwo_metrics.items():
                             key = f"avwo.layer_{layer_idx}.head_{head_idx}.{metric_name}"
-                            if key in svd_metric_arrays:
-                                val = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
-                                vals_np = val.cpu().numpy()
-                                for b_idx in range(B_actual):
-                                    svd_metric_arrays[key][
-                                        batch_start + b_idx, step
-                                    ] = vals_np[b_idx] if vals_np.ndim > 0 else vals_np.item()
-                            if n_heads == 1:
-                                legacy_key = f"avwo.layer_{layer_idx}.{metric_name}"
-                                if legacy_key in svd_metric_arrays:
-                                    val = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
-                                    vals_np = val.cpu().numpy()
-                                    for b_idx in range(B_actual):
-                                        svd_metric_arrays[legacy_key][
-                                            batch_start + b_idx, step
-                                        ] = vals_np[b_idx] if vals_np.ndim > 0 else vals_np.item()
+                            if key in svd_metric_tensors:
+                                val_1d = metric_val.mean(dim=-1) if metric_val.dim() > 1 else metric_val
+                                svd_metric_tensors[key][batch_start:batch_end, step] = val_1d
 
                         # AVWo Grassmannian distance (per-head)
                         avwo_u_key = ("avwo", layer_idx, head_idx)
@@ -437,38 +401,18 @@ def fused_evaluate(
                                 u_prev[avwo_u_key], U_avwo_k, k=grassmannian_k
                             )
                             gdist_avwo_vals = gdist_avwo.mean(dim=-1) if gdist_avwo.dim() > 1 else gdist_avwo
-                            gdist_avwo_np = gdist_avwo_vals.cpu().numpy()
                             gkey_avwo = f"avwo.layer_{layer_idx}.head_{head_idx}.grassmannian_distance"
-                            for b_idx in range(B_actual):
-                                svd_metric_arrays[gkey_avwo][
-                                    batch_start + b_idx, step
-                                ] = gdist_avwo_np[b_idx] if gdist_avwo_np.ndim > 0 else gdist_avwo_np.item()
-                            if n_heads == 1:
-                                gkey_avwo_legacy = f"avwo.layer_{layer_idx}.grassmannian_distance"
-                                if gkey_avwo_legacy in svd_metric_arrays:
-                                    for b_idx in range(B_actual):
-                                        svd_metric_arrays[gkey_avwo_legacy][
-                                            batch_start + b_idx, step
-                                        ] = gdist_avwo_np[b_idx] if gdist_avwo_np.ndim > 0 else gdist_avwo_np.item()
+                            svd_metric_tensors[gkey_avwo][batch_start:batch_end, step] = gdist_avwo_vals
                         u_prev[avwo_u_key] = U_avwo_k.clone()
 
                     # --- WvWo metrics (static, per-head, broadcast) ---
-                    for layer_idx in range(n_layers):
-                      for head_idx in range(n_heads):
-                        for metric_name, val in wvwo_layer_metrics[(layer_idx, head_idx)].items():
-                            key = f"wvwo.layer_{layer_idx}.head_{head_idx}.{metric_name}"
-                            if key in svd_metric_arrays:
-                                for b_idx in range(B_actual):
-                                    svd_metric_arrays[key][
-                                        batch_start + b_idx, step
-                                    ] = val
-                            if n_heads == 1:
-                                legacy_key = f"wvwo.layer_{layer_idx}.{metric_name}"
-                                if legacy_key in svd_metric_arrays:
-                                    for b_idx in range(B_actual):
-                                        svd_metric_arrays[legacy_key][
-                                            batch_start + b_idx, step
-                                        ] = val
+                    # NOTE: De-nested from the QK^T/AVWo layer loop to fix quadratic bug
+                    for layer_idx_w in range(n_layers):
+                      for head_idx_w in range(n_heads):
+                        for metric_name, val in wvwo_layer_metrics[(layer_idx_w, head_idx_w)].items():
+                            key = f"wvwo.layer_{layer_idx_w}.head_{head_idx_w}.{metric_name}"
+                            if key in svd_metric_tensors:
+                                svd_metric_tensors[key][batch_start:batch_end, step] = val
 
                         # WvWo Grassmannian distance is NaN (static matrix)
                         # Already NaN from initialization, no action needed
@@ -480,24 +424,49 @@ def fused_evaluate(
         # After generation: behavioral classification
         log.debug("  Batch %d/%d: classifying behavioral labels", batch_idx, n_batches)
         gen_np = generated.cpu().numpy()
-        for b_idx in range(B_actual):
-            seq_len = min(int(target_lengths[b_idx]), gen_np.shape[1])
-            all_seq_lengths[batch_start + b_idx] = seq_len
-            all_generated[batch_start + b_idx, :seq_len] = gen_np[b_idx, :seq_len]
+        # Vectorized sequence length and generated token copy
+        seq_lens = np.minimum(target_lengths, gen_np.shape[1])
+        all_seq_lengths[batch_start:batch_end] = seq_lens
+        # Copy generated tokens up to max available columns
+        copy_cols = min(gen_np.shape[1], max_steps)
+        all_generated[batch_start:batch_end, :copy_cols] = gen_np[:, :copy_cols]
 
         # Classify behavioral labels
         edge_valid, rule_outcome, failure_index = classify_steps(
             generated, graph_data, jumper_map
         )
 
-        # Copy into output arrays
+        # Vectorized copy into output arrays
         n_steps_classified = edge_valid.shape[1]
-        for b_idx in range(B_actual):
-            seq_len = int(target_lengths[b_idx])
-            copy_len = min(n_steps_classified, seq_len - 1, max_steps - 1)
-            all_edge_valid[batch_start + b_idx, :copy_len] = edge_valid[b_idx, :copy_len]
-            all_rule_outcome[batch_start + b_idx, :copy_len] = rule_outcome[b_idx, :copy_len]
-            all_failure_index[batch_start + b_idx] = failure_index[b_idx]
+        copy_len = min(n_steps_classified, max_steps - 1)
+        all_edge_valid[batch_start:batch_end, :copy_len] = edge_valid[:, :copy_len]
+        all_rule_outcome[batch_start:batch_end, :copy_len] = rule_outcome[:, :copy_len]
+        all_failure_index[batch_start:batch_end] = failure_index
+
+    # Bulk GPU -> CPU transfer: convert all metric tensors to numpy arrays once
+    svd_metric_arrays: dict[str, np.ndarray] = {}
+    transferred_keys: set[str] = set()
+    for key, tensor in svd_metric_tensors.items():
+        # Avoid double-transferring aliased tensors (legacy keys share same tensor)
+        tensor_id = id(tensor)
+        if key in legacy_aliases:
+            # Legacy alias: will be set after canonical key is transferred
+            continue
+        arr = tensor.cpu().numpy()
+        svd_metric_arrays[key] = arr
+        transferred_keys.add(key)
+    # Set legacy aliases to point to the same numpy array as their canonical key
+    for legacy_key, canonical_key in legacy_aliases.items():
+        svd_metric_arrays[legacy_key] = svd_metric_arrays[canonical_key]
+
+    # Bulk transfer spectrum tensors
+    spectrum_data: dict[str, np.ndarray] = {}
+    for key, tensor in spectrum_tensors.items():
+        if key in spectrum_legacy_aliases:
+            continue
+        spectrum_data[key] = tensor.cpu().numpy()
+    for legacy_key, canonical_key in spectrum_legacy_aliases.items():
+        spectrum_data[legacy_key] = spectrum_data[canonical_key]
 
     total_time = time.monotonic() - eval_start
     n_violations = int((all_failure_index >= 0).sum())
