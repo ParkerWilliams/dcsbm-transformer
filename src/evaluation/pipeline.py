@@ -7,6 +7,7 @@ inference pass. Outputs token_metrics.npz and result.json summary.
 
 import json
 import logging
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -163,7 +164,13 @@ def fused_evaluate(
 
     n_heads = config.model.n_heads
 
+    log.info(
+        "Evaluation: %d sequences, batch_size=%d, max_steps=%d, w=%d, n_layers=%d, n_heads=%d",
+        n_sequences, batch_size, max_possible_length, w, n_layers, n_heads,
+    )
+
     # Compute WvWo SVD once (static weight matrices)
+    t0_wvwo = time.monotonic()
     wvwo = model.get_wvwo()  # [n_layers, n_heads, d_model, d_model]
 
     # Pre-compute WvWo metrics per layer per head
@@ -186,6 +193,7 @@ def fused_evaluate(
                 k: v.item() if v.dim() == 0 else v.cpu().numpy()
                 for k, v in metrics.items()
             }
+    log.info("WvWo pre-computation: %.1fs (%d layers x %d heads)", time.monotonic() - t0_wvwo, n_layers, n_heads)
 
     # Build SVD metric key list
     all_metric_names = SV_METRIC_NAMES + FULL_SVD_METRIC_NAMES + ["grassmannian_distance"]
@@ -236,8 +244,18 @@ def fused_evaluate(
     all_seq_lengths = np.zeros(n_sequences, dtype=np.int32)
 
     # Process in batches
+    n_batches = (n_sequences + batch_size - 1) // batch_size
+    eval_start = time.monotonic()
+    step_log_interval = max(1, max_possible_length // 4)
     for batch_start in range(0, n_sequences, batch_size):
         batch_end = min(batch_start + batch_size, n_sequences)
+        batch_idx = batch_start // batch_size + 1
+        elapsed = time.monotonic() - eval_start
+        if batch_idx > 1:
+            eta = elapsed / (batch_idx - 1) * (n_batches - batch_idx + 1)
+            log.info("Batch %d/%d (%.0f%%) — elapsed %.0fs, ETA %.0fs", batch_idx, n_batches, 100 * batch_idx / n_batches, elapsed, eta)
+        else:
+            log.info("Batch %d/%d — starting", batch_idx, n_batches)
         B_actual = batch_end - batch_start
 
         # Seed with first token of each eval walk
@@ -455,7 +473,12 @@ def fused_evaluate(
                         # WvWo Grassmannian distance is NaN (static matrix)
                         # Already NaN from initialization, no action needed
 
+                # Step-level progress (debug only)
+                if step > 0 and step % step_log_interval == 0:
+                    log.debug("  Batch %d/%d step %d/%d", batch_idx, n_batches, step, max_possible_length - 1)
+
         # After generation: behavioral classification
+        log.debug("  Batch %d/%d: classifying behavioral labels", batch_idx, n_batches)
         gen_np = generated.cpu().numpy()
         for b_idx in range(B_actual):
             seq_len = min(int(target_lengths[b_idx]), gen_np.shape[1])
@@ -475,6 +498,13 @@ def fused_evaluate(
             all_edge_valid[batch_start + b_idx, :copy_len] = edge_valid[b_idx, :copy_len]
             all_rule_outcome[batch_start + b_idx, :copy_len] = rule_outcome[b_idx, :copy_len]
             all_failure_index[batch_start + b_idx] = failure_index[b_idx]
+
+    total_time = time.monotonic() - eval_start
+    n_violations = int((all_failure_index >= 0).sum())
+    log.info(
+        "Evaluation complete: %d sequences in %.1fs (%.2f seq/s), %d violations",
+        n_sequences, total_time, n_sequences / max(total_time, 0.001), n_violations,
+    )
 
     return EvaluationResult(
         generated=all_generated,
@@ -534,6 +564,7 @@ def save_evaluation_results(
     # Write NPZ
     npz_path = output_path / "token_metrics.npz"
     np.savez_compressed(str(npz_path), **npz_data)
+    log.info("Saved token_metrics.npz (%d metric arrays, %d sequences)", len(npz_data), result.sequence_lengths.shape[0])
 
     # Write spectrum trajectories (Phase 15: SPEC-01)
     if result.spectrum_data:
