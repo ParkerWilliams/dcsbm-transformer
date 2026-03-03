@@ -12,7 +12,10 @@ or miss that correlated metrics are measuring the same underlying signal.
 
 from __future__ import annotations
 
+import logging
 import warnings
+
+log = logging.getLogger(__name__)
 
 import numpy as np
 from scipy.stats import bootstrap, rankdata
@@ -508,7 +511,10 @@ def apply_statistical_controls(
     # Prepare metric arrays
     metric_arrays = {k: eval_data[k] for k in metric_keys}
 
+    log.info("Statistical controls: starting (%d metric keys, %d r-value groups)", len(metric_keys), len(by_r))
+
     # ----- 1. Bootstrap CIs and Cohen's d per r-value, per metric -----
+    log.info("Statistical controls: bootstrap CIs and Cohen's d for %d metrics", len(metric_keys))
     primary_p_values = {}  # metric_key -> p_value for Holm-Bonferroni
 
     for r_val in sorted(auroc_results.get("by_r_value", {}).keys()):
@@ -586,6 +592,7 @@ def apply_statistical_controls(
             ]
 
     # ----- 2. Holm-Bonferroni correction on primary metrics -----
+    log.info("Statistical controls: starting Holm-Bonferroni correction (%d p-values)", len(primary_p_values))
     hb_result = {"metric_names": [], "adjusted_p_values": {}, "reject": {}}
 
     if primary_p_values:
@@ -617,6 +624,7 @@ def apply_statistical_controls(
                     )
 
     # ----- 3. Correlation matrices -----
+    log.info("Statistical controls: correlation/redundancy analysis")
     correlation_matrices = {}
     if filtered_events and metric_arrays:
         correlation_matrices["measurement_redundancy"] = compute_correlation_matrix(
@@ -627,6 +635,7 @@ def apply_statistical_controls(
         )
 
     # ----- 4. Metric importance ranking per layer -----
+    log.info("Statistical controls: metric importance ranking")
     # Collect all metric results across r-values (use max AUROC across r-values)
     metric_best: dict[str, dict] = {}
     for r_val_key, r_data in auroc_results.get("by_r_value", {}).items():
@@ -678,5 +687,7 @@ def apply_statistical_controls(
     result["correlation_matrices"] = correlation_matrices
     result["metric_ranking"] = metric_ranking
     result["headline_comparison"] = headline
+
+    log.info("Statistical controls: complete")
 
     return result

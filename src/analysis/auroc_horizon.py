@@ -5,10 +5,13 @@ determines predictive horizons, and validates with shuffle controls.
 Implements the rank-based AUROC method equivalent to Mann-Whitney U statistic.
 """
 
+import logging
 from collections import defaultdict
 
 import numpy as np
 from scipy.stats import rankdata
+
+log = logging.getLogger(__name__)
 
 from src.analysis.event_extraction import (
     AnalysisEvent,
@@ -187,6 +190,9 @@ def run_shuffle_control(
         max_val = np.nanmax(shuffled_curve) if np.any(np.isfinite(shuffled_curve)) else np.nan
         shuffle_max_aurocs[perm] = max_val
 
+        if (perm + 1) % 2500 == 0:
+            log.debug("  Shuffle control: %d/%d permutations", perm + 1, n_permutations)
+
     valid_shuffles = shuffle_max_aurocs[np.isfinite(shuffle_max_aurocs)]
     shuffle_mean = float(np.mean(valid_shuffles)) if len(valid_shuffles) > 0 else np.nan
     shuffle_p95 = float(np.percentile(valid_shuffles, 95)) if len(valid_shuffles) > 0 else np.nan
@@ -330,6 +336,9 @@ def run_auroc_analysis(
     # Step 3: Stratify by r value
     by_r = stratify_by_r(filtered_events)
 
+    log.info("AUROC analysis: %d events extracted, %d after contamination filter", len(all_events), len(filtered_events))
+    log.info("AUROC analysis: %d r-value groups, %d metrics to analyze", len(by_r), len(metric_keys))
+
     # Build config block
     primary_list = sorted(PRIMARY_METRICS)
     config = {
@@ -353,6 +362,8 @@ def run_auroc_analysis(
         n_violations = len(violations)
         n_controls = len(controls)
         tier = _classify_event_count(n_violations, n_controls)
+
+        log.info("AUROC r=%d: %d violations, %d controls (tier=%s)", r_val, n_violations, n_controls, tier)
 
         r_result: dict = {
             "n_violations": n_violations,
@@ -430,6 +441,7 @@ def run_auroc_analysis(
 
             r_result["by_metric"][metric_key] = metric_result
 
+        log.info("AUROC r=%d: analyzed %d metrics", r_val, len(r_result["by_metric"]))
         by_r_value_results[r_val] = r_result
 
     return {
