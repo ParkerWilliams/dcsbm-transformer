@@ -45,6 +45,7 @@ All 7 phases (11-17) complete, 15/15 plans executed.
 
 All decisions logged in PROJECT.md Key Decisions table.
 - [Phase quick-1]: Path splicing replaces probabilistic guided stepping for guaranteed jumper compliance
+- [Phase quick-2]: Use log.info for batch/stage progress, log.debug for step-level to avoid output flooding
 
 ### Pending Todos
 
@@ -61,10 +62,11 @@ None — milestone complete.
 | # | Description | Date | Commit | Directory |
 |---|-------------|------|--------|-----------|
 | 1 | Guarantee walk generation by pre-computing viable jumper paths | 2026-03-02 | 15606a5 | [1-guarantee-walk-generation-by-pre-computi](./quick/1-guarantee-walk-generation-by-pre-computi/) |
+| 2 | Add progress logging to evaluation pipeline, AUROC analysis, and statistical controls | 2026-03-03 | bc51dd5 | [2-add-logging-to-evaluation-step](./quick/2-add-logging-to-evaluation-step/) |
 
 ## Session Continuity
 
-Last activity: 2026-03-02 - Completed quick task 1: Guarantee walk generation by pre-computing viable jumper paths
-Stopped at: Quick task 1 complete
+Last activity: 2026-03-03 - Completed quick task 2: Add progress logging to evaluation pipeline
+Stopped at: Quick task 2 complete
 Resume file: None
 Next action: /gsd:new-milestone (start v2.0 or v1.2 planning)
