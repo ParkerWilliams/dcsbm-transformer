@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-03T23:17:00Z"
+last_updated: "2026-03-04T02:05:57Z"
 progress:
   total_phases: 9
   completed_phases: 9
@@ -48,6 +48,7 @@ All decisions logged in PROJECT.md Key Decisions table.
 - [Phase quick-2]: Use log.info for batch/stage progress, log.debug for step-level to avoid output flooding
 - [Phase quick-3]: Use time.monotonic + cuda.synchronize for accurate GPU timing; try/except per section for graceful partial output
 - [Phase quick-4]: Deferred GPU->CPU bulk transfer for SVD metrics; pre-extracted value matrices for shuffle permutation controls; WvWo quadratic nesting bug fixed
+- [Phase quick-5]: Cascading shutdown (runpodctl > API > shutdown -h); always push results even on failure for remote debugging
 
 ### Pending Todos
 
@@ -67,10 +68,11 @@ None — milestone complete.
 | 2 | Add progress logging to evaluation pipeline, AUROC analysis, and statistical controls | 2026-03-03 | bc51dd5 | [2-add-logging-to-evaluation-step](./quick/2-add-logging-to-evaluation-step/) |
 | 3 | Evaluation pipeline performance profiler with per-stage timing and optimization recommendations | 2026-03-03 | bc2197a | [3-analyze-evaluation-performance-and-hardw](./quick/3-analyze-evaluation-performance-and-hardw/) |
 | 4 | Optimize evaluation pipeline: deferred CPU transfers, vectorized metric storage, vectorized AUROC | 2026-03-03 | 2baa333 | [4-optimize-evaluation-pipeline-performance](./quick/4-optimize-evaluation-pipeline-performance/) |
+| 5 | Fire-and-forget RunPod eval with auto-commit/push and pod shutdown | 2026-03-04 | db4e805 | [5-fire-and-forget-runpod-eval-with-auto-pu](./quick/5-fire-and-forget-runpod-eval-with-auto-pu/) |
 
 ## Session Continuity
 
-Last activity: 2026-03-03 - Completed quick task 4: Optimize evaluation pipeline performance
-Stopped at: Quick task 4 complete
+Last activity: 2026-03-04 - Completed quick task 5: Fire-and-forget RunPod eval script
+Stopped at: Quick task 5 complete
 Resume file: None
 Next action: /gsd:new-milestone (start v2.0 or v1.2 planning)
