@@ -17,9 +17,9 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 ### SVD Metrics
 
-- [ ] **SVD-01**: QK^T attention matrix is correctly constructed from Q and K projections before SVD extraction
-- [ ] **SVD-02**: WvWo and AVWo matrix constructions match their mathematical definitions
-- [ ] **SVD-03**: All singular-value-derived metrics (condition number, spectral gap, entropy, effective rank, stable rank) use correct formulas
+- [x] **SVD-01**: QK^T attention matrix is correctly constructed from Q and K projections before SVD extraction
+- [x] **SVD-02**: WvWo and AVWo matrix constructions match their mathematical definitions
+- [x] **SVD-03**: All singular-value-derived metrics (condition number, spectral gap, entropy, effective rank, stable rank) use correct formulas
 - [ ] **SVD-04**: Grassmannian distance (subspace angle) between consecutive steps is computed correctly using the standard definition
 - [ ] **SVD-05**: Spectrum trajectory storage preserves numerical fidelity (verify float16 vs float32 impact on downstream curvature/torsion)
 - [ ] **SVD-06**: Frenet-Serret curvature and torsion computation uses correct discrete differential geometry formulas
@@ -78,9 +78,9 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 | GRAPH-03 | Phase 18 | Complete |
 | GRAPH-04 | Phase 18 | Complete |
 | GRAPH-05 | Phase 18 | Complete |
-| SVD-01 | Phase 19 | Pending |
-| SVD-02 | Phase 19 | Pending |
-| SVD-03 | Phase 19 | Pending |
+| SVD-01 | Phase 19 | Complete |
+| SVD-02 | Phase 19 | Complete |
+| SVD-03 | Phase 19 | Complete |
 | SVD-04 | Phase 19 | Pending |
 | SVD-05 | Phase 19 | Pending |
 | SVD-06 | Phase 19 | Pending |
