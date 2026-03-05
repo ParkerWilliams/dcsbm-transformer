@@ -17,7 +17,7 @@ Determine whether SVD instability metrics from the QK^T attention matrix can pre
 - ✓ Walk generation on DCSBM graphs as training corpus — v1.0
 - ✓ NanoGPT-scale transformer with configurable d_model, n_layers, context window — v1.0
 - ✓ Training pipeline with cross-entropy next-token prediction and sufficiency gate — v1.0
-- ✓ Behavioral evaluation: 4-class outcome classification per step — v1.0
+- ✓ Behavioral evaluation: 4-class outcome classification per step — v1.0, expanded in v1.2 (UNCONSTRAINED/PENDING/FOLLOWED/VIOLATED)
 - ✓ Full SVD metric collection from QK^T at every token step (~20 metrics) — v1.0
 - ✓ Predictive horizon analysis: AUROC at each lookback distance — v1.0
 - ✓ Results storage per JSON schema, automated plotting, HTML reporting — v1.0
@@ -36,13 +36,17 @@ Determine whether SVD instability metrics from the QK^T attention matrix can pre
 ### Active
 
 - [ ] Full mathematical audit of all formulas, derivations, and their implementations
-- [ ] Verify DCSBM graph generation and walk sampling correctness
 - [ ] Verify SVD metric extraction mathematics and implementation
 - [ ] Verify AUROC predictive horizon computation and statistical controls
 - [ ] Verify softmax filtering bound derivation and empirical verification
 - [ ] Verify null model (Grassmannian drift) methodology
 - [ ] Verify spectrum trajectory curvature/torsion numerics
 - [ ] Fix all mathematical issues found during audit
+
+### Recently Validated (v1.2)
+
+- ✓ Verify DCSBM graph generation and walk sampling correctness — Phase 18 (all formulas match definitions, no production code changes needed)
+- ✓ Behavioral evaluation upgraded to 4-class outcome classification (UNCONSTRAINED/PENDING/FOLLOWED/VIOLATED) — Phase 18
 
 ### Deferred
 
@@ -116,4 +120,4 @@ Tech stack: Python 3.11+, PyTorch, NanoGPT-scale architecture, scipy, sklearn, m
 - Pre-registration framework correctness
 
 ---
-*Last updated: 2026-03-05 after v1.2 milestone start*
+*Last updated: 2026-03-05 after Phase 18*
