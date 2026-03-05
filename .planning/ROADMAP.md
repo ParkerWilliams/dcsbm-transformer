@@ -152,7 +152,7 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 |-------|-----------|----------------|--------|-----------|
 | 1-9   | v1.0      | 20/20          | Complete | 2026-02-25 |
 | 11-17 | v1.1      | 15/15          | Complete | 2026-02-28 |
-| 18. Graph & Walk Foundations | 2/2 | Complete   | 2026-03-05 | - |
+| 18. Graph & Walk Foundations | 2/2 | Complete    | 2026-03-05 | - |
 | 19. SVD Metric Extraction | v1.2 | 0/TBD | Not started | - |
 | 20. AUROC & Predictive Horizon | v1.2 | 0/TBD | Not started | - |
 | 21. Statistical Controls | v1.2 | 0/TBD | Not started | - |
