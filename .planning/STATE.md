@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
 status: executing
-stopped_at: Completed 18-01-PLAN.md
-last_updated: "2026-03-05T07:57:07.227Z"
-last_activity: 2026-03-05 — Completed 18-01 graph/walk mathematical audit (26 tests, GRAPH-01/02/03/05)
+stopped_at: Completed 18-02-PLAN.md
+last_updated: "2026-03-05T08:07:00.000Z"
+last_activity: 2026-03-05 — Completed 18-02 behavioral 4-class classification (GRAPH-04, 12 audit tests)
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 2
-  completed_plans: 1
-  percent: 0
+  completed_plans: 2
+  percent: 8
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 ## Current Position
 
-Phase: 18 of 23 (Graph & Walk Foundations)
-Plan: 1 of 2
-Status: Executing
-Last activity: 2026-03-05 — Completed 18-01 graph/walk mathematical audit (26 tests)
+Phase: 18 of 23 (Graph & Walk Foundations) -- COMPLETE
+Plan: 2 of 2 (phase complete)
+Status: Phase 18 complete, ready for Phase 19
+Last activity: 2026-03-05 — Completed 18-02 behavioral 4-class classification (GRAPH-04)
 
-Progress: [█████░░░░░] 50%
+Progress: [██████████] 100% (Phase 18)
 
 ## Performance Metrics
 
@@ -46,13 +46,14 @@ Progress: [█████░░░░░] 50%
 - Codebase: 23,652 LOC Python (111 files)
 
 **Velocity (v1.2):**
-- Total plans completed: 1
+- Total plans completed: 2
 - Phases: 6 (Phases 18-23)
 - Requirements: 31
 
 | Phase | Plan | Duration | Tasks | Files |
 |-------|------|----------|-------|-------|
 | 18    | 01   | 5min     | 3     | 5     |
+| 18    | 02   | 8min     | 2     | 13    |
 
 ## Accumulated Context
 
@@ -63,6 +64,8 @@ Recent decisions affecting current work:
 - [v1.2]: Mathematical audit milestone — verify every formula matches its implementation
 - [18-01]: Batch walk floor(U*d) bias documented as negligible (<1/2^53)
 - [18-01]: All DCSBM/walk/jumper/compliance formulas verified correct -- no production code changes needed
+- [18-02]: PENDING labels steps where constraint active but deadline in future, distinct from UNCONSTRAINED
+- [18-02]: Consumers filter to resolved-only outcomes (FOLLOWED/VIOLATED) preserving semantic parity
 - [v1.1 deferred]: Spectrum trajectory float32 storage concern flagged for audit (SVD-05)
 - [v1.1 deferred]: Curvature/torsion float16 quantization concern (SVD-06)
 
@@ -78,7 +81,7 @@ None.
 
 ## Session Continuity
 
-Last activity: 2026-03-05 — Completed 18-01-PLAN.md
-Stopped at: Completed 18-01-PLAN.md
-Resume file: .planning/phases/18-graph-walk-foundations/18-01-SUMMARY.md
-Next action: Execute 18-02-PLAN.md (behavioral classification 4-class refactor, GRAPH-04)
+Last activity: 2026-03-05 — Completed 18-02-PLAN.md (Phase 18 complete)
+Stopped at: Completed 18-02-PLAN.md
+Resume file: .planning/phases/18-graph-walk-foundations/18-02-SUMMARY.md
+Next action: Execute Phase 19 plans

@@ -44,7 +44,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for archived details.
 
 **Milestone Goal:** Exhaustive mathematical correctness review of every formula, derivation, and implementation in the codebase — audit and fix all issues found.
 
-- [ ] **Phase 18: Graph & Walk Foundations** - Verify DCSBM edge probabilities, walk sampling, jumper designation, behavioral classification, and compliance rates
+- [x] **Phase 18: Graph & Walk Foundations** - Verify DCSBM edge probabilities, walk sampling, jumper designation, behavioral classification, and compliance rates (completed 2026-03-05)
 - [ ] **Phase 19: SVD Metric Extraction** - Verify QK^T construction, WvWo/AVWo matrices, all singular-value-derived metrics, Grassmannian distance, float16 fidelity, and Frenet-Serret curvature/torsion
 - [ ] **Phase 20: AUROC & Predictive Horizon** - Verify AUROC rank-based computation, lookback indexing, horizon definition consistency, and event extraction logic
 - [ ] **Phase 21: Statistical Controls** - Verify shuffle permutation null, bootstrap BCa intervals, Holm-Bonferroni correction, Cohen's d, Spearman redundancy threshold, and exploratory/confirmatory split
@@ -62,7 +62,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for archived details.
   2. Walk sampling draws neighbors uniformly from the adjacency list without artificial bias (verified by comparing empirical neighbor frequencies to expected distribution)
   3. Block jumper designation assigns correct jump distance r and target block per the specification, and behavioral classification (followed/violated/unconstrained/pending) correctly labels every step
   4. Walk compliance rate formula (violations / constrained steps) matches the code computation exactly
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 18-01-PLAN.md — Audit DCSBM probability, walk sampling, jumper designation, and compliance rate math
@@ -152,7 +152,7 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 |-------|-----------|----------------|--------|-----------|
 | 1-9   | v1.0      | 20/20          | Complete | 2026-02-25 |
 | 11-17 | v1.1      | 15/15          | Complete | 2026-02-28 |
-| 18. Graph & Walk Foundations | 1/2 | In Progress|  | - |
+| 18. Graph & Walk Foundations | 2/2 | Complete   | 2026-03-05 | - |
 | 19. SVD Metric Extraction | v1.2 | 0/TBD | Not started | - |
 | 20. AUROC & Predictive Horizon | v1.2 | 0/TBD | Not started | - |
 | 21. Statistical Controls | v1.2 | 0/TBD | Not started | - |
