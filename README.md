@@ -82,7 +82,7 @@ Three matrix targets are decomposed at every generation step *t* >= *w*:
 
 For each jump length *r* and lookback distance *j* ∈ {1, …, *r*}:
 
-$$\mathrm{AUROC}(j) = P\!\left(X_\text{violated}^{(t-j)} > X_\text{followed}^{(t-j)}\right)$$
+$$\mathrm{AUROC}(j) = P\left(X_{\text{violated}}^{(t-j)} > X_{\text{followed}}^{(t-j)}\right)$$
 
 The **predictive horizon** is the maximum *j* where AUROC(*j*) > 0.75, measuring how many tokens in advance SVD instability distinguishes violations from compliant walks.
 
