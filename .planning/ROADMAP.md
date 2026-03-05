@@ -45,7 +45,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for archived details.
 **Milestone Goal:** Exhaustive mathematical correctness review of every formula, derivation, and implementation in the codebase — audit and fix all issues found.
 
 - [x] **Phase 18: Graph & Walk Foundations** - Verify DCSBM edge probabilities, walk sampling, jumper designation, behavioral classification, and compliance rates (completed 2026-03-05)
-- [ ] **Phase 19: SVD Metric Extraction** - Verify QK^T construction, WvWo/AVWo matrices, all singular-value-derived metrics, Grassmannian distance, float16 fidelity, and Frenet-Serret curvature/torsion
+- [x] **Phase 19: SVD Metric Extraction** - Verify QK^T construction, WvWo/AVWo matrices, all singular-value-derived metrics, Grassmannian distance, float16 fidelity, and Frenet-Serret curvature/torsion (completed 2026-03-05)
 - [ ] **Phase 20: AUROC & Predictive Horizon** - Verify AUROC rank-based computation, lookback indexing, horizon definition consistency, and event extraction logic
 - [ ] **Phase 21: Statistical Controls** - Verify shuffle permutation null, bootstrap BCa intervals, Holm-Bonferroni correction, Cohen's d, Spearman redundancy threshold, and exploratory/confirmatory split
 - [ ] **Phase 22: Softmax Bound & Null Model** - Verify LaTeX derivation correctness, empirical bound verification code, bound assumptions, Grassmannian drift parity, Mann-Whitney U, column-filtered adjacency, and Holm-Bonferroni family separation
@@ -78,7 +78,7 @@ Plans:
   3. Grassmannian distance between consecutive steps uses the canonical principal-angle definition (arccos of clipped singular values of U1^T @ U2)
   4. Float16 vs float32 impact on downstream curvature/torsion is quantified, with a clear recommendation documented
   5. Frenet-Serret curvature and torsion use correct discrete differential geometry formulas (finite differences of tangent, normal, binormal vectors on the spectrum trajectory curve)
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Plans:
 - [ ] 19-01-PLAN.md — Audit QK^T construction, WvWo/AVWo matrices, and singular-value metrics
@@ -154,7 +154,7 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 | 1-9   | v1.0      | 20/20          | Complete | 2026-02-25 |
 | 11-17 | v1.1      | 15/15          | Complete | 2026-02-28 |
 | 18. Graph & Walk Foundations | 2/2 | Complete    | 2026-03-05 | - |
-| 19. SVD Metric Extraction | 2/3 | In Progress|  | - |
+| 19. SVD Metric Extraction | 3/3 | Complete   | 2026-03-05 | - |
 | 20. AUROC & Predictive Horizon | v1.2 | 0/TBD | Not started | - |
 | 21. Statistical Controls | v1.2 | 0/TBD | Not started | - |
 | 22. Softmax Bound & Null Model | v1.2 | 0/TBD | Not started | - |
