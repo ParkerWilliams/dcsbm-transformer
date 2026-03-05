@@ -2,10 +2,10 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
-status: defining_requirements
+status: ready_to_plan
 last_updated: "2026-03-05"
 progress:
-  total_phases: 0
+  total_phases: 6
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -18,14 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** v1.2 Mathematical Audit — exhaustive correctness review of all formulas and implementations.
+**Current focus:** v1.2 Mathematical Audit — Phase 18: Graph & Walk Foundations
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 18 of 23 (Graph & Walk Foundations)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-03-05 — Milestone v1.2 started
+Status: Ready to plan
+Last activity: 2026-03-05 — Roadmap created for v1.2 Mathematical Audit
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Performance Metrics
 
@@ -37,19 +39,23 @@ Last activity: 2026-03-05 — Milestone v1.2 started
 **Velocity (v1.1):**
 - Total plans completed: 15
 - Commits: 39
-- Timeline: 5 days (2026-02-23 → 2026-02-28)
+- Timeline: 5 days (2026-02-23 -> 2026-02-28)
 - Codebase: 23,652 LOC Python (111 files)
+
+**Velocity (v1.2):**
+- Total plans completed: 0
+- Phases: 6 (Phases 18-23)
+- Requirements: 31
 
 ## Accumulated Context
 
 ### Decisions
 
 All decisions logged in PROJECT.md Key Decisions table.
-- [Phase quick-1]: Path splicing replaces probabilistic guided stepping for guaranteed jumper compliance
-- [Phase quick-2]: Use log.info for batch/stage progress, log.debug for step-level to avoid output flooding
-- [Phase quick-3]: Use time.monotonic + cuda.synchronize for accurate GPU timing; try/except per section for graceful partial output
-- [Phase quick-4]: Deferred GPU->CPU bulk transfer for SVD metrics; pre-extracted value matrices for shuffle permutation controls; WvWo quadratic nesting bug fixed
-- [Phase quick-5]: Cascading shutdown (runpodctl > API > shutdown -h); always push results even on failure for remote debugging
+Recent decisions affecting current work:
+- [v1.2]: Mathematical audit milestone — verify every formula matches its implementation
+- [v1.1 deferred]: Spectrum trajectory float32 storage concern flagged for audit (SVD-05)
+- [v1.1 deferred]: Curvature/torsion float16 quantization concern (SVD-06)
 
 ### Pending Todos
 
@@ -59,21 +65,11 @@ All decisions logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-None — milestone complete.
-
-### Quick Tasks Completed
-
-| # | Description | Date | Commit | Directory |
-|---|-------------|------|--------|-----------|
-| 1 | Guarantee walk generation by pre-computing viable jumper paths | 2026-03-02 | 15606a5 | [1-guarantee-walk-generation-by-pre-computi](./quick/1-guarantee-walk-generation-by-pre-computi/) |
-| 2 | Add progress logging to evaluation pipeline, AUROC analysis, and statistical controls | 2026-03-03 | bc51dd5 | [2-add-logging-to-evaluation-step](./quick/2-add-logging-to-evaluation-step/) |
-| 3 | Evaluation pipeline performance profiler with per-stage timing and optimization recommendations | 2026-03-03 | bc2197a | [3-analyze-evaluation-performance-and-hardw](./quick/3-analyze-evaluation-performance-and-hardw/) |
-| 4 | Optimize evaluation pipeline: deferred CPU transfers, vectorized metric storage, vectorized AUROC | 2026-03-03 | 2baa333 | [4-optimize-evaluation-pipeline-performance](./quick/4-optimize-evaluation-pipeline-performance/) |
-| 5 | Fire-and-forget RunPod eval with auto-commit/push and pod shutdown | 2026-03-04 | db4e805 | [5-fire-and-forget-runpod-eval-with-auto-pu](./quick/5-fire-and-forget-runpod-eval-with-auto-pu/) |
+None.
 
 ## Session Continuity
 
-Last activity: 2026-03-05 — Milestone v1.2 Mathematical Audit started
-Stopped at: Defining requirements
+Last activity: 2026-03-05 — v1.2 roadmap created (6 phases, 31 requirements)
+Stopped at: Roadmap created, ready to plan Phase 18
 Resume file: None
-Next action: Define requirements → create roadmap
+Next action: Plan Phase 18 (Graph & Walk Foundations)

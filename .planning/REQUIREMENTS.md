@@ -73,43 +73,43 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GRAPH-01 | — | Pending |
-| GRAPH-02 | — | Pending |
-| GRAPH-03 | — | Pending |
-| GRAPH-04 | — | Pending |
-| GRAPH-05 | — | Pending |
-| SVD-01 | — | Pending |
-| SVD-02 | — | Pending |
-| SVD-03 | — | Pending |
-| SVD-04 | — | Pending |
-| SVD-05 | — | Pending |
-| SVD-06 | — | Pending |
-| AUROC-01 | — | Pending |
-| AUROC-02 | — | Pending |
-| AUROC-03 | — | Pending |
-| AUROC-04 | — | Pending |
-| STAT-01 | — | Pending |
-| STAT-02 | — | Pending |
-| STAT-03 | — | Pending |
-| STAT-04 | — | Pending |
-| STAT-05 | — | Pending |
-| STAT-06 | — | Pending |
-| SFTX-01 | — | Pending |
-| SFTX-02 | — | Pending |
-| SFTX-03 | — | Pending |
-| NULL-01 | — | Pending |
-| NULL-02 | — | Pending |
-| NULL-03 | — | Pending |
-| NULL-04 | — | Pending |
-| REPT-01 | — | Pending |
-| REPT-02 | — | Pending |
-| REPT-03 | — | Pending |
+| GRAPH-01 | Phase 18 | Pending |
+| GRAPH-02 | Phase 18 | Pending |
+| GRAPH-03 | Phase 18 | Pending |
+| GRAPH-04 | Phase 18 | Pending |
+| GRAPH-05 | Phase 18 | Pending |
+| SVD-01 | Phase 19 | Pending |
+| SVD-02 | Phase 19 | Pending |
+| SVD-03 | Phase 19 | Pending |
+| SVD-04 | Phase 19 | Pending |
+| SVD-05 | Phase 19 | Pending |
+| SVD-06 | Phase 19 | Pending |
+| AUROC-01 | Phase 20 | Pending |
+| AUROC-02 | Phase 20 | Pending |
+| AUROC-03 | Phase 20 | Pending |
+| AUROC-04 | Phase 20 | Pending |
+| STAT-01 | Phase 21 | Pending |
+| STAT-02 | Phase 21 | Pending |
+| STAT-03 | Phase 21 | Pending |
+| STAT-04 | Phase 21 | Pending |
+| STAT-05 | Phase 21 | Pending |
+| STAT-06 | Phase 21 | Pending |
+| SFTX-01 | Phase 22 | Pending |
+| SFTX-02 | Phase 22 | Pending |
+| SFTX-03 | Phase 22 | Pending |
+| NULL-01 | Phase 22 | Pending |
+| NULL-02 | Phase 22 | Pending |
+| NULL-03 | Phase 22 | Pending |
+| NULL-04 | Phase 22 | Pending |
+| REPT-01 | Phase 23 | Pending |
+| REPT-02 | Phase 23 | Pending |
+| REPT-03 | Phase 23 | Pending |
 
 **Coverage:**
 - v1.2 requirements: 31 total
-- Mapped to phases: 0
-- Unmapped: 31 (pending roadmap creation)
+- Mapped to phases: 31
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-05*
-*Last updated: 2026-03-05 after initial definition*
+*Last updated: 2026-03-05 after roadmap creation*
