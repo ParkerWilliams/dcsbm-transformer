@@ -62,11 +62,11 @@ See `.planning/milestones/v1.1-ROADMAP.md` for archived details.
   2. Walk sampling draws neighbors uniformly from the adjacency list without artificial bias (verified by comparing empirical neighbor frequencies to expected distribution)
   3. Block jumper designation assigns correct jump distance r and target block per the specification, and behavioral classification (followed/violated/unconstrained/pending) correctly labels every step
   4. Walk compliance rate formula (violations / constrained steps) matches the code computation exactly
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 18-01: TBD
-- [ ] 18-02: TBD
+- [ ] 18-01-PLAN.md — Audit DCSBM probability, walk sampling, jumper designation, and compliance rate math
+- [ ] 18-02-PLAN.md — Expand RuleOutcome to 4-class behavioral classification and update consumers
 
 ### Phase 19: SVD Metric Extraction
 **Goal**: Every SVD-related metric formula and matrix construction is verified correct, including numerical fidelity of spectrum storage
@@ -152,7 +152,7 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 |-------|-----------|----------------|--------|-----------|
 | 1-9   | v1.0      | 20/20          | Complete | 2026-02-25 |
 | 11-17 | v1.1      | 15/15          | Complete | 2026-02-28 |
-| 18. Graph & Walk Foundations | v1.2 | 0/TBD | Not started | - |
+| 18. Graph & Walk Foundations | v1.2 | 0/2 | Planned | - |
 | 19. SVD Metric Extraction | v1.2 | 0/TBD | Not started | - |
 | 20. AUROC & Predictive Horizon | v1.2 | 0/TBD | Not started | - |
 | 21. Statistical Controls | v1.2 | 0/TBD | Not started | - |
