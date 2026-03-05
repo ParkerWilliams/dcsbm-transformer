@@ -68,8 +68,9 @@ class EvaluationResult:
         guard_activations: Count of guard activations per target.layer.
         sequence_lengths: Actual length per sequence, shape [n_sequences].
         spectrum_data: Full singular value vectors per step, keyed as
-            target.layer_N.spectrum -> [n_sequences, n_steps, k] float16.
-            Phase 15: SPEC-01.
+            target.layer_N.spectrum -> [n_sequences, n_steps, k] float32.
+            Phase 15: SPEC-01. Upgraded float16->float32 in Phase 19 (SVD-05)
+            after audit showed float16 quantization causes >1000% curvature error.
     """
 
     generated: np.ndarray
@@ -231,7 +232,7 @@ def fused_evaluate(
                 key = f"{target}.layer_{layer_idx}.head_{head_idx}.spectrum"
                 spectrum_tensors[key] = torch.full(
                     (n_sequences, max_steps - 1, spectrum_k),
-                    float('nan'), device=device, dtype=torch.float16,
+                    float('nan'), device=device, dtype=torch.float32,
                 )
                 # Legacy spectrum key for single-head
                 if n_heads == 1:
@@ -336,7 +337,7 @@ def fused_evaluate(
                         if "qkt" in SPECTRUM_TARGETS:
                             spec_key = f"qkt.layer_{layer_idx}.head_{head_idx}.spectrum"
                             if spec_key in spectrum_tensors:
-                                s_top = S_qkt[:, :spectrum_k].to(torch.float16)
+                                s_top = S_qkt[:, :spectrum_k].to(torch.float32)
                                 spectrum_tensors[spec_key][batch_start:batch_end, step, :] = s_top
 
                         qkt_metrics = compute_all_metrics(S_qkt, U=U_qkt, Vh=Vh_qkt)
