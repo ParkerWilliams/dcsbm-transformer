@@ -9,11 +9,11 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 ### Graph Theory & Data Generation
 
-- [ ] **GRAPH-01**: DCSBM edge probability matrix P_{ij} = theta_i * theta_j * B_{z_i, z_j} is correctly implemented (degree correction, block assignment, symmetry)
-- [ ] **GRAPH-02**: Walk sampling produces uniform random neighbor selection at each step (no bias toward high/low degree vertices beyond what DCSBM specifies)
-- [ ] **GRAPH-03**: Block jumper designation correctly assigns jump distance r and target block according to specification
+- [x] **GRAPH-01**: DCSBM edge probability matrix P_{ij} = theta_i * theta_j * B_{z_i, z_j} is correctly implemented (degree correction, block assignment, symmetry)
+- [x] **GRAPH-02**: Walk sampling produces uniform random neighbor selection at each step (no bias toward high/low degree vertices beyond what DCSBM specifies)
+- [x] **GRAPH-03**: Block jumper designation correctly assigns jump distance r and target block according to specification
 - [ ] **GRAPH-04**: Behavioral classification (4-class: followed, violated, unconstrained, pending) correctly identifies rule outcomes at each step
-- [ ] **GRAPH-05**: Walk compliance rate calculation matches the mathematical definition (violations / constrained steps)
+- [x] **GRAPH-05**: Walk compliance rate calculation matches the mathematical definition (violations / constrained steps)
 
 ### SVD Metrics
 
@@ -73,11 +73,11 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| GRAPH-01 | Phase 18 | Pending |
-| GRAPH-02 | Phase 18 | Pending |
-| GRAPH-03 | Phase 18 | Pending |
+| GRAPH-01 | Phase 18 | Complete |
+| GRAPH-02 | Phase 18 | Complete |
+| GRAPH-03 | Phase 18 | Complete |
 | GRAPH-04 | Phase 18 | Pending |
-| GRAPH-05 | Phase 18 | Pending |
+| GRAPH-05 | Phase 18 | Complete |
 | SVD-01 | Phase 19 | Pending |
 | SVD-02 | Phase 19 | Pending |
 | SVD-03 | Phase 19 | Pending |

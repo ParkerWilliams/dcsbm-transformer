@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
-status: planning
-stopped_at: Phase 18 context gathered
-last_updated: "2026-03-05T06:51:09.478Z"
-last_activity: 2026-03-05 — Roadmap created for v1.2 Mathematical Audit
+status: executing
+stopped_at: Completed 18-01-PLAN.md
+last_updated: "2026-03-05T07:57:07.227Z"
+last_activity: 2026-03-05 — Completed 18-01 graph/walk mathematical audit (26 tests, GRAPH-01/02/03/05)
 progress:
   total_phases: 6
   completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
+  total_plans: 2
+  completed_plans: 1
   percent: 0
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 ## Current Position
 
 Phase: 18 of 23 (Graph & Walk Foundations)
-Plan: —
-Status: Ready to plan
-Last activity: 2026-03-05 — Roadmap created for v1.2 Mathematical Audit
+Plan: 1 of 2
+Status: Executing
+Last activity: 2026-03-05 — Completed 18-01 graph/walk mathematical audit (26 tests)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
@@ -46,9 +46,13 @@ Progress: [░░░░░░░░░░] 0%
 - Codebase: 23,652 LOC Python (111 files)
 
 **Velocity (v1.2):**
-- Total plans completed: 0
+- Total plans completed: 1
 - Phases: 6 (Phases 18-23)
 - Requirements: 31
+
+| Phase | Plan | Duration | Tasks | Files |
+|-------|------|----------|-------|-------|
+| 18    | 01   | 5min     | 3     | 5     |
 
 ## Accumulated Context
 
@@ -57,6 +61,8 @@ Progress: [░░░░░░░░░░] 0%
 All decisions logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 - [v1.2]: Mathematical audit milestone — verify every formula matches its implementation
+- [18-01]: Batch walk floor(U*d) bias documented as negligible (<1/2^53)
+- [18-01]: All DCSBM/walk/jumper/compliance formulas verified correct -- no production code changes needed
 - [v1.1 deferred]: Spectrum trajectory float32 storage concern flagged for audit (SVD-05)
 - [v1.1 deferred]: Curvature/torsion float16 quantization concern (SVD-06)
 
@@ -72,7 +78,7 @@ None.
 
 ## Session Continuity
 
-Last activity: 2026-03-05 — v1.2 roadmap created (6 phases, 31 requirements)
-Stopped at: Phase 18 context gathered
-Resume file: .planning/phases/18-graph-walk-foundations/18-CONTEXT.md
-Next action: Plan Phase 18 (Graph & Walk Foundations)
+Last activity: 2026-03-05 — Completed 18-01-PLAN.md
+Stopped at: Completed 18-01-PLAN.md
+Resume file: .planning/phases/18-graph-walk-foundations/18-01-SUMMARY.md
+Next action: Execute 18-02-PLAN.md (behavioral classification 4-class refactor, GRAPH-04)
