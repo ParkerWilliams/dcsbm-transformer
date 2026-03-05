@@ -35,6 +35,17 @@ Determine whether SVD instability metrics from the QK^T attention matrix can pre
 
 ### Active
 
+- [ ] Full mathematical audit of all formulas, derivations, and their implementations
+- [ ] Verify DCSBM graph generation and walk sampling correctness
+- [ ] Verify SVD metric extraction mathematics and implementation
+- [ ] Verify AUROC predictive horizon computation and statistical controls
+- [ ] Verify softmax filtering bound derivation and empirical verification
+- [ ] Verify null model (Grassmannian drift) methodology
+- [ ] Verify spectrum trajectory curvature/torsion numerics
+- [ ] Fix all mathematical issues found during audit
+
+### Deferred
+
 - [ ] Parameter sweep infrastructure with declarative ranges and priority queue
 - [ ] Multi-seed runs (3 seeds per configuration)
 - [ ] Sweep state persistence for RunPod preemption resume
@@ -88,5 +99,21 @@ Tech stack: Python 3.11+, PyTorch, NanoGPT-scale architecture, scipy, sklearn, m
 - **Venv requirement:** All Python commands run in a virtual environment
 - **Walk corpus size:** Must be at least 2 orders of magnitude larger than n
 
+## Current Milestone: v1.2 Mathematical Audit
+
+**Goal:** Exhaustive mathematical correctness review of every formula, derivation, and implementation in the codebase — audit and fix all issues.
+
+**Target areas:**
+- DCSBM graph generation and block structure mathematics
+- Walk generation sampling correctness
+- SVD metric definitions and extraction implementation
+- AUROC predictive horizon computation
+- Statistical controls (Holm-Bonferroni, bootstrap CIs, effect sizes, correlation)
+- Softmax filtering bound (LaTeX derivation + empirical verification)
+- Null model baseline (Grassmannian drift, Mann-Whitney U)
+- Spectrum trajectory (curvature/torsion numerics, float16 concern)
+- Multi-head ablation signal concentration
+- Pre-registration framework correctness
+
 ---
-*Last updated: 2026-02-28 after v1.1 milestone*
+*Last updated: 2026-03-05 after v1.2 milestone start*

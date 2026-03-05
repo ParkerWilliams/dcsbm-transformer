@@ -1,30 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-03-04T02:05:57Z"
+milestone: v1.2
+milestone_name: Mathematical Audit
+status: defining_requirements
+last_updated: "2026-03-05"
 progress:
-  total_phases: 9
-  completed_phases: 9
-  total_plans: 20
-  completed_plans: 20
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-28)
+See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** Milestone v1.1 complete. Planning next milestone.
+**Current focus:** v1.2 Mathematical Audit — exhaustive correctness review of all formulas and implementations.
 
 ## Current Position
 
-Milestone: v1.1 Journal Feedback — SHIPPED 2026-02-28
-All 7 phases (11-17) complete, 15/15 plans executed.
-540 tests passing, 0 failures.
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-03-05 — Milestone v1.2 started
 
 ## Performance Metrics
 
@@ -72,7 +73,7 @@ None — milestone complete.
 
 ## Session Continuity
 
-Last activity: 2026-03-04 - Completed quick task 5: Fire-and-forget RunPod eval script
-Stopped at: Quick task 5 complete
+Last activity: 2026-03-05 — Milestone v1.2 Mathematical Audit started
+Stopped at: Defining requirements
 Resume file: None
-Next action: /gsd:new-milestone (start v2.0 or v1.2 planning)
+Next action: Define requirements → create roadmap
