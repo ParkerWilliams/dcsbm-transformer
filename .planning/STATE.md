@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
 status: in_progress
-stopped_at: Completed 19-01-PLAN.md
-last_updated: "2026-03-05T19:48:54Z"
-last_activity: 2026-03-05 — Completed 19-01 SVD metric extraction audit (SVD-01, SVD-02, SVD-03)
+stopped_at: Completed 19-03-PLAN.md
+last_updated: "2026-03-05T19:51:02Z"
+last_activity: 2026-03-05 — Completed 19-03 curvature/torsion formula audit (SVD-06)
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 3
-  percent: 60
+  total_plans: 7
+  completed_plans: 5
+  percent: 71
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 ## Current Position
 
-Phase: 19 of 23 (SVD Metric Extraction)
-Plan: 1 of 3 (complete)
-Status: 19-01 complete, ready for 19-02
-Last activity: 2026-03-05 — Completed 19-01 SVD metric extraction audit (SVD-01, SVD-02, SVD-03)
+Phase: 19 of 23 (SVD Metric Extraction) -- COMPLETE
+Plan: 3 of 3 (phase complete)
+Status: Phase 19 complete, ready for Phase 20
+Last activity: 2026-03-05 — Completed 19-03 curvature/torsion formula audit (SVD-06)
 
-Progress: [██████░░░░] 60% (v1.2 Milestone)
+Progress: [███████░░░] 71% (v1.2 Milestone)
 
 ## Performance Metrics
 
@@ -55,6 +55,7 @@ Progress: [██████░░░░] 60% (v1.2 Milestone)
 | 18    | 01   | 5min     | 3     | 5     |
 | 18    | 02   | 8min     | 2     | 13    |
 | 19    | 01   | 22min    | 3     | 3     |
+| 19    | 03   | 23min    | 1     | 1     |
 
 ## Accumulated Context
 
@@ -68,6 +69,8 @@ Recent decisions affecting current work:
 - [18-02]: PENDING labels steps where constraint active but deadline in future, distinct from UNCONSTRAINED
 - [18-02]: Consumers filter to resolved-only outcomes (FOLLOWED/VIOLATED) preserving semantic parity
 - [19-01]: All SVD matrix constructions and metric formulas verified correct -- no production code changes needed
+- [19-03]: Discrete curvature achieves O(h^2) convergence on circle, better than expected O(h)
+- [19-03]: Synthetic spectra use descending bases to isolate formula audit from crossing-mask logic
 - [v1.1 deferred]: Spectrum trajectory float32 storage concern flagged for audit (SVD-05)
 - [v1.1 deferred]: Curvature/torsion float16 quantization concern (SVD-06)
 
@@ -83,7 +86,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-05T19:48:54Z
-Stopped at: Completed 19-01-PLAN.md
-Resume file: .planning/phases/19-svd-metric-extraction/19-01-SUMMARY.md
-Next action: Execute 19-02-PLAN.md (Grassmannian distance and spectrum trajectory audit)
+Last session: 2026-03-05T19:51:02Z
+Stopped at: Completed 19-03-PLAN.md
+Resume file: .planning/phases/19-svd-metric-extraction/19-03-SUMMARY.md
+Next action: Plan and execute Phase 20

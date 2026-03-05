@@ -22,7 +22,7 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 - [x] **SVD-03**: All singular-value-derived metrics (condition number, spectral gap, entropy, effective rank, stable rank) use correct formulas
 - [ ] **SVD-04**: Grassmannian distance (subspace angle) between consecutive steps is computed correctly using the standard definition
 - [ ] **SVD-05**: Spectrum trajectory storage preserves numerical fidelity (verify float16 vs float32 impact on downstream curvature/torsion)
-- [ ] **SVD-06**: Frenet-Serret curvature and torsion computation uses correct discrete differential geometry formulas
+- [x] **SVD-06**: Frenet-Serret curvature and torsion computation uses correct discrete differential geometry formulas
 
 ### AUROC & Predictive Horizon
 
@@ -83,7 +83,7 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 | SVD-03 | Phase 19 | Complete |
 | SVD-04 | Phase 19 | Pending |
 | SVD-05 | Phase 19 | Pending |
-| SVD-06 | Phase 19 | Pending |
+| SVD-06 | Phase 19 | Complete |
 | AUROC-01 | Phase 20 | Pending |
 | AUROC-02 | Phase 20 | Pending |
 | AUROC-03 | Phase 20 | Pending |
