@@ -122,9 +122,9 @@ class TestRuleCompliance:
         # At step t=1: t+1=2 == deadline, v=2, block[2]=1 -> FOLLOWED
         generated = torch.tensor([[0, 1, 2, 3, 4]], dtype=torch.long)
         _, rule_outcome, _ = classify_steps(generated, small_graph, jumper_map)
-        # Step 0: NOT_APPLICABLE (no deadline resolves, even though jumper encountered)
+        # Step 0: PENDING (jumper constraint active, deadline=2 not yet reached at t+1=1)
         # Step 1: FOLLOWED (deadline 2 resolves, vertex 2 is in block 1)
-        assert rule_outcome[0, 0] == RuleOutcome.NOT_APPLICABLE
+        assert rule_outcome[0, 0] == RuleOutcome.PENDING
         assert rule_outcome[0, 1] == RuleOutcome.FOLLOWED
 
     def test_rule_violated(self, small_graph, jumper_map):
@@ -142,11 +142,11 @@ class TestRuleCompliance:
         assert rule_outcome[0, 1] == RuleOutcome.VIOLATED
 
     def test_no_jumper_encounter(self, small_graph, jumper_map):
-        """Sequence with no jumper encounter: all NOT_APPLICABLE."""
+        """Sequence with no jumper encounter: all UNCONSTRAINED."""
         # Path: 1 -> 2 -> 3 -> 4 -> 4 (vertex 0 never visited)
         generated = torch.tensor([[1, 2, 3, 4, 4]], dtype=torch.long)
         _, rule_outcome, _ = classify_steps(generated, small_graph, jumper_map)
-        assert np.all(rule_outcome[0] == RuleOutcome.NOT_APPLICABLE)
+        assert np.all(rule_outcome[0] == RuleOutcome.UNCONSTRAINED)
 
     def test_multiple_jumper_encounters(self, small_graph):
         """Multiple jumper encounters in same sequence: each checked independently."""
@@ -165,16 +165,55 @@ class TestRuleCompliance:
         assert rule_outcome[0, 3] == RuleOutcome.FOLLOWED  # deadline from vertex 1
 
     def test_jumper_too_late_for_resolution(self, small_graph, jumper_map):
-        """Jumper encountered too late: step+r >= seq_len -> stays NOT_APPLICABLE."""
+        """Jumper encountered too late: deadline beyond sequence length."""
         # Short sequence, jumper at vertex 0 with r=2
         # Path: 1 -> 0 -> 1 (only 3 tokens, 2 steps)
-        # Step 1: u=0 jumper, deadline=1+2=3, but seq only has 2 steps (indices 0,1)
-        # Deadline 3 never checked -> NOT_APPLICABLE
+        # Step 0: u=1, not a jumper -> UNCONSTRAINED
+        # Step 1: u=0 jumper, deadline=1+2=3, but seq only has 2 steps
+        # Deadline 3 never reached, but constraint IS active -> PENDING
         generated = torch.tensor([[1, 0, 1]], dtype=torch.long)
         _, rule_outcome, _ = classify_steps(generated, small_graph, jumper_map)
-        # Step 0: NOT_APPLICABLE (u=1, not a jumper)
-        # Step 1: NOT_APPLICABLE (jumper encountered but deadline unreachable)
-        assert np.all(rule_outcome[0] == RuleOutcome.NOT_APPLICABLE)
+        assert rule_outcome[0, 0] == RuleOutcome.UNCONSTRAINED  # u=1, no constraint
+        assert rule_outcome[0, 1] == RuleOutcome.PENDING  # constraint active, deadline beyond seq
+
+    def test_pending_during_countdown(self, small_graph):
+        """Steps during countdown window are PENDING, not UNCONSTRAINED."""
+        # Jumper at vertex 0, r=3, target_block=1
+        jmap = {
+            0: JumperInfo(vertex_id=0, source_block=0, target_block=1, r=3),
+        }
+        # Path: 0 -> 1 -> 1 -> 2 -> 3  (5 tokens, 4 steps)
+        # Step 0: u=0 jumper, deadline=3. t+1=1, pending (3>1) => PENDING
+        # Step 1: u=1, t+1=2, no deadline match. pending (3>2) => PENDING
+        # Step 2: u=1, t+1=3==3 => v=2, block[2]=1==target => FOLLOWED
+        # Step 3: u=2, no active constraints pending => UNCONSTRAINED
+        generated = torch.tensor([[0, 1, 1, 2, 3]], dtype=torch.long)
+        _, rule_outcome, _ = classify_steps(generated, small_graph, jmap)
+        assert rule_outcome[0, 0] == RuleOutcome.PENDING
+        assert rule_outcome[0, 1] == RuleOutcome.PENDING
+        assert rule_outcome[0, 2] == RuleOutcome.FOLLOWED
+        assert rule_outcome[0, 3] == RuleOutcome.UNCONSTRAINED
+
+    def test_pending_then_violated(self, small_graph):
+        """PENDING steps followed by VIOLATED at deadline."""
+        # Jumper at vertex 0, r=3, target_block=1
+        jmap = {
+            0: JumperInfo(vertex_id=0, source_block=0, target_block=1, r=3),
+        }
+        # Path: 0 -> 1 -> 1 -> 0 -> 3  (5 tokens, 4 steps)
+        # Step 0: u=0 jumper, deadline=3. PENDING (3>1)
+        # Step 1: u=1, PENDING (3>2)
+        # Step 2: u=1, t+1=3==3 => v=0, block[0]=0 != 1 => VIOLATED
+        # Step 3: u=0 jumper again (new constraint), but check: deadline from step 2 = 3+3=6?
+        #   Actually new constraint: deadline = 2+3=5 (wait, step 2's u is 1, not a jumper)
+        #   Step 2: u=1, not in jmap. Step 3: u=0 jumper, deadline = 3+3=6
+        #   But only 4 steps (indices 0-3). Step 3 PENDING (6>4)
+        generated = torch.tensor([[0, 1, 1, 0, 3]], dtype=torch.long)
+        _, rule_outcome, failure_index = classify_steps(generated, small_graph, jmap)
+        assert rule_outcome[0, 0] == RuleOutcome.PENDING
+        assert rule_outcome[0, 1] == RuleOutcome.PENDING
+        assert rule_outcome[0, 2] == RuleOutcome.VIOLATED
+        assert failure_index[0] == 2
 
 
 # ---------------------------------------------------------------------------

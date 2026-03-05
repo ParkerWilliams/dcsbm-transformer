@@ -359,7 +359,7 @@ class TestSpectrumAUROC:
 
         # Eval result data
         generated = rng.randint(0, 100, (n_seqs, n_steps + 1))
-        rule_outcome = np.full((n_seqs, n_steps), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+        rule_outcome = np.full((n_seqs, n_steps), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
         failure_index = np.full(n_seqs, -1, dtype=np.int32)
 
         # Create some jumper encounters and violations

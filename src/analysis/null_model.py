@@ -160,7 +160,7 @@ def run_null_evaluation(
     """Evaluate null walks through the trained model to collect SVD metrics.
 
     Calls fused_evaluate() on the null walks. Since null walks contain no
-    jumper vertices, all behavioral labels will be NOT_APPLICABLE.
+    jumper vertices, all behavioral labels will be UNCONSTRAINED.
 
     Args:
         model: Trained TransformerLM in eval mode.

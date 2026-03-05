@@ -40,7 +40,7 @@ class TestExtractEvents:
         generated = np.zeros((1, 20), dtype=np.int64)
         generated[0, 3] = 5  # jumper vertex at step 3
 
-        rule_outcome = np.full((1, 19), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+        rule_outcome = np.full((1, 19), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
         rule_outcome[0, 6] = RuleOutcome.FOLLOWED  # step 6 = deadline-1 = 3+4-1
 
         failure_index = np.full(1, -1, dtype=np.int32)
@@ -66,7 +66,7 @@ class TestExtractEvents:
         generated[0, 2] = 5   # encounter at step 2, resolution = 5
         generated[0, 10] = 7  # encounter at step 10, resolution = 13
 
-        rule_outcome = np.full((1, 29), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+        rule_outcome = np.full((1, 29), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
         rule_outcome[0, 4] = RuleOutcome.VIOLATED   # step 4 = 2+3-1
         rule_outcome[0, 12] = RuleOutcome.VIOLATED  # step 12 = 10+3-1
 
@@ -91,7 +91,7 @@ class TestExtractEvents:
     def test_no_events_returns_empty(self):
         """No jumper vertices in generated sequences. Returns empty list."""
         generated = np.zeros((2, 10), dtype=np.int64)
-        rule_outcome = np.full((2, 9), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+        rule_outcome = np.full((2, 9), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
         failure_index = np.full(2, -1, dtype=np.int32)
 
         # Jumper vertex 99 is never in the generated array
@@ -101,13 +101,30 @@ class TestExtractEvents:
         events = extract_events(generated, rule_outcome, failure_index, jumper_map)
         assert events == []
 
+    def test_extract_events_skips_pending_outcomes(self):
+        """PENDING outcomes in rule_outcome are skipped (only FOLLOWED/VIOLATED produce events)."""
+        generated = np.zeros((1, 20), dtype=np.int64)
+        generated[0, 3] = 5  # jumper at step 3
+
+        rule_outcome = np.full((1, 19), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
+        # Place PENDING at the resolution index instead of a resolved outcome
+        rule_outcome[0, 6] = RuleOutcome.PENDING  # step 6 = 3+4-1
+
+        failure_index = np.full(1, -1, dtype=np.int32)
+
+        jumper = JumperInfo(vertex_id=5, source_block=0, target_block=1, r=4)
+        jumper_map = _make_jumper_map(jumper)
+
+        events = extract_events(generated, rule_outcome, failure_index, jumper_map)
+        assert len(events) == 0  # PENDING is not a resolved outcome
+
     def test_resolution_step_alignment(self):
         """Verify resolution_step = encounter_step + r exactly (off-by-one guard)."""
         # Jumper vertex 10 with r=5 at step 8 => resolution = 13
         generated = np.zeros((1, 25), dtype=np.int64)
         generated[0, 8] = 10
 
-        rule_outcome = np.full((1, 24), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+        rule_outcome = np.full((1, 24), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
         rule_outcome[0, 12] = RuleOutcome.FOLLOWED  # 8+5-1 = 12
 
         failure_index = np.full(1, -1, dtype=np.int32)

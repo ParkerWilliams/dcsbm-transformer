@@ -267,7 +267,7 @@ def test_confusion_matrix_returns_figure():
     rng = np.random.default_rng(42)
     n_steps = 200
     edge_valid = rng.choice([True, False], size=n_steps, p=[0.9, 0.1])
-    rule_outcome = np.full(n_steps, RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+    rule_outcome = np.full(n_steps, RuleOutcome.UNCONSTRAINED, dtype=np.int32)
     # Set some as FOLLOWED and VIOLATED
     rule_outcome[:100] = RuleOutcome.FOLLOWED
     rule_outcome[100:130] = RuleOutcome.VIOLATED
@@ -285,7 +285,7 @@ def test_confusion_matrix_counts():
     # Create known data: 100 valid+followed, 20 valid+violated, 5 invalid+followed, 3 invalid+violated
     n = 128 + 50  # 178 total (128 applicable + 50 N/A)
     edge_valid = np.zeros(n, dtype=bool)
-    rule_outcome = np.full(n, RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+    rule_outcome = np.full(n, RuleOutcome.UNCONSTRAINED, dtype=np.int32)
 
     # Valid + followed: indices 0-99
     edge_valid[:100] = True
@@ -482,7 +482,7 @@ def _create_minimal_result(result_dir, include_curves=True, include_violations=T
     rng = np.random.default_rng(42)
     npz_data = {}
     npz_data["edge_valid"] = rng.choice([True, False], size=(n_seq, max_steps - 1), p=[0.9, 0.1])
-    npz_data["rule_outcome"] = np.full((n_seq, max_steps - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+    npz_data["rule_outcome"] = np.full((n_seq, max_steps - 1), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
     npz_data["rule_outcome"][:, :15] = RuleOutcome.FOLLOWED
     npz_data["sequence_lengths"] = np.full(n_seq, max_steps, dtype=np.int32)
     npz_data["generated"] = rng.integers(0, 100, size=(n_seq, max_steps))

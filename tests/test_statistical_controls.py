@@ -565,7 +565,7 @@ class TestApplyStatisticalControls:
         generated[:, 20] = 5  # Place jumper at step 20
 
         rule_outcome = np.full(
-            (n_sequences, max_steps - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32
+            (n_sequences, max_steps - 1), RuleOutcome.UNCONSTRAINED, dtype=np.int32
         )
         for w in range(15):
             rule_outcome[w, 27] = RuleOutcome.VIOLATED

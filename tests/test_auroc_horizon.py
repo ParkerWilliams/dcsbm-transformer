@@ -321,7 +321,7 @@ class TestRunAurocAnalysis:
         generated[:, 20] = 5
 
         # rule_outcome: mark resolution at step 27 (20 + 8 - 1)
-        rule_outcome = np.full((n_sequences, max_steps - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+        rule_outcome = np.full((n_sequences, max_steps - 1), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
         # First 15 walks: VIOLATED
         for w in range(15):
             rule_outcome[w, 27] = RuleOutcome.VIOLATED

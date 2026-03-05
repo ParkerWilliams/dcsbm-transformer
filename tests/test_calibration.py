@@ -170,7 +170,7 @@ class TestRunCalibrationAnalysis:
         generated[:, 20] = 5
 
         rule_outcome = np.full(
-            (n_sequences, max_steps - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32
+            (n_sequences, max_steps - 1), RuleOutcome.UNCONSTRAINED, dtype=np.int32
         )
         for w in range(15):
             rule_outcome[w, 24] = RuleOutcome.VIOLATED

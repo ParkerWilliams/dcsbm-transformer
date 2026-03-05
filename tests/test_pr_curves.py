@@ -222,7 +222,7 @@ class TestRunPrAnalysis:
 
         # Rule outcome at resolution step 24 (20+5-1)
         rule_outcome = np.full(
-            (n_sequences, max_steps - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32
+            (n_sequences, max_steps - 1), RuleOutcome.UNCONSTRAINED, dtype=np.int32
         )
         for w in range(15):
             rule_outcome[w, 24] = RuleOutcome.VIOLATED
@@ -288,7 +288,7 @@ class TestRunPrAnalysis:
 
         generated = np.zeros((n_sequences, max_steps), dtype=np.int64)
         rule_outcome = np.full(
-            (n_sequences, max_steps - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32
+            (n_sequences, max_steps - 1), RuleOutcome.UNCONSTRAINED, dtype=np.int32
         )
         failure_index = np.full(n_sequences, -1, dtype=np.int32)
 
