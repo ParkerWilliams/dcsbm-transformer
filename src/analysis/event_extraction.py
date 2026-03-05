@@ -84,8 +84,8 @@ def extract_events(
 
             outcome_val = int(rule_outcome[walk_idx, outcome_idx])
 
-            # Only record events where rule actually resolved
-            if outcome_val == RuleOutcome.NOT_APPLICABLE:
+            # Skip steps where no constraint resolved (UNCONSTRAINED or PENDING)
+            if outcome_val not in (RuleOutcome.FOLLOWED, RuleOutcome.VIOLATED):
                 continue
 
             # Determine is_first_violation

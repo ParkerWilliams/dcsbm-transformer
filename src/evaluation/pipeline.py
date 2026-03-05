@@ -242,7 +242,7 @@ def fused_evaluate(
     all_generated = np.zeros((n_sequences, max_steps), dtype=np.int64)
     all_edge_valid = np.zeros((n_sequences, max_steps - 1), dtype=bool)
     all_rule_outcome = np.full(
-        (n_sequences, max_steps - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32
+        (n_sequences, max_steps - 1), RuleOutcome.UNCONSTRAINED, dtype=np.int32
     )
     all_failure_index = np.full(n_sequences, -1, dtype=np.int32)
     all_seq_lengths = np.zeros(n_sequences, dtype=np.int32)

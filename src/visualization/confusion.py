@@ -1,7 +1,8 @@
-"""Confusion matrix for 4-class behavioral outcomes (PLOT-04).
+"""Confusion matrix for behavioral outcomes (PLOT-04).
 
 Renders a 2x2 heatmap of edge valid/invalid vs rule followed/violated,
-excluding NOT_APPLICABLE steps. Shows both counts and percentages.
+including only resolved outcomes (FOLLOWED/VIOLATED). Steps that are
+UNCONSTRAINED or PENDING are excluded. Shows both counts and percentages.
 """
 
 import matplotlib.pyplot as plt
@@ -19,7 +20,7 @@ def plot_confusion_matrix(
 
     Rows: Edge valid / Edge invalid
     Cols: Rule followed / Rule violated
-    Excludes NOT_APPLICABLE steps.
+    Excludes UNCONSTRAINED and PENDING steps (only resolved outcomes).
 
     Args:
         edge_valid: Boolean array, shape [n_steps] or [n_sequences, n_steps].
@@ -32,8 +33,8 @@ def plot_confusion_matrix(
     ev = np.asarray(edge_valid).ravel()
     ro = np.asarray(rule_outcome).ravel()
 
-    # Filter out NOT_APPLICABLE
-    applicable_mask = ro != RuleOutcome.NOT_APPLICABLE
+    # Only include steps where a constraint resolved (FOLLOWED or VIOLATED)
+    applicable_mask = (ro == RuleOutcome.FOLLOWED) | (ro == RuleOutcome.VIOLATED)
     ev = ev[applicable_mask]
     ro = ro[applicable_mask]
 

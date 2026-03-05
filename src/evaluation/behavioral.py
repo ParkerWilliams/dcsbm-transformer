@@ -2,8 +2,14 @@
 
 Classifies each generation step into one of 4 classes based on
 edge validity (against DCSBM adjacency) and rule compliance
-(against jumper constraints). Produces failure_index annotation
-marking the first rule violation per sequence.
+(against jumper constraints):
+
+  UNCONSTRAINED: No jumper rule active at this step.
+  PENDING: A jumper rule is active but its deadline has not yet been reached.
+  FOLLOWED: Jumper rule deadline reached, correct block arrived.
+  VIOLATED: Jumper rule deadline reached, wrong block arrived.
+
+Produces failure_index annotation marking the first rule violation per sequence.
 """
 
 from enum import IntEnum
@@ -18,14 +24,16 @@ from src.graph.types import GraphData
 class RuleOutcome(IntEnum):
     """Outcome of rule compliance check at a generation step.
 
-    NOT_APPLICABLE: No jumper rule deadline at this step.
-    FOLLOWED: Jumper rule deadline met, correct block reached.
-    VIOLATED: Jumper rule deadline met, wrong block reached.
+    UNCONSTRAINED: No jumper rule active at this step.
+    PENDING: A jumper rule is active but its deadline has not yet been reached.
+    FOLLOWED: Jumper rule deadline reached, correct block arrived.
+    VIOLATED: Jumper rule deadline reached, wrong block arrived.
     """
 
-    NOT_APPLICABLE = 0
-    FOLLOWED = 1
-    VIOLATED = 2
+    UNCONSTRAINED = 0
+    PENDING = 1
+    FOLLOWED = 2
+    VIOLATED = 3
 
 
 def classify_steps(
@@ -59,7 +67,7 @@ def classify_steps(
     B, L = seqs.shape
 
     edge_valid = np.zeros((B, L - 1), dtype=bool)
-    rule_outcome = np.full((B, L - 1), RuleOutcome.NOT_APPLICABLE, dtype=np.int32)
+    rule_outcome = np.full((B, L - 1), RuleOutcome.UNCONSTRAINED, dtype=np.int32)
     failure_index = np.full(B, -1, dtype=np.int32)
 
     indptr = graph_data.adjacency.indptr
@@ -94,5 +102,13 @@ def classify_steps(
                         if failure_index[b] == -1:
                             failure_index[b] = t
                     break  # Only one constraint resolves per step
+
+            # If no deadline resolved at this step, check if any constraint
+            # is still pending (deadline in the future)
+            if rule_outcome[b, t] == RuleOutcome.UNCONSTRAINED:
+                for deadline, target_block in active_constraints:
+                    if deadline > t + 1:  # Constraint not yet resolved
+                        rule_outcome[b, t] = RuleOutcome.PENDING
+                        break
 
     return edge_valid, rule_outcome, failure_index
