@@ -94,10 +94,11 @@ Plans:
   2. Lookback distance j correctly retrieves the metric value at step (t-j) relative to resolution step t, with no fence-post error in indexing
   3. Predictive horizon (max j where AUROC > 0.75) is applied identically in primary analysis, null model comparison, and multi-head ablation code paths
   4. Event extraction correctly identifies resolution steps from behavioral labels, matching the 4-class classification verified in Phase 18
-**Plans**: TBD
+**Plans:** 2 plans
 
 Plans:
-- [ ] 20-01: TBD
+- [ ] 20-01-PLAN.md — Audit AUROC formula vs sklearn/Mann-Whitney U and lookback indexing fence-post correctness
+- [ ] 20-02-PLAN.md — Audit cross-path horizon consistency and event extraction boundaries
 
 ### Phase 21: Statistical Controls
 **Goal**: All statistical testing machinery produces mathematically correct results — permutation tests, confidence intervals, multiple comparison corrections, effect sizes, and study design splits
@@ -155,7 +156,7 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 | 11-17 | v1.1      | 15/15          | Complete | 2026-02-28 |
 | 18. Graph & Walk Foundations | 2/2 | Complete    | 2026-03-05 | - |
 | 19. SVD Metric Extraction | 3/3 | Complete    | 2026-03-05 | - |
-| 20. AUROC & Predictive Horizon | v1.2 | 0/TBD | Not started | - |
+| 20. AUROC & Predictive Horizon | v1.2 | 0/2 | Planned | - |
 | 21. Statistical Controls | v1.2 | 0/TBD | Not started | - |
 | 22. Softmax Bound & Null Model | v1.2 | 0/TBD | Not started | - |
 | 23. Audit Report Generation | v1.2 | 0/TBD | Not started | - |
