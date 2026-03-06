@@ -3,9 +3,9 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
 status: completed
-stopped_at: Completed 20-01-PLAN.md
-last_updated: "2026-03-06T21:13:04.703Z"
-last_activity: 2026-03-06 — Completed 20-01 AUROC formula and lookback indexing audit (AUROC-01, AUROC-02)
+stopped_at: Completed 20-02-PLAN.md (Phase 20 complete)
+last_updated: "2026-03-06T21:14:01.236Z"
+last_activity: 2026-03-06 — Completed 20-02 cross-path horizon consistency and event extraction boundary audit (AUROC-03, AUROC-04)
 progress:
   total_phases: 6
   completed_phases: 3
@@ -59,6 +59,7 @@ Progress: [██████████] 96% (v1.2 Milestone)
 | Phase 19 P02 | 26min | 2 tasks | 3 files |
 | 20    | 01   | 8min     | 2     | 2     |
 | 20    | 02   | 7min     | 2     | 2     |
+| Phase 20 P02 | 7min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -84,6 +85,7 @@ Recent decisions affecting current work:
 - [20-02]: AST-based import verification avoids brittle string matching for code-path audits
 - [20-02]: null_model.py confirmed to NOT compute AUROC -- uses Mann-Whitney U for a different statistical question
 - [20-02]: Living regression test catalogs all 0.75 occurrences in src/ to detect future drift
+- [Phase 20]: AST-based import verification avoids brittle string matching for code-path audits
 
 ### Pending Todos
 
@@ -97,7 +99,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-06T21:11:46Z
-Stopped at: Completed 20-01-PLAN.md
-Resume file: .planning/phases/20-auroc-predictive-horizon/20-01-SUMMARY.md
-Next action: Execute 20-02-PLAN.md (cross-path horizon consistency and event extraction)
+Last session: 2026-03-06T21:13:56.786Z
+Stopped at: Completed 20-02-PLAN.md (Phase 20 complete)
+Resume file: None
+Next action: Plan and execute Phase 21
