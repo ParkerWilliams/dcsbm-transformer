@@ -26,8 +26,8 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 ### AUROC & Predictive Horizon
 
-- [ ] **AUROC-01**: AUROC computation from violation/control groups uses correct rank-based probability P(X_violated > X_followed)
-- [ ] **AUROC-02**: Lookback distance j correctly indexes metric values at step (t-j) relative to resolution step t
+- [x] **AUROC-01**: AUROC computation from violation/control groups uses correct rank-based probability P(X_violated > X_followed)
+- [x] **AUROC-02**: Lookback distance j correctly indexes metric values at step (t-j) relative to resolution step t
 - [ ] **AUROC-03**: Predictive horizon definition (max j where AUROC > 0.75) is consistently applied across all analysis paths
 - [ ] **AUROC-04**: Event extraction (violation events, control events) correctly identifies resolution steps from behavioral labels
 
@@ -84,8 +84,8 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 | SVD-04 | Phase 19 | Complete |
 | SVD-05 | Phase 19 | Complete |
 | SVD-06 | Phase 19 | Complete |
-| AUROC-01 | Phase 20 | Pending |
-| AUROC-02 | Phase 20 | Pending |
+| AUROC-01 | Phase 20 | Complete |
+| AUROC-02 | Phase 20 | Complete |
 | AUROC-03 | Phase 20 | Pending |
 | AUROC-04 | Phase 20 | Pending |
 | STAT-01 | Phase 21 | Pending |

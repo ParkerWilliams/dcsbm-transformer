@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
 status: completed
-stopped_at: Phase 20 context gathered
-last_updated: "2026-03-06T19:35:59.747Z"
-last_activity: 2026-03-05 — Completed 19-03 curvature/torsion formula audit (SVD-06)
+stopped_at: Completed 20-01-PLAN.md
+last_updated: "2026-03-06T21:13:04.703Z"
+last_activity: 2026-03-06 — Completed 20-01 AUROC formula and lookback indexing audit (AUROC-01, AUROC-02)
 progress:
   total_phases: 6
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 71
+  completed_phases: 3
+  total_plans: 7
+  completed_plans: 7
+  percent: 96
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** v1.2 Mathematical Audit — Phase 19: SVD Metric Extraction
+**Current focus:** v1.2 Mathematical Audit — Phase 20: AUROC & Predictive Horizon
 
 ## Current Position
 
-Phase: 19 of 23 (SVD Metric Extraction) -- COMPLETE
-Plan: 3 of 3 (phase complete)
-Status: Phase 19 complete, ready for Phase 20
-Last activity: 2026-03-05 — Completed 19-03 curvature/torsion formula audit (SVD-06)
+Phase: 20 of 23 (AUROC & Predictive Horizon) -- COMPLETE
+Plan: 2 of 2 (phase complete)
+Status: Phase 20 complete, ready for Phase 21
+Last activity: 2026-03-06 — Completed 20-02 cross-path horizon consistency and event extraction boundary audit (AUROC-03, AUROC-04)
 
-Progress: [███████░░░] 71% (v1.2 Milestone)
+Progress: [██████████] 96% (v1.2 Milestone)
 
 ## Performance Metrics
 
@@ -57,6 +57,8 @@ Progress: [███████░░░] 71% (v1.2 Milestone)
 | 19    | 01   | 22min    | 3     | 3     |
 | 19    | 03   | 23min    | 1     | 1     |
 | Phase 19 P02 | 26min | 2 tasks | 3 files |
+| 20    | 01   | 8min     | 2     | 2     |
+| 20    | 02   | 7min     | 2     | 2     |
 
 ## Accumulated Context
 
@@ -76,6 +78,12 @@ Recent decisions affecting current work:
 - [v1.1 deferred]: Curvature/torsion float16 quantization concern (SVD-06)
 - [Phase 19]: Float16 spectrum storage produces 1130% curvature error -- upgraded to float32 in pipeline.py (SVD-05)
 - [Phase 19]: Grassmannian distance formula verified correct against Edelman et al. (1998) geodesic definition (SVD-04)
+- [20-01]: auroc_from_groups matches sklearn and Mann-Whitney U within 1e-10 -- no production code changes needed
+- [20-01]: Lookback indexing has no fence-post error -- j=1 retrieves metric at resolution_step-1
+- [20-01]: compute_predictive_horizon correctly uses strict inequality (val > threshold)
+- [20-02]: AST-based import verification avoids brittle string matching for code-path audits
+- [20-02]: null_model.py confirmed to NOT compute AUROC -- uses Mann-Whitney U for a different statistical question
+- [20-02]: Living regression test catalogs all 0.75 occurrences in src/ to detect future drift
 
 ### Pending Todos
 
@@ -89,7 +97,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-06T19:35:59.735Z
-Stopped at: Phase 20 context gathered
-Resume file: .planning/phases/20-auroc-predictive-horizon/20-CONTEXT.md
-Next action: Plan and execute Phase 20
+Last session: 2026-03-06T21:11:46Z
+Stopped at: Completed 20-01-PLAN.md
+Resume file: .planning/phases/20-auroc-predictive-horizon/20-01-SUMMARY.md
+Next action: Execute 20-02-PLAN.md (cross-path horizon consistency and event extraction)

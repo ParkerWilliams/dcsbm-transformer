@@ -46,7 +46,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for archived details.
 
 - [x] **Phase 18: Graph & Walk Foundations** - Verify DCSBM edge probabilities, walk sampling, jumper designation, behavioral classification, and compliance rates (completed 2026-03-05)
 - [x] **Phase 19: SVD Metric Extraction** - Verify QK^T construction, WvWo/AVWo matrices, all singular-value-derived metrics, Grassmannian distance, float16 fidelity, and Frenet-Serret curvature/torsion (completed 2026-03-05)
-- [ ] **Phase 20: AUROC & Predictive Horizon** - Verify AUROC rank-based computation, lookback indexing, horizon definition consistency, and event extraction logic
+- [x] **Phase 20: AUROC & Predictive Horizon** - Verify AUROC rank-based computation, lookback indexing, horizon definition consistency, and event extraction logic (completed 2026-03-06)
 - [ ] **Phase 21: Statistical Controls** - Verify shuffle permutation null, bootstrap BCa intervals, Holm-Bonferroni correction, Cohen's d, Spearman redundancy threshold, and exploratory/confirmatory split
 - [ ] **Phase 22: Softmax Bound & Null Model** - Verify LaTeX derivation correctness, empirical bound verification code, bound assumptions, Grassmannian drift parity, Mann-Whitney U, column-filtered adjacency, and Holm-Bonferroni family separation
 - [ ] **Phase 23: Audit Report Generation** - Generate self-contained HTML report linking every formula to its implementation with correctness verdicts
@@ -94,7 +94,7 @@ Plans:
   2. Lookback distance j correctly retrieves the metric value at step (t-j) relative to resolution step t, with no fence-post error in indexing
   3. Predictive horizon (max j where AUROC > 0.75) is applied identically in primary analysis, null model comparison, and multi-head ablation code paths
   4. Event extraction correctly identifies resolution steps from behavioral labels, matching the 4-class classification verified in Phase 18
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] 20-01-PLAN.md — Audit AUROC formula vs sklearn/Mann-Whitney U and lookback indexing fence-post correctness
@@ -156,7 +156,7 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 | 11-17 | v1.1      | 15/15          | Complete | 2026-02-28 |
 | 18. Graph & Walk Foundations | 2/2 | Complete    | 2026-03-05 | - |
 | 19. SVD Metric Extraction | 3/3 | Complete    | 2026-03-05 | - |
-| 20. AUROC & Predictive Horizon | v1.2 | 0/2 | Planned | - |
+| 20. AUROC & Predictive Horizon | 2/2 | Complete   | 2026-03-06 | - |
 | 21. Statistical Controls | v1.2 | 0/TBD | Not started | - |
 | 22. Softmax Bound & Null Model | v1.2 | 0/TBD | Not started | - |
 | 23. Audit Report Generation | v1.2 | 0/TBD | Not started | - |
