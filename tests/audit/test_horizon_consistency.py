@@ -270,6 +270,7 @@ class TestHorizonThresholdConsistency:
             "heatmap.py",        # visualization/heatmap.py
             "single.py",         # reporting/single.py
             "math_pdf.py",       # reporting/math_pdf.py
+            "audit_registry.py", # reporting/audit_registry.py (LaTeX formula string)
         }
 
         unknown_files: list[str] = []
