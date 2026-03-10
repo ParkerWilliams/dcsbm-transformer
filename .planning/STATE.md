@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
-status: completed
-stopped_at: Phase 22 context gathered
-last_updated: "2026-03-10T18:02:15.106Z"
-last_activity: 2026-03-10 — Completed 21-02 correlation redundancy and split audit (STAT-05, STAT-06)
+status: executing
+stopped_at: Completed 22-01-PLAN.md
+last_updated: "2026-03-10T18:22:12.557Z"
+last_activity: 2026-03-10 — Completed 22-01 softmax bound derivation audit (SFTX-01, SFTX-02, SFTX-03)
 progress:
   total_phases: 6
   completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
-  percent: 98
+  total_plans: 11
+  completed_plans: 10
+  percent: 97
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 ## Current Position
 
-Phase: 21 of 23 (Statistical Controls) -- COMPLETE
-Plan: 2 of 2 (phase complete)
-Status: Phase 21 complete, ready for Phase 22
-Last activity: 2026-03-10 — Completed 21-02 correlation redundancy and split audit (STAT-05, STAT-06)
+Phase: 22 of 23 (Softmax Bound & Null Model)
+Plan: 1 of 2
+Status: Executing Phase 22 -- Plan 01 complete
+Last activity: 2026-03-10 — Completed 22-01 softmax bound derivation audit (SFTX-01, SFTX-02, SFTX-03)
 
-Progress: [██████████] 98% (v1.2 Milestone)
+Progress: [██████████] 97% (v1.2 Milestone)
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 98% (v1.2 Milestone)
 | Phase 20 P02 | 7min | 2 tasks | 2 files |
 | 21    | 01   | 11min    | 2     | 4     |
 | 21    | 02   | 12min    | 2     | 3     |
+| Phase 22 P01 | 8min | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -94,6 +95,9 @@ Recent decisions affecting current work:
 - [21-02]: Measurement mode correlation fixed from Pearson to Spearman per STAT-05 requirement
 - [21-02]: Predictive mode retains Pearson on AUROC curves -- bounded scale makes linear correlation appropriate
 - [21-02]: Exploratory/confirmatory split verified: balanced, stratified, deterministic with SPLIT_SEED=2026
+- [Phase 22]: LaTeX derivation verified correct step-by-step -- no formula errors found, no production code changes needed
+- [Phase 22]: sqrt(d_k) cancellation algebraically proven: unscaled and scaled formulations produce identical bounds within 1e-12
+- [Phase 22]: Masking consistency verified: zero-fill in direction + -inf in softmax = no inconsistency
 
 ### Pending Todos
 
@@ -107,7 +111,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-10T18:02:15.095Z
-Stopped at: Phase 22 context gathered
-Resume file: .planning/phases/22-softmax-bound-null-model/22-CONTEXT.md
+Last session: 2026-03-10T18:22:12.546Z
+Stopped at: Completed 22-01-PLAN.md
+Resume file: None
 Next action: Plan and execute Phase 22

@@ -42,9 +42,9 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 ### Softmax Filtering Bound
 
-- [ ] **SFTX-01**: LaTeX derivation of QK^T → AVWo epsilon-bound is mathematically correct (each step follows from the previous)
-- [ ] **SFTX-02**: Empirical verification code correctly tests the bound's predictions against observed data
-- [ ] **SFTX-03**: Bound assumptions are explicitly stated and implementation respects them
+- [x] **SFTX-01**: LaTeX derivation of QK^T → AVWo epsilon-bound is mathematically correct (each step follows from the previous)
+- [x] **SFTX-02**: Empirical verification code correctly tests the bound's predictions against observed data
+- [x] **SFTX-03**: Bound assumptions are explicitly stated and implementation respects them
 
 ### Null Model
 
@@ -94,9 +94,9 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 | STAT-04 | Phase 21 | Complete |
 | STAT-05 | Phase 21 | Complete |
 | STAT-06 | Phase 21 | Complete |
-| SFTX-01 | Phase 22 | Pending |
-| SFTX-02 | Phase 22 | Pending |
-| SFTX-03 | Phase 22 | Pending |
+| SFTX-01 | Phase 22 | Complete |
+| SFTX-02 | Phase 22 | Complete |
+| SFTX-03 | Phase 22 | Complete |
 | NULL-01 | Phase 22 | Pending |
 | NULL-02 | Phase 22 | Pending |
 | NULL-03 | Phase 22 | Pending |

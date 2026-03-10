@@ -158,5 +158,5 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 | 19. SVD Metric Extraction | 3/3 | Complete    | 2026-03-05 | - |
 | 20. AUROC & Predictive Horizon | 2/2 | Complete    | 2026-03-06 | - |
 | 21. Statistical Controls | 2/2 | Complete    | 2026-03-10 | - |
-| 22. Softmax Bound & Null Model | v1.2 | 0/2 | Not started | - |
+| 22. Softmax Bound & Null Model | 1/2 | In Progress|  | - |
 | 23. Audit Report Generation | v1.2 | 0/TBD | Not started | - |
