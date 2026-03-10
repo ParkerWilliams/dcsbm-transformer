@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
-status: completed
-stopped_at: Phase 23 context gathered
-last_updated: "2026-03-10T21:42:26.340Z"
-last_activity: 2026-03-10 — Completed 22-02 null model parity and Marchenko-Pastur audit (NULL-01..04)
+status: in-progress
+stopped_at: Completed 23-01-PLAN.md
+last_updated: "2026-03-10T22:08:33Z"
+last_activity: 2026-03-10 — Completed 23-01 audit registry and KaTeX vendor (REPT-01, REPT-02)
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 11
-  completed_plans: 11
-  percent: 98
+  total_plans: 13
+  completed_plans: 12
+  percent: 92
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** v1.2 Mathematical Audit — Phase 22: Softmax Filtering Bound
+**Current focus:** v1.2 Mathematical Audit — Phase 23: Audit Report Generation
 
 ## Current Position
 
-Phase: 22 of 23 (Softmax Bound & Null Model) -- COMPLETE
-Plan: 2 of 2 (phase complete)
-Status: Phase 22 complete, ready for Phase 23
-Last activity: 2026-03-10 — Completed 22-02 null model parity and Marchenko-Pastur audit (NULL-01..04)
+Phase: 23 of 23 (Audit Report Generation)
+Plan: 1 of 2 (23-01 complete)
+Status: Plan 01 complete, ready for Plan 02
+Last activity: 2026-03-10 — Completed 23-01 audit registry and KaTeX vendor (REPT-01, REPT-02)
 
-Progress: [██████████] 98% (v1.2 Milestone)
+Progress: [█████████░] 92% (v1.2 Milestone)
 
 ## Performance Metrics
 
@@ -64,6 +64,7 @@ Progress: [██████████] 98% (v1.2 Milestone)
 | 21    | 02   | 12min    | 2     | 3     |
 | Phase 22 P01 | 8min | 2 tasks | 2 files |
 | 22    | 02   | 13min    | 2     | 3     |
+| 23    | 01   | 5min     | 2     | 4     |
 
 ## Accumulated Context
 
@@ -102,6 +103,8 @@ Recent decisions affecting current work:
 - [22-02]: MP sigma^2 calibration corrected: E[lambda_MP(gamma, sigma^2)] = sigma^2, not sigma^2*(1+gamma)
 - [22-02]: For gamma > 1, continuous MP density integrates to 1/gamma (point mass of 1-1/gamma at zero)
 - [22-02]: Null model code-path parity verified via AST: fused_evaluate, extract_events, holm_bonferroni, cohens_d all from correct modules
+- [23-01]: Fresh curated registry (not reusing MATH_SECTIONS from math_pdf.py) per user decision
+- [23-01]: All 60 KaTeX font files embedded as base64 data URIs in CSS for complete self-containment
 
 ### Pending Todos
 
@@ -115,7 +118,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-10T21:42:26.333Z
-Stopped at: Phase 23 context gathered
-Resume file: .planning/phases/23-audit-report-generation/23-CONTEXT.md
-Next action: Execute Phase 23
+Last session: 2026-03-10T22:08:33Z
+Stopped at: Completed 23-01-PLAN.md
+Resume file: .planning/phases/23-audit-report-generation/23-01-SUMMARY.md
+Next action: Execute 23-02 (HTML report template and generator)
