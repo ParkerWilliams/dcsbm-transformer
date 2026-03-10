@@ -33,10 +33,10 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 ### Statistical Controls
 
-- [ ] **STAT-01**: Shuffle permutation null distribution correctly permutes event labels while preserving group sizes
-- [ ] **STAT-02**: Bootstrap confidence intervals use correct BCa method with proper bias correction and acceleration
-- [ ] **STAT-03**: Holm-Bonferroni family-wise error correction applies sorted p-values with correct step-down threshold formula
-- [ ] **STAT-04**: Cohen's d effect size uses correct pooled standard deviation formula
+- [x] **STAT-01**: Shuffle permutation null distribution correctly permutes event labels while preserving group sizes
+- [x] **STAT-02**: Bootstrap confidence intervals use correct BCa method with proper bias correction and acceleration
+- [x] **STAT-03**: Holm-Bonferroni family-wise error correction applies sorted p-values with correct step-down threshold formula
+- [x] **STAT-04**: Cohen's d effect size uses correct pooled standard deviation formula
 - [ ] **STAT-05**: Spearman correlation for redundancy analysis is correctly computed and threshold (|r| > 0.9) is justified
 - [ ] **STAT-06**: Exploratory/confirmatory split assignment is methodologically sound (random, reproducible, correct proportions)
 
@@ -88,10 +88,10 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 | AUROC-02 | Phase 20 | Complete |
 | AUROC-03 | Phase 20 | Complete |
 | AUROC-04 | Phase 20 | Complete |
-| STAT-01 | Phase 21 | Pending |
-| STAT-02 | Phase 21 | Pending |
-| STAT-03 | Phase 21 | Pending |
-| STAT-04 | Phase 21 | Pending |
+| STAT-01 | Phase 21 | Complete |
+| STAT-02 | Phase 21 | Complete |
+| STAT-03 | Phase 21 | Complete |
+| STAT-04 | Phase 21 | Complete |
 | STAT-05 | Phase 21 | Pending |
 | STAT-06 | Phase 21 | Pending |
 | SFTX-01 | Phase 22 | Pending |
