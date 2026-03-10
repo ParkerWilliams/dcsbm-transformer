@@ -126,11 +126,11 @@ Plans:
   3. Null model Grassmannian drift uses identical SVD extraction code path as primary analysis (same function calls, same parameters), differing only in input walks
   4. Mann-Whitney U test statistic and p-value computation match scipy.stats.mannwhitneyu on identical inputs
   5. Column-filtered adjacency provably removes all jumper paths (zero contamination), and null model uses a separate Holm-Bonferroni family from primary analysis
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 22-01: TBD
-- [ ] 22-02: TBD
+- [ ] 22-01-PLAN.md — Audit softmax filtering bound derivation, sqrt(d_k) cancellation, and empirical verification code
+- [ ] 22-02-PLAN.md — Audit null model code-path parity, column-filtered adjacency, MW-U, family separation, and Marchenko-Pastur
 
 ### Phase 23: Audit Report Generation
 **Goal**: A self-contained HTML audit report documents every formula-to-code mapping with correctness verdicts
@@ -158,5 +158,5 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 | 19. SVD Metric Extraction | 3/3 | Complete    | 2026-03-05 | - |
 | 20. AUROC & Predictive Horizon | 2/2 | Complete    | 2026-03-06 | - |
 | 21. Statistical Controls | 2/2 | Complete    | 2026-03-10 | - |
-| 22. Softmax Bound & Null Model | v1.2 | 0/TBD | Not started | - |
+| 22. Softmax Bound & Null Model | v1.2 | 0/2 | Not started | - |
 | 23. Audit Report Generation | v1.2 | 0/TBD | Not started | - |
