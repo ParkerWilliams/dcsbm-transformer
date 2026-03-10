@@ -110,11 +110,11 @@ Plans:
   3. Holm-Bonferroni step-down correction applies sorted p-values against thresholds alpha/(m-k+1) for k=1..m, rejecting in correct order
   4. Cohen's d uses the pooled standard deviation formula s_p = sqrt(((n1-1)*s1^2 + (n2-1)*s2^2) / (n1+n2-2))
   5. Exploratory/confirmatory split uses reproducible random assignment with correct proportions, and Spearman |r| > 0.9 redundancy threshold is applied correctly
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 21-01: TBD
-- [ ] 21-02: TBD
+- [ ] 21-01-PLAN.md — Audit shuffle permutation null, Holm-Bonferroni, BCa bootstrap CIs, and Cohen's d
+- [ ] 21-02-PLAN.md — Audit correlation redundancy analysis and exploratory/confirmatory split
 
 ### Phase 22: Softmax Bound & Null Model
 **Goal**: The softmax filtering bound derivation and null model baseline methodology are mathematically sound and correctly implemented
@@ -157,6 +157,6 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 | 18. Graph & Walk Foundations | 2/2 | Complete    | 2026-03-05 | - |
 | 19. SVD Metric Extraction | 3/3 | Complete    | 2026-03-05 | - |
 | 20. AUROC & Predictive Horizon | 2/2 | Complete    | 2026-03-06 | - |
-| 21. Statistical Controls | v1.2 | 0/TBD | Not started | - |
+| 21. Statistical Controls | v1.2 | 0/2 | Planned | - |
 | 22. Softmax Bound & Null Model | v1.2 | 0/TBD | Not started | - |
 | 23. Audit Report Generation | v1.2 | 0/TBD | Not started | - |
