@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
-status: in-progress
-stopped_at: Completed 23-01-PLAN.md
-last_updated: "2026-03-10T22:08:33Z"
-last_activity: 2026-03-10 — Completed 23-01 audit registry and KaTeX vendor (REPT-01, REPT-02)
+status: completed
+stopped_at: Completed 23-02-PLAN.md
+last_updated: "2026-03-10T22:13:33Z"
+last_activity: 2026-03-10 — Completed 23-02 audit report HTML template and generator (REPT-01, REPT-02, REPT-03)
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 13
-  completed_plans: 12
-  percent: 92
+  completed_plans: 13
+  percent: 100
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** v1.2 Mathematical Audit — Phase 23: Audit Report Generation
+**Current focus:** v1.2 Mathematical Audit — Complete
 
 ## Current Position
 
 Phase: 23 of 23 (Audit Report Generation)
-Plan: 1 of 2 (23-01 complete)
-Status: Plan 01 complete, ready for Plan 02
-Last activity: 2026-03-10 — Completed 23-01 audit registry and KaTeX vendor (REPT-01, REPT-02)
+Plan: 2 of 2 (all plans complete)
+Status: v1.2 Mathematical Audit milestone complete
+Last activity: 2026-03-10 — Completed 23-02 audit report HTML template and generator (REPT-01, REPT-02, REPT-03)
 
-Progress: [█████████░] 92% (v1.2 Milestone)
+Progress: [██████████] 100% (v1.2 Milestone)
 
 ## Performance Metrics
 
@@ -46,7 +46,7 @@ Progress: [█████████░] 92% (v1.2 Milestone)
 - Codebase: 23,652 LOC Python (111 files)
 
 **Velocity (v1.2):**
-- Total plans completed: 3
+- Total plans completed: 13
 - Phases: 6 (Phases 18-23)
 - Requirements: 31
 
@@ -65,6 +65,7 @@ Progress: [█████████░] 92% (v1.2 Milestone)
 | Phase 22 P01 | 8min | 2 tasks | 2 files |
 | 22    | 02   | 13min    | 2     | 3     |
 | 23    | 01   | 5min     | 2     | 4     |
+| 23    | 02   | 2min     | 2     | 3     |
 
 ## Accumulated Context
 
@@ -105,6 +106,9 @@ Recent decisions affecting current work:
 - [22-02]: Null model code-path parity verified via AST: fused_evaluate, extract_events, holm_bonferroni, cohens_d all from correct modules
 - [23-01]: Fresh curated registry (not reusing MATH_SECTIONS from math_pdf.py) per user decision
 - [23-01]: All 60 KaTeX font files embedded as base64 data URIs in CSS for complete self-containment
+- [23-02]: KaTeX LaTeX stored in data-latex attributes and rendered client-side via katex.render() with displayMode
+- [23-02]: Multi-line formulas split on newline and rendered as separate display-mode blocks
+- [23-02]: Active section highlighting on scroll for sidebar TOC navigation
 
 ### Pending Todos
 
@@ -118,7 +122,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-10T22:08:33Z
-Stopped at: Completed 23-01-PLAN.md
-Resume file: .planning/phases/23-audit-report-generation/23-01-SUMMARY.md
-Next action: Execute 23-02 (HTML report template and generator)
+Last session: 2026-03-10T22:13:33Z
+Stopped at: Completed 23-02-PLAN.md
+Resume file: .planning/phases/23-audit-report-generation/23-02-SUMMARY.md
+Next action: v1.2 Mathematical Audit milestone complete

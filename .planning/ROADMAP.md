@@ -49,7 +49,7 @@ See `.planning/milestones/v1.1-ROADMAP.md` for archived details.
 - [x] **Phase 20: AUROC & Predictive Horizon** - Verify AUROC rank-based computation, lookback indexing, horizon definition consistency, and event extraction logic (completed 2026-03-06)
 - [x] **Phase 21: Statistical Controls** - Verify shuffle permutation null, bootstrap BCa intervals, Holm-Bonferroni correction, Cohen's d, Spearman redundancy threshold, and exploratory/confirmatory split (completed 2026-03-10)
 - [x] **Phase 22: Softmax Bound & Null Model** - Verify LaTeX derivation correctness, empirical bound verification code, bound assumptions, Grassmannian drift parity, Mann-Whitney U, column-filtered adjacency, and Holm-Bonferroni family separation (completed 2026-03-10)
-- [ ] **Phase 23: Audit Report Generation** - Generate self-contained HTML report linking every formula to its implementation with correctness verdicts
+- [x] **Phase 23: Audit Report Generation** - Generate self-contained HTML report linking every formula to its implementation with correctness verdicts (completed 2026-03-10)
 
 ## Phase Details
 
@@ -160,4 +160,4 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 | 20. AUROC & Predictive Horizon | 2/2 | Complete    | 2026-03-06 | - |
 | 21. Statistical Controls | 2/2 | Complete    | 2026-03-10 | - |
 | 22. Softmax Bound & Null Model | 2/2 | Complete    | 2026-03-10 | - |
-| 23. Audit Report Generation | 1/2 | In Progress|  | - |
+| 23. Audit Report Generation | 2/2 | Complete   | 2026-03-10 | - |

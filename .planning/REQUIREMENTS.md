@@ -57,7 +57,7 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 - [x] **REPT-01**: Generate HTML audit report linking every mathematical formula to its code implementation with LaTeX rendering
 - [x] **REPT-02**: Each report entry includes: formula in LaTeX, code location (file:line), correctness verdict, and fix description if applicable
-- [ ] **REPT-03**: Report is self-contained (inline CSS/JS, MathJax for LaTeX) and navigable by audit category
+- [x] **REPT-03**: Report is self-contained (inline CSS/JS, MathJax for LaTeX) and navigable by audit category
 
 ## Out of Scope
 
@@ -103,7 +103,7 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 | NULL-04 | Phase 22 | Complete |
 | REPT-01 | Phase 23 | Complete |
 | REPT-02 | Phase 23 | Complete |
-| REPT-03 | Phase 23 | Pending |
+| REPT-03 | Phase 23 | Complete |
 
 **Coverage:**
 - v1.2 requirements: 31 total
