@@ -291,8 +291,11 @@ def run_mp_ks_test(
     """Compare empirical QK^T singular values against Marchenko-Pastur distribution.
 
     Calibrates sigma^2 from the mean of squared singular values using the
-    MP mean formula: E[lambda] = sigma^2 * (1 + gamma), so
-    sigma^2 = mean(sv^2) / (1 + gamma).
+    MP mean formula: E[lambda] = sigma^2, so sigma^2 = mean(sv^2).
+
+    The MP distribution with parameters (gamma, sigma^2) has mean sigma^2
+    (verified by integrating x * f_MP(x) over the support). The previous
+    formula E[lambda] = sigma^2 * (1 + gamma) was incorrect.
 
     Uses scipy.stats.kstest with a callable CDF.
 
@@ -305,8 +308,8 @@ def run_mp_ks_test(
     """
     sv_squared = singular_values.astype(np.float64) ** 2
 
-    # Calibrate sigma^2 from data
-    sigma2 = float(np.mean(sv_squared)) / (1.0 + gamma)
+    # Calibrate sigma^2 from data: E[lambda_MP] = sigma^2
+    sigma2 = float(np.mean(sv_squared))
 
     # KS test against MP CDF
     ks_result = kstest(
@@ -656,7 +659,7 @@ def run_null_analysis(
 
             if first_anchor_vals is not None:
                 sv_sq = first_anchor_vals.astype(np.float64) ** 2
-                sigma2 = float(np.mean(sv_sq)) / (1.0 + gamma)
+                sigma2 = float(np.mean(sv_sq))
                 lam_minus = sigma2 * (1 - np.sqrt(gamma)) ** 2
                 lam_plus = sigma2 * (1 + np.sqrt(gamma)) ** 2
                 mp_result = {
