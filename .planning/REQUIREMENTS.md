@@ -37,8 +37,8 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 - [x] **STAT-02**: Bootstrap confidence intervals use correct BCa method with proper bias correction and acceleration
 - [x] **STAT-03**: Holm-Bonferroni family-wise error correction applies sorted p-values with correct step-down threshold formula
 - [x] **STAT-04**: Cohen's d effect size uses correct pooled standard deviation formula
-- [ ] **STAT-05**: Spearman correlation for redundancy analysis is correctly computed and threshold (|r| > 0.9) is justified
-- [ ] **STAT-06**: Exploratory/confirmatory split assignment is methodologically sound (random, reproducible, correct proportions)
+- [x] **STAT-05**: Spearman correlation for redundancy analysis is correctly computed and threshold (|r| > 0.9) is justified
+- [x] **STAT-06**: Exploratory/confirmatory split assignment is methodologically sound (random, reproducible, correct proportions)
 
 ### Softmax Filtering Bound
 
@@ -92,8 +92,8 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 | STAT-02 | Phase 21 | Complete |
 | STAT-03 | Phase 21 | Complete |
 | STAT-04 | Phase 21 | Complete |
-| STAT-05 | Phase 21 | Pending |
-| STAT-06 | Phase 21 | Pending |
+| STAT-05 | Phase 21 | Complete |
+| STAT-06 | Phase 21 | Complete |
 | SFTX-01 | Phase 22 | Pending |
 | SFTX-02 | Phase 22 | Pending |
 | SFTX-03 | Phase 22 | Pending |

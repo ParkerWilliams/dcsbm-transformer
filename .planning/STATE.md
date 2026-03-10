@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
 status: completed
-stopped_at: Phase 21 context gathered
-last_updated: "2026-03-10T02:00:45.075Z"
-last_activity: 2026-03-06 — Completed 20-02 cross-path horizon consistency and event extraction boundary audit (AUROC-03, AUROC-04)
+stopped_at: Completed 21-02-PLAN.md
+last_updated: "2026-03-10T02:00:44Z"
+last_activity: 2026-03-10 — Completed 21-02 correlation redundancy and split audit (STAT-05, STAT-06)
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 9
-  completed_plans: 8
-  percent: 96
+  completed_plans: 9
+  percent: 98
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-03-05)
 
 **Core value:** Determine whether SVD instability metrics from the QK^T attention matrix can predict transformer rule violations before they happen, and measure the predictive horizon.
-**Current focus:** v1.2 Mathematical Audit — Phase 21: Statistical Controls
+**Current focus:** v1.2 Mathematical Audit — Phase 22: Softmax Filtering Bound
 
 ## Current Position
 
-Phase: 21 of 23 (Statistical Controls)
-Plan: 1 of 2
-Status: Completed 21-01, ready for 21-02
-Last activity: 2026-03-10 — Completed 21-01 shuffle permutation, BCa bootstrap, Holm-Bonferroni, Cohen's d audit (STAT-01, STAT-02, STAT-03, STAT-04)
+Phase: 21 of 23 (Statistical Controls) -- COMPLETE
+Plan: 2 of 2 (phase complete)
+Status: Phase 21 complete, ready for Phase 22
+Last activity: 2026-03-10 — Completed 21-02 correlation redundancy and split audit (STAT-05, STAT-06)
 
-Progress: [██████████] 97% (v1.2 Milestone)
+Progress: [██████████] 98% (v1.2 Milestone)
 
 ## Performance Metrics
 
@@ -61,6 +61,7 @@ Progress: [██████████] 97% (v1.2 Milestone)
 | 20    | 02   | 7min     | 2     | 2     |
 | Phase 20 P02 | 7min | 2 tasks | 2 files |
 | 21    | 01   | 11min    | 2     | 4     |
+| 21    | 02   | 12min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -90,6 +91,9 @@ Recent decisions affecting current work:
 - [21-01]: All four statistical primitives (shuffle null, BCa bootstrap, Holm-Bonferroni, Cohen's d) verified correct -- no production code changes needed
 - [21-01]: Shuffle H0 uniformity tested via 100 independent trials with KS test at alpha=0.01
 - [21-01]: BCa delegation verified via unittest.mock.patch on scipy.stats.bootstrap
+- [21-02]: Measurement mode correlation fixed from Pearson to Spearman per STAT-05 requirement
+- [21-02]: Predictive mode retains Pearson on AUROC curves -- bounded scale makes linear correlation appropriate
+- [21-02]: Exploratory/confirmatory split verified: balanced, stratified, deterministic with SPLIT_SEED=2026
 
 ### Pending Todos
 
@@ -103,7 +107,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-10T01:59:38Z
-Stopped at: Completed 21-01-PLAN.md
-Resume file: .planning/phases/21-statistical-controls/21-01-SUMMARY.md
-Next action: Execute 21-02-PLAN.md
+Last session: 2026-03-10T02:00:44Z
+Stopped at: Completed 21-02-PLAN.md
+Resume file: .planning/phases/21-statistical-controls/21-02-SUMMARY.md
+Next action: Plan and execute Phase 22
