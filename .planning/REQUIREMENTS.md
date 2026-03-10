@@ -48,10 +48,10 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 
 ### Null Model
 
-- [ ] **NULL-01**: Grassmannian drift on jumper-free sequences is computed identically to primary analysis (same SVD extraction, same metrics)
-- [ ] **NULL-02**: Mann-Whitney U comparison uses correct test statistic and p-value computation
-- [ ] **NULL-03**: Column-filtered adjacency correctly removes all jumper paths (zero contamination)
-- [ ] **NULL-04**: Null model and primary model use separate Holm-Bonferroni families (no cross-contamination of p-values)
+- [x] **NULL-01**: Grassmannian drift on jumper-free sequences is computed identically to primary analysis (same SVD extraction, same metrics)
+- [x] **NULL-02**: Mann-Whitney U comparison uses correct test statistic and p-value computation
+- [x] **NULL-03**: Column-filtered adjacency correctly removes all jumper paths (zero contamination)
+- [x] **NULL-04**: Null model and primary model use separate Holm-Bonferroni families (no cross-contamination of p-values)
 
 ### Audit Report
 
@@ -97,10 +97,10 @@ Requirements for mathematical correctness audit. Each requirement verifies a spe
 | SFTX-01 | Phase 22 | Complete |
 | SFTX-02 | Phase 22 | Complete |
 | SFTX-03 | Phase 22 | Complete |
-| NULL-01 | Phase 22 | Pending |
-| NULL-02 | Phase 22 | Pending |
-| NULL-03 | Phase 22 | Pending |
-| NULL-04 | Phase 22 | Pending |
+| NULL-01 | Phase 22 | Complete |
+| NULL-02 | Phase 22 | Complete |
+| NULL-03 | Phase 22 | Complete |
+| NULL-04 | Phase 22 | Complete |
 | REPT-01 | Phase 23 | Pending |
 | REPT-02 | Phase 23 | Pending |
 | REPT-03 | Phase 23 | Pending |

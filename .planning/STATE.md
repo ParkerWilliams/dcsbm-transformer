@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-03-05)
 
 ## Current Position
 
-Phase: 22 of 23 (Softmax Bound & Null Model)
-Plan: 1 of 2
-Status: Executing Phase 22 -- Plan 01 complete
-Last activity: 2026-03-10 — Completed 22-01 softmax bound derivation audit (SFTX-01, SFTX-02, SFTX-03)
+Phase: 22 of 23 (Softmax Bound & Null Model) -- COMPLETE
+Plan: 2 of 2 (phase complete)
+Status: Phase 22 complete, ready for Phase 23
+Last activity: 2026-03-10 — Completed 22-02 null model parity and Marchenko-Pastur audit (NULL-01..04)
 
-Progress: [██████████] 97% (v1.2 Milestone)
+Progress: [██████████] 98% (v1.2 Milestone)
 
 ## Performance Metrics
 
@@ -63,6 +63,7 @@ Progress: [██████████] 97% (v1.2 Milestone)
 | 21    | 01   | 11min    | 2     | 4     |
 | 21    | 02   | 12min    | 2     | 3     |
 | Phase 22 P01 | 8min | 2 tasks | 2 files |
+| 22    | 02   | 13min    | 2     | 3     |
 
 ## Accumulated Context
 
@@ -98,6 +99,9 @@ Recent decisions affecting current work:
 - [Phase 22]: LaTeX derivation verified correct step-by-step -- no formula errors found, no production code changes needed
 - [Phase 22]: sqrt(d_k) cancellation algebraically proven: unscaled and scaled formulations produce identical bounds within 1e-12
 - [Phase 22]: Masking consistency verified: zero-fill in direction + -inf in softmax = no inconsistency
+- [22-02]: MP sigma^2 calibration corrected: E[lambda_MP(gamma, sigma^2)] = sigma^2, not sigma^2*(1+gamma)
+- [22-02]: For gamma > 1, continuous MP density integrates to 1/gamma (point mass of 1-1/gamma at zero)
+- [22-02]: Null model code-path parity verified via AST: fused_evaluate, extract_events, holm_bonferroni, cohens_d all from correct modules
 
 ### Pending Todos
 
@@ -111,7 +115,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-10T18:22:12.546Z
-Stopped at: Completed 22-01-PLAN.md
-Resume file: None
-Next action: Plan and execute Phase 22
+Last session: 2026-03-10T18:26:20Z
+Stopped at: Completed 22-02-PLAN.md (Phase 22 complete)
+Resume file: .planning/phases/22-softmax-bound-null-model/22-02-SUMMARY.md
+Next action: Execute Phase 23
