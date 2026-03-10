@@ -137,13 +137,14 @@ Plans:
 **Depends on**: Phases 18-22 (all audit findings must be complete before report generation)
 **Requirements**: REPT-01, REPT-02, REPT-03
 **Success Criteria** (what must be TRUE):
-  1. HTML report renders every mathematical formula in LaTeX (via MathJax) alongside its code location (file:line), with a correctness verdict (correct / fixed / concern) and fix description where applicable
+  1. HTML report renders every mathematical formula in LaTeX (via KaTeX) alongside its code location (file:line), with a correctness verdict (correct / fixed / concern) and fix description where applicable
   2. Report is organized by audit category (Graph, SVD, AUROC, Statistical, Softmax, Null Model) with clickable navigation
-  3. Report is fully self-contained (inline CSS/JS, bundled MathJax) and opens correctly in a browser without network access
-**Plans**: TBD
+  3. Report is fully self-contained (inline CSS/JS, bundled KaTeX) and opens correctly in a browser without network access
+**Plans**: 2 plans
 
 Plans:
-- [ ] 23-01: TBD
+- [ ] 23-01-PLAN.md — Create audit data registry (28 formula-to-code entries) and vendor KaTeX assets
+- [ ] 23-02-PLAN.md — Create Jinja2 template, Python generator, and integration tests for self-contained HTML report
 
 ## Progress
 
@@ -159,4 +160,4 @@ Phases execute in numeric order: 18 -> 19 -> 20 -> 21 -> 22 -> 23
 | 20. AUROC & Predictive Horizon | 2/2 | Complete    | 2026-03-06 | - |
 | 21. Statistical Controls | 2/2 | Complete    | 2026-03-10 | - |
 | 22. Softmax Bound & Null Model | 2/2 | Complete    | 2026-03-10 | - |
-| 23. Audit Report Generation | v1.2 | 0/TBD | Not started | - |
+| 23. Audit Report Generation | v1.2 | 0/2 | Not started | - |
