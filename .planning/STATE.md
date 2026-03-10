@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
-status: executing
-stopped_at: Completed 22-01-PLAN.md
-last_updated: "2026-03-10T18:22:12.557Z"
-last_activity: 2026-03-10 — Completed 22-01 softmax bound derivation audit (SFTX-01, SFTX-02, SFTX-03)
+status: completed
+stopped_at: Completed 22-02-PLAN.md (Phase 22 complete)
+last_updated: "2026-03-10T18:33:14.390Z"
+last_activity: 2026-03-10 — Completed 22-02 null model parity and Marchenko-Pastur audit (NULL-01..04)
 progress:
   total_phases: 6
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 11
-  completed_plans: 10
-  percent: 97
+  completed_plans: 11
+  percent: 98
 ---
 
 # Project State
