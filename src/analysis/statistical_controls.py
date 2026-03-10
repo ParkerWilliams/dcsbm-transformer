@@ -18,7 +18,7 @@ import warnings
 log = logging.getLogger(__name__)
 
 import numpy as np
-from scipy.stats import bootstrap, rankdata
+from scipy.stats import bootstrap, rankdata, spearmanr
 
 from src.analysis.auroc_horizon import (
     PRIMARY_METRICS,
@@ -278,7 +278,16 @@ def compute_correlation_matrix(
             }
         vectors = [v[:min_len] for v in vectors]
         data_matrix = np.array(vectors)
-        corr_matrix = np.corrcoef(data_matrix)
+        # STAT-05: Use Spearman rank correlation for measurement redundancy.
+        # Requirement specifies Spearman; Pearson was used previously in error.
+        # spearmanr expects observations as rows, so use axis=1 (each row is a variable).
+        corr_result, _ = spearmanr(data_matrix, axis=1)
+        # spearmanr returns a scalar for exactly 2 variables; reshape to 2x2 matrix.
+        if n_metrics == 2:
+            rho = float(corr_result)
+            corr_matrix = np.array([[1.0, rho], [rho, 1.0]])
+        else:
+            corr_matrix = np.asarray(corr_result)
 
     elif mode == "predictive":
         # Compute AUROC curves per metric, then correlate
