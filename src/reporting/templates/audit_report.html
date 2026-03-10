@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>v1.2 Mathematical Audit Report</title>
+  <style>
+    {{ katex_css }}
+  </style>
+  <style>
+    /* Academic style: serif fonts, paper-like feel */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: Georgia, "Times New Roman", Times, serif;
+      margin: 0;
+      padding: 0;
+      background: #fff;
+      color: #333;
+      line-height: 1.6;
+    }
+
+    /* Sidebar TOC */
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 100vh;
+      overflow-y: auto;
+      background: #f8f9fa;
+      border-right: 1px solid #ddd;
+      padding: 1.5em 1em;
+      z-index: 100;
+    }
+
+    .sidebar-title {
+      font-size: 1.1em;
+      font-weight: bold;
+      margin-bottom: 1em;
+      padding-bottom: 0.5em;
+      border-bottom: 2px solid #333;
+      color: #333;
+    }
+
+    .sidebar a {
+      display: block;
+      text-decoration: none;
+      color: #555;
+      padding: 0.2em 0;
+      font-size: 0.9em;
+      transition: color 0.15s;
+    }
+
+    .sidebar a:hover {
+      color: #000;
+    }
+
+    .sidebar .toc-category {
+      font-weight: bold;
+      margin-top: 0.8em;
+      margin-bottom: 0.2em;
+      color: #333;
+      font-size: 0.95em;
+    }
+
+    .sidebar .toc-req {
+      padding-left: 1em;
+      font-size: 0.82em;
+      color: #666;
+    }
+
+    .sidebar .toc-req:hover {
+      color: #222;
+    }
+
+    .sidebar .toc-dashboard-link {
+      font-weight: bold;
+      margin-bottom: 0.5em;
+      color: #333;
+    }
+
+    /* Main content area */
+    .main-content {
+      margin-left: 260px;
+      padding: 2em 2.5em;
+      max-width: 900px;
+    }
+
+    h1 {
+      font-size: 1.8em;
+      border-bottom: 2px solid #333;
+      padding-bottom: 0.3em;
+      margin-bottom: 0.3em;
+    }
+
+    .header-meta {
+      color: #666;
+      font-size: 0.95em;
+      margin-bottom: 2em;
+    }
+
+    h2 {
+      font-size: 1.4em;
+      border-bottom: 1px solid #ccc;
+      padding-bottom: 0.2em;
+      margin-top: 2.5em;
+    }
+
+    /* Summary dashboard table */
+    .dashboard-table {
+      border-collapse: collapse;
+      width: 100%;
+      margin: 1em 0 2em 0;
+      font-size: 0.95em;
+    }
+
+    .dashboard-table th,
+    .dashboard-table td {
+      border: 1px solid #ccc;
+      padding: 0.5em 0.8em;
+      text-align: center;
+    }
+
+    .dashboard-table th {
+      background: #f5f5f5;
+      font-weight: bold;
+      text-align: left;
+    }
+
+    .dashboard-table th:not(:first-child) {
+      text-align: center;
+    }
+
+    .dashboard-table td:first-child {
+      text-align: left;
+      font-weight: bold;
+    }
+
+    .dashboard-table .cell-correct {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .dashboard-table .cell-fixed {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .dashboard-table .cell-concern {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .dashboard-table .totals-row {
+      font-weight: bold;
+      background: #f5f5f5;
+    }
+
+    /* Requirement cards */
+    .req-card {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 1.5em;
+      margin-bottom: 1.5em;
+      background: #fff;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+
+    .req-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.8em;
+    }
+
+    .req-card-id {
+      font-weight: bold;
+      font-size: 1.05em;
+      color: #333;
+    }
+
+    .req-card-title {
+      color: #555;
+      font-size: 0.95em;
+      margin-left: 0.5em;
+    }
+
+    /* Verdict badges */
+    .verdict-badge {
+      display: inline-block;
+      padding: 0.2em 0.8em;
+      border-radius: 12px;
+      font-size: 0.85em;
+      font-weight: bold;
+      text-transform: capitalize;
+      white-space: nowrap;
+    }
+
+    .verdict-correct {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .verdict-fixed {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .verdict-concern {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    /* Formula block */
+    .formula-block {
+      margin: 1em 0;
+      min-height: 2em;
+      padding: 0.5em;
+      background: #fafafa;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+
+    /* Code location */
+    .code-location {
+      font-family: "Courier New", Courier, monospace;
+      color: #555;
+      font-size: 0.9em;
+      margin-top: 0.5em;
+    }
+
+    .code-location-label {
+      font-family: Georgia, "Times New Roman", serif;
+      font-weight: bold;
+      color: #333;
+      font-size: 0.9em;
+    }
+
+    /* Fix description */
+    .fix-description {
+      margin-top: 0.8em;
+      padding: 0.6em 1em;
+      background: #fff8e1;
+      border-left: 3px solid #ffc107;
+      border-radius: 0 4px 4px 0;
+      font-size: 0.9em;
+      color: #6d4c00;
+    }
+
+    .fix-description-label {
+      font-weight: bold;
+    }
+
+    /* Footer */
+    .report-footer {
+      margin-top: 3em;
+      padding-top: 1em;
+      border-top: 1px solid #ccc;
+      color: #999;
+      font-size: 0.85em;
+      text-align: center;
+    }
+
+    /* Responsive: sidebar collapses to top bar on narrow screens */
+    @media (max-width: 768px) {
+      .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        max-height: 300px;
+        border-right: none;
+        border-bottom: 1px solid #ddd;
+      }
+
+      .main-content {
+        margin-left: 0;
+        padding: 1.5em 1em;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sidebar TOC -->
+  <nav class="sidebar">
+    <div class="sidebar-title">Audit Report</div>
+    <a href="#dashboard" class="toc-dashboard-link">Summary Dashboard</a>
+    {% for cat in categories %}
+    <a href="#cat-{{ cat | lower | replace(' ', '-') }}" class="toc-category">{{ cat }}</a>
+    {% for entry in entries_by_category[cat] %}
+    <a href="#{{ entry.req_id }}" class="toc-req">{{ entry.req_id }}: {{ entry.title }}</a>
+    {% endfor %}
+    {% endfor %}
+  </nav>
+
+  <!-- Main content -->
+  <div class="main-content">
+
+    <!-- Header -->
+    <h1>v1.2 Mathematical Audit Report</h1>
+    <div class="header-meta">
+      <p>Generated: {{ generation_date }}</p>
+      <p>Scope: 28 audited requirements across 6 categories (Phases 18-22)</p>
+    </div>
+
+    <!-- Summary Dashboard -->
+    <h2 id="dashboard">Summary Dashboard</h2>
+    <table class="dashboard-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Correct</th>
+          <th>Fixed</th>
+          <th>Concern</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cat in categories %}
+        <tr>
+          <td>{{ cat }}</td>
+          <td class="{% if summary[cat].correct > 0 %}cell-correct{% endif %}">{{ summary[cat].correct }}</td>
+          <td class="{% if summary[cat].fixed > 0 %}cell-fixed{% endif %}">{{ summary[cat].fixed }}</td>
+          <td class="{% if summary[cat].concern > 0 %}cell-concern{% endif %}">{{ summary[cat].concern }}</td>
+          <td>{{ summary[cat].correct + summary[cat].fixed + summary[cat].concern }}</td>
+        </tr>
+        {% endfor %}
+        <tr class="totals-row">
+          <td>Total</td>
+          <td class="cell-correct">{{ total_correct }}</td>
+          <td class="{% if total_fixed > 0 %}cell-fixed{% endif %}">{{ total_fixed }}</td>
+          <td class="{% if total_concern > 0 %}cell-concern{% endif %}">{{ total_concern }}</td>
+          <td>{{ total_correct + total_fixed + total_concern }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Category sections -->
+    {% for cat in categories %}
+    <h2 id="cat-{{ cat | lower | replace(' ', '-') }}">{{ cat }}</h2>
+
+    {% for entry in entries_by_category[cat] %}
+    <div class="req-card" id="{{ entry.req_id }}">
+      <div class="req-card-header">
+        <div>
+          <span class="req-card-id">{{ entry.req_id }}</span>
+          <span class="req-card-title">{{ entry.title }}</span>
+        </div>
+        <span class="verdict-badge verdict-{{ entry.verdict }}">{{ entry.verdict }}</span>
+      </div>
+
+      <div class="formula-block" data-latex="{{ entry.latex | e }}">
+        <noscript>{{ entry.latex | e }}</noscript>
+      </div>
+
+      <div class="code-location">
+        <span class="code-location-label">Source:</span> {{ entry.code_location }}
+      </div>
+
+      {% if entry.verdict == "fixed" and entry.fix_description %}
+      <div class="fix-description">
+        <span class="fix-description-label">Fix applied:</span> {{ entry.fix_description }}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+
+    {% endfor %}
+
+    <!-- Footer -->
+    <div class="report-footer">
+      Generated by DCSBM-Transformer v1.2 Mathematical Audit
+    </div>
+
+  </div>
+
+  <!-- KaTeX JS (inlined for self-containment) -->
+  <script>
+    {{ katex_js }}
+  </script>
+
+  <!-- KaTeX rendering script -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      var blocks = document.querySelectorAll(".formula-block");
+      blocks.forEach(function(block) {
+        var latex = block.getAttribute("data-latex");
+        if (!latex) return;
+
+        // Split on newlines to handle multi-line formulas
+        var lines = latex.split("\n").filter(function(l) { return l.trim().length > 0; });
+        block.innerHTML = "";
+
+        lines.forEach(function(line) {
+          var container = document.createElement("div");
+          container.style.marginBottom = "0.3em";
+          try {
+            katex.render(line, container, {displayMode: true, throwOnError: false});
+          } catch (e) {
+            container.textContent = line;
+          }
+          block.appendChild(container);
+        });
+      });
+
+      // Highlight active section on scroll
+      var tocLinks = document.querySelectorAll(".sidebar a[href^='#']");
+      var sections = [];
+      tocLinks.forEach(function(link) {
+        var id = link.getAttribute("href").substring(1);
+        var el = document.getElementById(id);
+        if (el) sections.push({link: link, el: el});
+      });
+
+      function highlightActive() {
+        var scrollPos = window.scrollY + 80;
+        var active = null;
+        for (var i = sections.length - 1; i >= 0; i--) {
+          if (sections[i].el.offsetTop <= scrollPos) {
+            active = sections[i].link;
+            break;
+          }
+        }
+        tocLinks.forEach(function(l) { l.style.fontWeight = ""; l.style.color = ""; });
+        if (active) {
+          active.style.fontWeight = "bold";
+          active.style.color = "#000";
+        }
+      }
+
+      window.addEventListener("scroll", highlightActive);
+      highlightActive();
+    });
+  </script>
+
+</body>
+</html>
