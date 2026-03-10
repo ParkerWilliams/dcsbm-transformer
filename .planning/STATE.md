@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.2
 milestone_name: Mathematical Audit
 status: completed
-stopped_at: Completed 21-02-PLAN.md
-last_updated: "2026-03-10T02:10:21.418Z"
+stopped_at: Phase 22 context gathered
+last_updated: "2026-03-10T18:02:15.106Z"
 last_activity: 2026-03-10 — Completed 21-02 correlation redundancy and split audit (STAT-05, STAT-06)
 progress:
   total_phases: 6
@@ -107,7 +107,7 @@ None.
 
 ## Session Continuity
 
-Last session: 2026-03-10T02:00:44Z
-Stopped at: Completed 21-02-PLAN.md
-Resume file: .planning/phases/21-statistical-controls/21-02-SUMMARY.md
+Last session: 2026-03-10T18:02:15.095Z
+Stopped at: Phase 22 context gathered
+Resume file: .planning/phases/22-softmax-bound-null-model/22-CONTEXT.md
 Next action: Plan and execute Phase 22
