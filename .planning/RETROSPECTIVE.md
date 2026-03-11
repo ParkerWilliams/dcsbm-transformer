@@ -47,6 +47,48 @@
 
 ---
 
+## Milestone: v1.2 — Mathematical Audit
+
+**Shipped:** 2026-03-10
+**Phases:** 6 | **Plans:** 13
+
+### What Was Built
+- 308 audit tests verifying every mathematical formula against textbook definitions across 6 domains (graph, SVD, AUROC, statistical, softmax bound, null model)
+- Fixed 4 production bugs: float16→float32 spectrum storage (1130% curvature error), Pearson→Spearman correlation, MP sigma^2 calibration, 3→4-class behavioral enum
+- AST-based code-path verification for null model import parity
+- Living regression test catalog for 0.75 threshold drift detection
+- Self-contained HTML audit report with 28 formula-to-code entries, KaTeX rendering, sidebar TOC, and verdict dashboard
+
+### What Worked
+- Phase-per-domain structure: one phase per mathematical domain (graph, SVD, AUROC, stats, softmax/null, report) kept each audit focused and exhaustive
+- Textbook cross-referencing: comparing implementation against published formulas (Efron BCa, Edelman Grassmannian, Marchenko-Pastur) caught subtle bugs
+- AST-based verification: using Python AST to verify import identity was more reliable than string matching for code-path audits
+- Synthetic analytic fixtures: using known-answer test cases (circles for curvature, planted signals for AUROC) provided gold-standard verification
+
+### What Was Inefficient
+- SUMMARY.md files lacked standardized `one_liner` field, making automated accomplishment extraction fail — had to read all 13 files manually
+- Living regression test catalog needed updating after Phase 23 added a new file containing 0.75 — cross-phase test dependencies are fragile
+- Some verification tests were overly precise (atol=1e-15) when 1e-10 would have sufficed, making tests brittle
+
+### Patterns Established
+- Mathematical audit workflow: requirement → formula → textbook reference → implementation → test → verdict
+- AST-based import verification for code-path parity audits
+- Living regression test catalogs for threshold consistency
+- Synthetic analytic fixture pattern (known-answer tests on simple geometric objects)
+- KaTeX + base64 font embedding for fully self-contained HTML reports
+
+### Key Lessons
+1. Float16 storage is catastrophic for derivative computation — v1.1 flagged it, v1.2 proved it with 1130% error measurement. Always verify numerical precision at storage boundaries.
+2. Cross-phase test dependencies (like the 0.75 catalog) need explicit ownership — when Phase 23 added a file, Phase 20's test broke silently
+3. Mathematical audits find real bugs even in well-tested code — 4 bugs in 850+ tests worth of codebase
+
+### Cost Observations
+- Model mix: ~90% opus (quality profile), ~10% sonnet
+- Sessions: ~8 sessions across 9 days
+- Notable: Audit phases averaged ~150min total wall time for 13 plans — research-heavy but high-value
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -55,6 +97,7 @@
 |-----------|--------|-------|------------|
 | v1.0 MVP | 9 | 20 | Established TDD + GSD workflow |
 | v1.1 Journal Feedback | 7 | 15 | Added pre-registration methodology, bulk phase execution |
+| v1.2 Mathematical Audit | 6 | 13 | Added mathematical audit workflow, AST-based verification, living regression tests |
 
 ### Cumulative Quality
 
@@ -62,9 +105,12 @@
 |-----------|-------|------------|
 | v1.0 | ~340 | Core pipeline functional |
 | v1.1 | 536+ | Full analysis suite with null validation |
+| v1.2 | 850+ | 308 audit tests, 4 production bugs fixed, all formulas verified |
 
 ### Top Lessons (Verified Across Milestones)
 
 1. Standalone module pattern with orchestrator functions scales well across phases
 2. Integration testing at milestone boundary catches gaps that unit tests miss
 3. Pre-registration methodology should be the first phase when doing confirmatory research
+4. Float16 storage is dangerous for derivative computation — flagged in v1.1 UAT, proven catastrophic in v1.2 audit (1130% error)
+5. Mathematical audits find real bugs even in well-tested code — worth the investment before scaling experiments

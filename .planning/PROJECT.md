@@ -35,18 +35,19 @@ Determine whether SVD instability metrics from the QK^T attention matrix can pre
 
 ### Active
 
-- [ ] Full mathematical audit of all formulas, derivations, and their implementations
-- [ ] Verify SVD metric extraction mathematics and implementation
-- [ ] Verify AUROC predictive horizon computation and statistical controls
-- [ ] Verify softmax filtering bound derivation and empirical verification
-- [ ] Verify null model (Grassmannian drift) methodology
-- [ ] Verify spectrum trajectory curvature/torsion numerics
-- [ ] Fix all mathematical issues found during audit
+(None — define next milestone with `/gsd:new-milestone`)
 
 ### Recently Validated (v1.2)
 
-- ✓ Verify DCSBM graph generation and walk sampling correctness — Phase 18 (all formulas match definitions, no production code changes needed)
-- ✓ Behavioral evaluation upgraded to 4-class outcome classification (UNCONSTRAINED/PENDING/FOLLOWED/VIOLATED) — Phase 18
+- ✓ Full mathematical audit of all formulas, derivations, and their implementations — v1.2 (308 audit tests, 4 bugs fixed)
+- ✓ Verify DCSBM graph generation and walk sampling correctness — Phase 18 (all formulas match definitions)
+- ✓ Behavioral evaluation upgraded to 4-class outcome classification — Phase 18
+- ✓ Verify SVD metric extraction mathematics and float16→float32 fix — Phase 19 (1130% curvature error fixed)
+- ✓ Verify AUROC predictive horizon computation — Phase 20 (matches sklearn within 1e-10)
+- ✓ Verify statistical controls (permutation, bootstrap, Holm-Bonferroni, Cohen's d, Spearman) — Phase 21
+- ✓ Verify softmax filtering bound derivation and empirical verification — Phase 22
+- ✓ Verify null model methodology and MP sigma^2 calibration — Phase 22 (calibration bug fixed)
+- ✓ Self-contained HTML audit report with 28 formula-to-code mappings — Phase 23
 
 ### Deferred
 
@@ -66,16 +67,17 @@ Determine whether SVD instability metrics from the QK^T attention matrix can pre
 
 ## Context
 
-Shipped v1.1 with 23,652 LOC Python across 111 files.
+Shipped v1.2 with 33,515 LOC Python. 850+ tests passing, 0 failures.
 Tech stack: Python 3.11+, PyTorch, NanoGPT-scale architecture, scipy, sklearn, matplotlib/seaborn.
-536+ tests passing, 0 failures.
 
-**Research status:** All reviewer concerns addressed:
+**Research status:** All reviewer concerns addressed, all mathematics audited:
+- 308 audit tests verify every formula against textbook definitions
+- 4 production bugs found and fixed during audit
+- Self-contained HTML audit report documents all findings
 - Null model validates signal is real (not artifact)
 - Softmax bound formalizes theoretical lag prediction
 - Multi-head ablation tests single-head multiplexing concern
 - Pre-registration locks hypothesis before confirmatory analysis
-- Calibration and PR curves complement AUROC
 
 ## Key Decisions
 
@@ -92,7 +94,10 @@ Tech stack: Python 3.11+, PyTorch, NanoGPT-scale architecture, scipy, sklearn, m
 | Multi-head ablation last | Most invasive change; validate on single-head first | ✓ Good |
 | Column-filtered adjacency for null walks | 100% jumper-free without overgeneration | ✓ Good |
 | Separate Holm-Bonferroni family for null model | Don't mix with primary metrics | ✓ Good |
-| Curvature/torsion as exploratory only | Numerically delicate on noisy SVD output | ⚠️ Revisit — float16 quantization concern |
+| Curvature/torsion as exploratory only | Numerically delicate on noisy SVD output | ✓ Good — float16→float32 fix resolved quantization concern in v1.2 |
+| Mathematical audit before sweep | Verify correctness before scaling experiments | ✓ Good — 4 bugs found, all fixed |
+| AST-based code-path verification | Avoid brittle string matching for import audits | ✓ Good — caught null model code-path parity reliably |
+| Living regression test catalog | Detect future threshold drift automatically | ✓ Good — all 0.75 occurrences tracked |
 
 ## Constraints
 
@@ -103,21 +108,14 @@ Tech stack: Python 3.11+, PyTorch, NanoGPT-scale architecture, scipy, sklearn, m
 - **Venv requirement:** All Python commands run in a virtual environment
 - **Walk corpus size:** Must be at least 2 orders of magnitude larger than n
 
-## Current Milestone: v1.2 Mathematical Audit
+## Current State
 
-**Goal:** Exhaustive mathematical correctness review of every formula, derivation, and implementation in the codebase — audit and fix all issues.
+All three milestones shipped. v1.2 Mathematical Audit completed 2026-03-10 with 31/31 requirements satisfied, 308 audit tests, and 4 production bugs fixed.
 
-**Target areas:**
-- DCSBM graph generation and block structure mathematics
-- Walk generation sampling correctness
-- SVD metric definitions and extraction implementation
-- AUROC predictive horizon computation
-- Statistical controls (Holm-Bonferroni, bootstrap CIs, effect sizes, correlation)
-- Softmax filtering bound (LaTeX derivation + empirical verification)
-- Null model baseline (Grassmannian drift, Mann-Whitney U)
-- Spectrum trajectory (curvature/torsion numerics, float16 concern)
-- Multi-head ablation signal concentration
-- Pre-registration framework correctness
+Next milestone not yet defined. Candidates:
+- Parameter sweep infrastructure (MGMT-02/03/04/06, deferred since v1.1)
+- Multi-seed runs for statistical power
+- Grassmannian trajectory visualization
 
 ---
-*Last updated: 2026-03-05 after Phase 18*
+*Last updated: 2026-03-10 after v1.2 milestone*

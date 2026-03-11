@@ -1,5 +1,24 @@
 # Milestones
 
+## v1.2 Mathematical Audit (Shipped: 2026-03-10)
+
+**Phases:** 6 (Phases 18-23) | **Plans:** 13 | **Requirements:** 31/31
+**Timeline:** 9 days (2026-03-02 → 2026-03-10)
+**Codebase:** 33,515 LOC Python | 107 files changed, +19,172/-307 lines
+**Audit tests created:** 308 across 22 test files
+**Production bugs found and fixed:** 4
+**Git range:** feat(18)..feat(23)
+
+**Key accomplishments:**
+1. Verified all graph-theoretic, SVD, AUROC, and statistical formulas against textbook definitions — 308 audit tests created
+2. Fixed critical float16 spectrum storage bug causing 1130% curvature error; upgraded to float32 (SVD-05)
+3. Fixed Pearson→Spearman correlation for redundancy analysis (STAT-05) and MP sigma^2 calibration divisor (NULL-02)
+4. Expanded behavioral classification from 3-class to 4-class enum (UNCONSTRAINED/PENDING/FOLLOWED/VIOLATED)
+5. Verified softmax bound LaTeX derivation step-by-step and proved sqrt(d_k) cancellation algebraically
+6. Generated self-contained HTML audit report with 28 formula-to-code entries, KaTeX rendering, and per-category verdict dashboard
+
+---
+
 ## v1.1 Journal Feedback (Shipped: 2026-02-28)
 
 **Phases:** 7 (Phases 11-17) | **Plans:** 15 | **Commits:** 39
