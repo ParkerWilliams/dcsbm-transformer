@@ -1,0 +1,29 @@
+{
+  "graph": {
+    "n": 500,
+    "K": 4,
+    "p_in": 0.25,
+    "p_out": 0.03,
+    "n_jumpers_per_block": 2
+  },
+  "model": {
+    "d_model": 128,
+    "n_layers": 4,
+    "n_heads": 1,
+    "dropout": 0.0
+  },
+  "training": {
+    "w": 64,
+    "walk_length": 256,
+    "corpus_size": 200000,
+    "r": 57,
+    "learning_rate": 3e-4,
+    "batch_size": 64,
+    "max_steps": 50000,
+    "eval_interval": 1000,
+    "checkpoint_interval": 5000
+  },
+  "seed": 42,
+  "description": "Anchor config: n=500, w=64, d_model=128, n_layers=4, 1 head",
+  "tags": ["anchor", "v1.1"]
+}

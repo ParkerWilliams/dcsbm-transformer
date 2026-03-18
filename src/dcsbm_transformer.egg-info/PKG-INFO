@@ -1,0 +1,15 @@
+Metadata-Version: 2.4
+Name: dcsbm-transformer
+Version: 0.1.0
+Summary: SVD instability prediction in transformer attention on DCSBM-generated sequences
+Requires-Python: >=3.11
+Requires-Dist: torch>=2.0
+Requires-Dist: numpy>=1.24
+Requires-Dist: dacite>=1.8
+Requires-Dist: scipy>=1.14
+Requires-Dist: matplotlib>=3.8
+Requires-Dist: seaborn>=0.13
+Requires-Dist: scikit-learn>=1.4
+Requires-Dist: jinja2>=3.1
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
